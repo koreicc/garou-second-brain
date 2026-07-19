@@ -206,7 +206,7 @@ matching the backend JSON response format, including ApiResponse<T>
 envelope.
 
 **data/repository/** -- Repository classes wrapping ApiService with
-NetworkResult sealed class (Success / Error / Loading). Each entity
+Kotlin `Result<T>` for success/error handling. Each entity
 has its own repository.
 
 **domain/model/** -- Domain model classes (Note, Task, QuickTask, Person,

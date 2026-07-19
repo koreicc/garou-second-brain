@@ -84,7 +84,7 @@ Single-user. Localhost-only (no auth in MVP).
 │   └── settings.gradle.kts
 └── docs/
     ├── ARCHITECTURE.md         # Detailed architecture and design decisions
-    └── agent-anti-patterns.md  # Go anti-patterns reference (to be created)
+    └── agent-anti-patterns.md  # Go anti-patterns reference
 ```
 
 ---
