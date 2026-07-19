@@ -69,39 +69,39 @@ class DashboardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            // Load counts and quick tasks in parallel
-            launch {
-                noteRepository.getAll().onSuccess { notes ->
-                    _state.update { it.copy(noteCount = notes.size, recentNotes = notes.take(5)) }
-                }.onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
+            // Load counts and quick tasks in parallel, then clear loading once
+            // every source has responded (previously isLoading was cleared early).
+            val loads = listOf(
+                launch {
+                    noteRepository.getAll().onSuccess { notes ->
+                        _state.update { it.copy(noteCount = notes.size, recentNotes = notes.take(5)) }
+                    }.onFailure { e ->
+                        _state.update { it.copy(error = e.message) }
+                    }
+                },
+                launch {
+                    taskRepository.getAll().onSuccess { tasks ->
+                        _state.update { it.copy(taskCount = tasks.size, recentTasks = tasks.take(5)) }
+                    }.onFailure { e ->
+                        _state.update { it.copy(error = e.message) }
+                    }
+                },
+                launch {
+                    personRepository.getAll().onSuccess { people ->
+                        _state.update { it.copy(personCount = people.size) }
+                    }.onFailure { e ->
+                        _state.update { it.copy(error = e.message) }
+                    }
+                },
+                launch {
+                    quickTaskRepository.getAll().onSuccess { quickTasks ->
+                        _state.update { it.copy(quickTasks = quickTasks) }
+                    }.onFailure { e ->
+                        _state.update { it.copy(error = e.message) }
+                    }
                 }
-            }
-
-            launch {
-                taskRepository.getAll().onSuccess { tasks ->
-                    _state.update { it.copy(taskCount = tasks.size, recentTasks = tasks.take(5)) }
-                }.onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
-                }
-            }
-
-            launch {
-                personRepository.getAll().onSuccess { people ->
-                    _state.update { it.copy(personCount = people.size) }
-                }.onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
-                }
-            }
-
-            launch {
-                quickTaskRepository.getAll().onSuccess { quickTasks ->
-                    _state.update { it.copy(quickTasks = quickTasks) }
-                }.onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
-                }
-            }
-
+            )
+            loads.forEach { it.join() }
             _state.update { it.copy(isLoading = false) }
         }
     }
