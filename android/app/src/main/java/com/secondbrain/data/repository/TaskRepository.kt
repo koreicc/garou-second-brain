@@ -3,6 +3,7 @@ package com.secondbrain.data.repository
 import com.secondbrain.data.api.ApiService
 import com.secondbrain.data.dto.CreateTaskRequest
 import com.secondbrain.data.dto.UpdateTaskRequest
+import com.secondbrain.data.dto.toDomain
 import com.secondbrain.domain.model.Task
 
 class TaskRepository(private val api: ApiService) {

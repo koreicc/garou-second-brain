@@ -3,6 +3,7 @@ package com.secondbrain.data.repository
 import com.secondbrain.data.api.ApiService
 import com.secondbrain.data.dto.CreatePersonRequest
 import com.secondbrain.data.dto.UpdatePersonRequest
+import com.secondbrain.data.dto.toDomain
 import com.secondbrain.domain.model.Person
 
 class PersonRepository(private val api: ApiService) {

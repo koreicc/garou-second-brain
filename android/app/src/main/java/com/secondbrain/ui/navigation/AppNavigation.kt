@@ -32,6 +32,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.toRoute
 import com.secondbrain.data.repository.NetworkResult
 import com.secondbrain.ui.dashboard.DashboardScreen
 import com.secondbrain.ui.notes.NoteDetailScreen

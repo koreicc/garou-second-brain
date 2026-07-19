@@ -3,6 +3,7 @@ package com.secondbrain.data.repository
 import com.secondbrain.data.api.ApiService
 import com.secondbrain.data.dto.CreateNoteRequest
 import com.secondbrain.data.dto.UpdateNoteRequest
+import com.secondbrain.data.dto.toDomain
 import com.secondbrain.domain.model.Note
 
 class NoteRepository(private val api: ApiService) {

@@ -2,6 +2,7 @@ package com.secondbrain.data.repository
 
 import com.secondbrain.data.api.ApiService
 import com.secondbrain.data.dto.CreateQuickTaskRequest
+import com.secondbrain.data.dto.toDomain
 import com.secondbrain.domain.model.QuickTask
 
 class QuickTaskRepository(private val api: ApiService) {
