@@ -64,7 +64,22 @@ func (v *Vault) filePath(entityType, id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(v.root, dir, id+".md"), nil
+	if id == "" {
+		return "", fmt.Errorf("invalid id: %q", id)
+	}
+	// Reject path separators and traversal segments so an id cannot escape the
+	// vault directory (e.g. "../../../etc/passwd").
+	if strings.ContainsAny(id, "/\\") || id == "." || id == ".." {
+		return "", fmt.Errorf("invalid id: %q", id)
+	}
+	path := filepath.Join(v.root, dir, id+".md")
+	// Defense in depth: confirm the resolved path stays inside the vault root.
+	cleanRoot := filepath.Clean(v.root)
+	cleanPath := filepath.Clean(path)
+	if cleanPath != cleanRoot && !strings.HasPrefix(cleanPath, cleanRoot+string(filepath.Separator)) {
+		return "", fmt.Errorf("invalid id: %q", id)
+	}
+	return path, nil
 }
 
 func (v *Vault) getFileLock(path string) *sync.Mutex {
