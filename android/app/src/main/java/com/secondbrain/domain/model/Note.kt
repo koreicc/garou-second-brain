@@ -6,7 +6,7 @@ data class Note(
     val status: String = "active",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
-    val content: String = "",
+    val body: String = "",
     val createdAt: String = "",
     val updatedAt: String = ""
 )

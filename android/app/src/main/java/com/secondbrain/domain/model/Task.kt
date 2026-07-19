@@ -12,7 +12,7 @@ data class Task(
     val endDate: String = "",
     val recurrence: Recurrence? = null,
     val subtasks: List<Subtask> = emptyList(),
-    val content: String = "",
+    val body: String = "",
     val createdAt: String = "",
     val updatedAt: String = ""
 )

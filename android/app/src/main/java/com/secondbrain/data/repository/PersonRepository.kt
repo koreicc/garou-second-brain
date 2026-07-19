@@ -1,17 +1,26 @@
 package com.secondbrain.data.repository
 
 import com.secondbrain.data.api.ApiService
-import com.secondbrain.data.dto.*
+import com.secondbrain.data.dto.ApiResponse
+import com.secondbrain.data.dto.CreatePersonRequest
+import com.secondbrain.data.dto.UpdatePersonRequest
 import com.secondbrain.domain.model.Person
 
 class PersonRepository(private val api: ApiService) {
 
+    private fun <T> checkError(response: ApiResponse<T>): T {
+        if (response.error.isNotBlank()) {
+            throw Exception(response.error)
+        }
+        return response.data ?: throw Exception("Empty response")
+    }
+
     suspend fun getAll(): Result<List<Person>> = runCatching {
-        api.getAllPeople().map { it.toDomain() }
+        checkError(api.getAllPeople()).map { it.toDomain() }
     }
 
     suspend fun getById(id: String): Result<Person> = runCatching {
-        api.getPerson(id).toDomain()
+        checkError(api.getPerson(id)).toDomain()
     }
 
     suspend fun create(
@@ -21,7 +30,7 @@ class PersonRepository(private val api: ApiService) {
         tags: List<String> = emptyList(),
         notes: String = ""
     ): Result<Person> = runCatching {
-        api.createPerson(
+        checkError(api.createPerson(
             CreatePersonRequest(
                 name = name,
                 contacts = contacts.map { it.toDto() },
@@ -29,7 +38,7 @@ class PersonRepository(private val api: ApiService) {
                 tags = tags,
                 notes = notes
             )
-        ).toDomain()
+        )).toDomain()
     }
 
     suspend fun update(
@@ -41,7 +50,7 @@ class PersonRepository(private val api: ApiService) {
         tags: List<String>? = null,
         notes: String? = null
     ): Result<Person> = runCatching {
-        api.updatePerson(
+        checkError(api.updatePerson(
             id,
             UpdatePersonRequest(
                 name = name,
@@ -51,10 +60,10 @@ class PersonRepository(private val api: ApiService) {
                 tags = tags,
                 notes = notes
             )
-        ).toDomain()
+        )).toDomain()
     }
 
     suspend fun delete(id: String): Result<Unit> = runCatching {
-        api.deletePerson(id)
+        checkError(api.deletePerson(id))
     }
 }

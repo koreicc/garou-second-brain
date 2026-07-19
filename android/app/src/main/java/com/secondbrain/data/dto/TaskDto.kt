@@ -19,7 +19,7 @@ data class TaskDto(
     val endDate: String = "",
     val recurrence: RecurrenceDto? = null,
     val subtasks: List<SubtaskDto> = emptyList(),
-    val content: String = "",
+    val body: String = "",
     @SerialName("created_at")
     val createdAt: String = "",
     @SerialName("updated_at")

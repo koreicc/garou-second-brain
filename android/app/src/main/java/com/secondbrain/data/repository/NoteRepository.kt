@@ -1,17 +1,26 @@
 package com.secondbrain.data.repository
 
 import com.secondbrain.data.api.ApiService
-import com.secondbrain.data.dto.*
+import com.secondbrain.data.dto.ApiResponse
+import com.secondbrain.data.dto.CreateNoteRequest
+import com.secondbrain.data.dto.UpdateNoteRequest
 import com.secondbrain.domain.model.Note
 
 class NoteRepository(private val api: ApiService) {
 
+    private fun <T> checkError(response: ApiResponse<T>): T {
+        if (response.error.isNotBlank()) {
+            throw Exception(response.error)
+        }
+        return response.data ?: throw Exception("Empty response")
+    }
+
     suspend fun getAll(): Result<List<Note>> = runCatching {
-        api.getAllNotes().map { it.toDomain() }
+        checkError(api.getAllNotes()).map { it.toDomain() }
     }
 
     suspend fun getById(id: String): Result<Note> = runCatching {
-        api.getNote(id).toDomain()
+        checkError(api.getNote(id)).toDomain()
     }
 
     suspend fun create(
@@ -19,7 +28,7 @@ class NoteRepository(private val api: ApiService) {
         tags: List<String> = emptyList(),
         content: String = ""
     ): Result<Note> = runCatching {
-        api.createNote(CreateNoteRequest(title = title, tags = tags, content = content)).toDomain()
+        checkError(api.createNote(CreateNoteRequest(title = title, tags = tags, content = content))).toDomain()
     }
 
     suspend fun update(
@@ -29,10 +38,10 @@ class NoteRepository(private val api: ApiService) {
         tags: List<String>? = null,
         content: String? = null
     ): Result<Note> = runCatching {
-        api.updateNote(id, UpdateNoteRequest(title = title, status = status, tags = tags, content = content)).toDomain()
+        checkError(api.updateNote(id, UpdateNoteRequest(title = title, status = status, tags = tags, content = content))).toDomain()
     }
 
     suspend fun delete(id: String): Result<Unit> = runCatching {
-        api.deleteNote(id)
+        checkError(api.deleteNote(id))
     }
 }

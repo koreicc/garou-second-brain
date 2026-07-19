@@ -1,17 +1,26 @@
 package com.secondbrain.data.repository
 
 import com.secondbrain.data.api.ApiService
-import com.secondbrain.data.dto.*
+import com.secondbrain.data.dto.ApiResponse
+import com.secondbrain.data.dto.CreateTaskRequest
+import com.secondbrain.data.dto.UpdateTaskRequest
 import com.secondbrain.domain.model.Task
 
 class TaskRepository(private val api: ApiService) {
 
+    private fun <T> checkError(response: ApiResponse<T>): T {
+        if (response.error.isNotBlank()) {
+            throw Exception(response.error)
+        }
+        return response.data ?: throw Exception("Empty response")
+    }
+
     suspend fun getAll(): Result<List<Task>> = runCatching {
-        api.getAllTasks().map { it.toDomain() }
+        checkError(api.getAllTasks()).map { it.toDomain() }
     }
 
     suspend fun getById(id: String): Result<Task> = runCatching {
-        api.getTask(id).toDomain()
+        checkError(api.getTask(id)).toDomain()
     }
 
     suspend fun create(
@@ -25,7 +34,7 @@ class TaskRepository(private val api: ApiService) {
         subtasks: List<com.secondbrain.domain.model.Subtask> = emptyList(),
         content: String = ""
     ): Result<Task> = runCatching {
-        api.createTask(
+        checkError(api.createTask(
             CreateTaskRequest(
                 title = title,
                 icon = icon,
@@ -37,7 +46,7 @@ class TaskRepository(private val api: ApiService) {
                 subtasks = subtasks.map { it.toDto() },
                 content = content
             )
-        ).toDomain()
+        )).toDomain()
     }
 
     suspend fun update(
@@ -53,7 +62,7 @@ class TaskRepository(private val api: ApiService) {
         subtasks: List<com.secondbrain.domain.model.Subtask>? = null,
         content: String? = null
     ): Result<Task> = runCatching {
-        api.updateTask(
+        checkError(api.updateTask(
             id,
             UpdateTaskRequest(
                 title = title,
@@ -67,10 +76,10 @@ class TaskRepository(private val api: ApiService) {
                 subtasks = subtasks?.map { it.toDto() },
                 content = content
             )
-        ).toDomain()
+        )).toDomain()
     }
 
     suspend fun delete(id: String): Result<Unit> = runCatching {
-        api.deleteTask(id)
+        checkError(api.deleteTask(id))
     }
 }

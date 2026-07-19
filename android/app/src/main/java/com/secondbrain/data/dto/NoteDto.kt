@@ -11,7 +11,7 @@ data class NoteDto(
     val status: String = "active",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
-    val content: String = "",
+    val body: String = "",
     @SerialName("created_at")
     val createdAt: String = "",
     @SerialName("updated_at")
@@ -23,7 +23,7 @@ data class CreateNoteRequest(
     val title: String,
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
-    val content: String = ""
+    val body: String = ""
 )
 
 @Serializable
@@ -32,7 +32,7 @@ data class UpdateNoteRequest(
     val status: String? = null,
     val tags: List<String>? = null,
     val links: List<String>? = null,
-    val content: String? = null
+    val body: String? = null
 )
 
 fun NoteDto.toDomain(): Note = Note(
@@ -41,7 +41,7 @@ fun NoteDto.toDomain(): Note = Note(
     status = status,
     tags = tags,
     links = links,
-    content = content,
+    body = body,
     createdAt = createdAt,
     updatedAt = updatedAt
 )
