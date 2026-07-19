@@ -260,7 +260,7 @@ func (h *TaskHandler) Delete(c echo.Context) error {
 		}
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("delete task: %v", err)))
 	}
-	return c.JSON(http.StatusOK, model.DataResponse(map[string]string{"status": "deleted"}))
+	return c.JSON(http.StatusOK, model.DataResponse(nil))
 }
 
 func copySlice(s []string) []string {

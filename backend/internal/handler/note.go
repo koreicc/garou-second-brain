@@ -137,5 +137,5 @@ func (h *NoteHandler) Delete(c echo.Context) error {
 		}
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("delete note: %v", err)))
 	}
-	return c.JSON(http.StatusOK, model.DataResponse(map[string]string{"status": "deleted"}))
+	return c.JSON(http.StatusOK, model.DataResponse(nil))
 }
