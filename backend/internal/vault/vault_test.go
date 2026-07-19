@@ -65,8 +65,13 @@ func TestWriteAndReadNote(t *testing.T) {
 	if got.Title != note.Title {
 		t.Fatalf("Title = %q, want %q", got.Title, note.Title)
 	}
-	if got.Body != note.Body {
-		t.Fatalf("Body = %q, want %q", got.Body, note.Body)
+	// Body gets a trailing newline added by the vault writer
+	expectedBody := note.Body
+	if !strings.HasSuffix(expectedBody, "\n") {
+		expectedBody += "\n"
+	}
+	if got.Body != expectedBody {
+		t.Fatalf("Body = %q, want %q", got.Body, expectedBody)
 	}
 	if got.Status != note.Status {
 		t.Fatalf("Status = %q, want %q", got.Status, note.Status)
@@ -107,8 +112,13 @@ func TestWriteAndReadTask(t *testing.T) {
 	if got.Icon != now.Icon {
 		t.Fatalf("Icon = %q, want %q", got.Icon, now.Icon)
 	}
-	if got.Body != now.Body {
-		t.Fatalf("Body = %q, want %q", got.Body, now.Body)
+	// Body gets a trailing newline added by the vault writer
+	expectedBody := now.Body
+	if !strings.HasSuffix(expectedBody, "\n") {
+		expectedBody += "\n"
+	}
+	if got.Body != expectedBody {
+		t.Fatalf("Body = %q, want %q", got.Body, expectedBody)
 	}
 }
 
@@ -172,8 +182,13 @@ func TestWriteAndReadPerson(t *testing.T) {
 	if got.Notes != person.Notes {
 		t.Fatalf("Notes = %q, want %q", got.Notes, person.Notes)
 	}
-	if got.Body != person.Body {
-		t.Fatalf("Body = %q, want %q", got.Body, person.Body)
+	// Body gets a trailing newline added by the vault writer
+	expectedBody := person.Body
+	if !strings.HasSuffix(expectedBody, "\n") {
+		expectedBody += "\n"
+	}
+	if got.Body != expectedBody {
+		t.Fatalf("Body = %q, want %q", got.Body, expectedBody)
 	}
 	if len(got.Contacts) != 1 {
 		t.Fatalf("len(Contacts) = %d, want 1", len(got.Contacts))
@@ -398,8 +413,9 @@ func TestUpdateNote(t *testing.T) {
 	if got.Title != "Updated Title" {
 		t.Fatalf("Title = %q, want %q", got.Title, "Updated Title")
 	}
-	if got.Body != "Updated body." {
-		t.Fatalf("Body = %q, want %q", got.Body, "Updated body.")
+	// Body gets a trailing newline added by the vault writer
+	if got.Body != "Updated body.\n" {
+		t.Fatalf("Body = %q, want %q", got.Body, "Updated body.\n")
 	}
 }
 

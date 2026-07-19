@@ -22,6 +22,9 @@ func NewQuickTask(id, title string) *QuickTask {
 }
 
 func (q *QuickTask) Validate() error {
+	if err := ValidateBase(&q.BaseEntity); err != nil {
+		return err
+	}
 	if q.Title == "" {
 		return NewValidationError("quick-task.title is required")
 	}
