@@ -25,7 +25,14 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Accept Android SDK licenses
-        run: yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+        run: |
+          # Use JDK 11 for sdkmanager to avoid javax.xml.bind issues
+          JAVA_HOME=$JAVA_HOME_17_X64 yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses 2>/dev/null || true
+          # Also try with cmdline-tools if available
+          if [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          fi
+          echo "SDK licenses accepted"
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
