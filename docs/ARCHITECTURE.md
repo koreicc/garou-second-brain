@@ -14,11 +14,11 @@ Default: `~/second-brain/vault/`.
 
 ```
 vault/
-  notes/          # Note entities
+  notes/          # Note entities (.md files named {uuid}.md)
   tasks/          # Task entities
   quick-tasks/    # Quick Task entities
   people/         # Person entities
-  archive/        # Archived entities
+  archive/        # Archived/deleted entities
 ```
 
 Each entity is a single `.md` file named `{uuid}.md`.
@@ -49,15 +49,15 @@ id: "550e8400-e29b-41d4-a716-446655440001"
 type: "task"
 title: "Write architecture doc"
 status: "pending"           # pending | in-progress | completed | expired
-icon: "edit-note"           # Material icon name or similar
+icon: "edit-note"
 location: "Home office"
 tags: ["documentation"]
-links: ["<note-uuid>", "<person-uuid>"]
+links: ["<note-uuid>"]
 start_date: "2025-01-01T00:00:00Z"
 end_date: "2025-01-10T23:59:59Z"
 recurrence:
   type: "weekly"            # daily | weekly | monthly | yearly
-  interval: 1               # every N days/weeks/months/years
+  interval: 1               # every N periods
   days_of_week: [1,3]       # only for weekly: 0=Sun, 1=Mon...
 subtasks:
   - id: "sub-uuid-1"
@@ -84,8 +84,8 @@ created_at: "2025-01-01T10:00:00Z"
 ---
 ```
 
-Quick Tasks have no markdown body. They are created from the dashboard
-with just a title. When marked completed, they are deleted after 5 seconds.
+Quick Tasks have no markdown body. When marked completed, they are
+deleted after 5 seconds via a background goroutine.
 
 ### Person
 
@@ -108,95 +108,80 @@ social_links:
   - platform: "twitter"
     url: "https://twitter.com/johndoe"
 tags: ["friend", "work"]
-links: ["<task-uuid>", "<note-uuid>"]
+links: ["<task-uuid>"]
 notes: "Met at conference. Interested in PKM systems."
 created_at: "2025-01-01T10:00:00Z"
 updated_at: "2025-01-01T10:00:00Z"
 ---
 ```
 
-## API Design
+## Backend Architecture
+
+### Packages
+
+**cmd/server/main.go** -- Entry point. Loads config, initializes vault,
+creates Echo server, registers all routes.
+
+**internal/config/** -- Reads environment variables (SECOND_BRAIN_VAULT_PATH,
+SECOND_BRAIN_PORT) with sensible defaults. Expands ~ in vault path.
+
+**internal/model/** -- Domain models and shared types:
+- `common.go` -- BaseEntity, EntityStatus, Recurrence, Subtask, Contact, SocialLink, type constants
+- `note.go` -- Note struct
+- `task.go` -- Task struct
+- `quick_task.go` -- QuickTask struct
+- `person.go` -- Person struct
+- `response.go` -- DataResponse/ErrorResponse helpers for JSON envelope
+- `errors.go` -- ValidationError, NotFoundError, and helpers
+
+**internal/handler/** -- HTTP handlers:
+- `note.go` -- CRUD for notes
+- `task.go` -- CRUD for tasks with recurrence logic
+- `quicktask.go` -- CRUD for quick tasks with auto-delete goroutine
+- `person.go` -- CRUD for people
+- `search.go` -- Full-text search across all entity types
+- `helpers.go` -- Shared helper utilities
+
+**internal/vault/** -- File operations:
+- Atomic writes (write to temp file, rename)
+- Per-file mutex locking (sync.Map)
+- YAML frontmatter parsing with yaml.v3
+- List entities by scanning directory for .md files
+- Archive deleted entities (move to archive/ dir)
+- InitVault creates all required subdirectories
+
+### API Design
 
 Base path: `/api/v1`
 
-### Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| GET | /notes | List all notes |
-| GET | /notes/:id | Get note by ID |
-| POST | /notes | Create note |
-| PUT | /notes/:id | Update note |
-| DELETE | /notes/:id | Delete note |
-| GET | /tasks | List all tasks |
-| GET | /tasks/:id | Get task by ID |
-| POST | /tasks | Create task |
-| PUT | /tasks/:id | Update task |
-| DELETE | /tasks/:id | Delete task |
-| GET | /quick-tasks | List all quick tasks |
-| POST | /quick-tasks | Create quick task |
-| PUT | /quick-tasks/:id | Mark complete (handles auto-delete) |
-| DELETE | /quick-tasks/:id | Delete quick task |
-| GET | /people | List all people |
-| GET | /people/:id | Get person by ID |
-| POST | /people | Create person |
-| PUT | /people/:id | Update person |
-| DELETE | /people/:id | Delete person |
-| GET | /search?q=... | Full-text search across all entities |
-
-### Response Format
-
-All responses follow a consistent envelope:
-
+Response envelope:
 ```json
 {
   "data": { ... },
-  "error": ""
+  "error": "..."
 }
 ```
 
-Errors include appropriate HTTP status codes:
+Error responses use appropriate HTTP status codes (400, 404, 409, 500)
+with descriptive error messages.
 
-| Status | Meaning |
-|---|---|
-| 200 | Success |
-| 400 | Bad request (invalid input) |
-| 404 | Entity not found |
-| 409 | Conflict (e.g. duplicate ID) |
-| 500 | Internal server error |
+### Recurrence Logic
 
-## Recurrence System
+1. When PUT /tasks/:id is called with status=completed and the task
+   has recurrence configured:
+2. Spawn a new Task with fresh UUID, copy all fields
+3. Reset subtask completion statuses
+4. Calculate new start_date based on recurrence (add N days/weeks/months)
+5. Set new end_date based on new start_date + original duration
+6. Mark original task as "expired"
+7. Return the new task ID in the response
 
-When a Task with `recurrence` is marked `completed`, the backend:
+### Quick Task Auto-Delete
 
-1. Creates a new Task with a fresh UUID
-2. Copies all fields (title, subtasks, icon, location, etc.)
-3. Resets subtask completion statuses to `false`
-4. Calculates new start/end dates based on recurrence config
-5. Marks the original task as `expired` (not `completed`)
-6. Returns the new task ID in the response
-
-Recurrence is evaluated lazily -- on API request, not via cron.
-When listing tasks, the backend checks if any recurring tasks
-need to spawn new instances based on their end_date.
-
-## File Operations & Concurrency
-
-- All vault file operations use `os.ReadFile` / `os.WriteFile`
-- Write operations use a per-file mutex to prevent corruption
-- YAML frontmatter is parsed with `gopkg.in/yaml.v3`
-- Markdown body is everything after the `---\n` closing frontmatter delimiter
-- File writes are atomic: write to a temp file, then rename
-
-## Search
-
-MVP search is simple:
-- Backend loads all vault files
-- Parses frontmatter and body
-- Performs case-insensitive substring match across title, tags, and body
-- Returns matching entities with their type and ID
-
-Future: full-text index with bleed and relevance scoring.
+When a Quick Task is marked completed via PUT:
+1. The status is updated to "completed"
+2. A background goroutine waits 5 seconds
+3. The file is deleted
 
 ## Android Architecture
 
@@ -209,36 +194,67 @@ UI (Compose) --events--> ViewModel --state--> UI (Compose)
                 Repository --> API --> Backend
 ```
 
-- Each screen has a ViewModel with `StateFlow<UiState>`
-- Events are sealed classes (e.g. `NoteEvent.Save`, `NoteEvent.Delete`)
-- Side effects (navigation, toasts) use `SharedFlow<Effect>`
+Each screen has a ViewModel with `StateFlow<UiState>` and sealed event classes.
 
-### Dependency Injection
+### Package Structure
 
-Manual DI via a simple `AppModule` object (no Hilt/Dagger for MVP).
-Provides:
-- Ktor HttpClient
-- API service instances
-- Repository instances
+**data/api/** -- Ktor-based API service interface and implementation.
+Handles HTTP calls to all backend endpoints.
 
-### Navigation
+**data/dto/** -- kotlinx.serialization @Serializable data classes
+matching the backend JSON response format, including ApiResponse<T>
+envelope.
 
-Simple sealed class-based navigation with a `NavHost`-like composable.
-No third-party navigation library for MVP.
+**data/repository/** -- Repository classes wrapping ApiService with
+NetworkResult sealed class (Success / Error / Loading). Each entity
+has its own repository.
 
-### Networking
+**domain/model/** -- Domain model classes (Note, Task, QuickTask, Person,
+SearchResult) separate from DTOs.
 
-- Ktor HttpClient with content negotiation (JSON)
-- `kotlinx.serialization` for DTOs
-- Base URL: `http://localhost:8080/api/v1` (configurable)
-- Connect timeout: 5s, request timeout: 30s
+**di/** -- Manual dependency injection via AppModule providing
+HttpClient, ApiService, and Repository instances.
+
+**ui/theme/** -- Material3 theming with custom colors, typography, and shapes.
+
+**ui/navigation/** -- Sealed class Screen routes, NavHost composable,
+and a bottom navigation bar with tabs: Dashboard, Notes, Tasks, People.
+
+**ui/dashboard/** -- Dashboard screen showing quick stats (entity counts)
+and a quick task creation card with the latest quick tasks listed.
+
+**ui/notes/** -- Note listing (LazyColumn), detail view with markdown
+content, and edit screen for title/tags/body.
+
+**ui/tasks/** -- Task listing with status filtering, detail view with
+subtask checkboxes, and edit screen for all task fields.
+
+**ui/people/** -- Person listing (alphabetical), detail view with
+contacts/social links/notes, and edit screen.
+
+## Concurrency & File Safety
+
+- All vault file operations use per-file mutexes (sync.Map keyed by
+  absolute path)
+- Writes are atomic: content is written to a temp file first, then
+  renamed to the target path
+- Read operations acquire the same per-file mutex
+- Deleted entities are moved to the archive directory, not permanently
+  deleted
+
+## Search
+
+MVP search is a simple case-insensitive substring match:
+- Loads all vault files for all entity types
+- Parses frontmatter and body
+- Checks title, tags, notes field, and body content
+- Returns matching entities with their type and ID
 
 ## Future Considerations
 
 - File watching with fsnotify for hot-reload of vault changes
-- Git-based sync or WebDAV
-- Full text search with bleve
-- WikiLink resolution (`[[title]]` -> entity lookup)
+- Full-text index with bleve for relevance scoring
+- WikiLink resolution ([[title]] -> entity lookup)
 - Archived entity restoration from archive folder
 - Offline mode with local vault copy
-- Backup to GitHub
+- GitHub/WebDAV sync

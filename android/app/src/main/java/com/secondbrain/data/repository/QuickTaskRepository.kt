@@ -1,32 +1,31 @@
 package com.secondbrain.data.repository
 
 import com.secondbrain.data.api.ApiService
-import com.secondbrain.data.dto.ApiResponse
 import com.secondbrain.data.dto.CreateQuickTaskRequest
 import com.secondbrain.domain.model.QuickTask
 
 class QuickTaskRepository(private val api: ApiService) {
 
-    private fun <T> checkError(response: ApiResponse<T>): T {
-        if (response.error.isNotBlank()) {
-            throw Exception(response.error)
-        }
-        return response.data ?: throw Exception("Empty response")
-    }
-
     suspend fun getAll(): Result<List<QuickTask>> = runCatching {
-        checkError(api.getAllQuickTasks()).map { it.toDomain() }
+        val response = api.getAllQuickTasks()
+        if (response.error.isNotBlank()) throw Exception(response.error)
+        (response.data ?: emptyList()).map { it.toDomain() }
     }
 
     suspend fun create(title: String): Result<QuickTask> = runCatching {
-        checkError(api.createQuickTask(CreateQuickTaskRequest(title = title))).toDomain()
+        val response = api.createQuickTask(CreateQuickTaskRequest(title = title))
+        if (response.error.isNotBlank()) throw Exception(response.error)
+        (response.data ?: throw Exception("Empty response")).toDomain()
     }
 
     suspend fun complete(id: String): Result<QuickTask> = runCatching {
-        checkError(api.completeQuickTask(id)).toDomain()
+        val response = api.completeQuickTask(id)
+        if (response.error.isNotBlank()) throw Exception(response.error)
+        (response.data ?: throw Exception("Empty response")).toDomain()
     }
 
     suspend fun delete(id: String): Result<Unit> = runCatching {
-        checkError(api.deleteQuickTask(id))
+        val response = api.deleteQuickTask(id)
+        if (response.error.isNotBlank()) throw Exception(response.error)
     }
 }

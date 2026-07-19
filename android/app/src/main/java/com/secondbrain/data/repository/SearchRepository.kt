@@ -1,21 +1,21 @@
 package com.secondbrain.data.repository
 
 import com.secondbrain.data.api.ApiService
-import com.secondbrain.data.dto.ApiResponse
+import com.secondbrain.data.dto.SearchResultDto
 import com.secondbrain.domain.model.SearchResult
 
 class SearchRepository(private val api: ApiService) {
 
-    private fun <T> checkError(response: ApiResponse<T>): T {
-        if (response.error.isNotBlank()) {
-            throw Exception(response.error)
-        }
-        return response.data ?: throw Exception("Empty response")
-    }
-
     suspend fun search(query: String): Result<List<SearchResult>> = runCatching {
-        checkError(api.search(query)).map {
-            SearchResult(id = it.id, type = it.type, title = it.title, snippet = it.snippet)
-        }
+        val response = api.search(query)
+        if (response.error.isNotBlank()) throw Exception(response.error)
+        (response.data ?: emptyList()).map { it.toDomain() }
     }
 }
+
+fun SearchResultDto.toDomain(): SearchResult = SearchResult(
+    id = id,
+    type = type,
+    title = title,
+    snippet = snippet
+)
