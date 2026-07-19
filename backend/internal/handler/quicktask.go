@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -13,10 +16,15 @@ import (
 
 type QuickTaskHandler struct {
 	vault *vault.Vault
+	ctx   context.Context
 }
 
 func NewQuickTaskHandler(v *vault.Vault) *QuickTaskHandler {
-	return &QuickTaskHandler{vault: v}
+	return NewQuickTaskHandlerWithContext(v, context.Background())
+}
+
+func NewQuickTaskHandlerWithContext(v *vault.Vault, ctx context.Context) *QuickTaskHandler {
+	return &QuickTaskHandler{vault: v, ctx: ctx}
 }
 
 func (h *QuickTaskHandler) List(c echo.Context) error {
@@ -79,8 +87,14 @@ func (h *QuickTaskHandler) MarkComplete(c echo.Context) error {
 	}
 
 	go func() {
-		time.Sleep(5 * time.Second)
-		_ = h.vault.Delete(model.TypeQuickTask, id)
+		select {
+		case <-time.After(5 * time.Second):
+			if err := h.vault.Delete(model.TypeQuickTask, id); err != nil && !errors.Is(err, vault.ErrNotFound) {
+				log.Printf("quick task auto-delete failed: id=%s err=%v", id, err)
+			}
+		case <-h.ctx.Done():
+			return
+		}
 	}()
 
 	return c.JSON(http.StatusOK, model.DataResponse(qt))
