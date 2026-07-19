@@ -4,8 +4,8 @@ import "time"
 
 type Note struct {
 	BaseEntity `yaml:",inline" json:",inline"`
-	Title      string   `yaml:"title" json:"title"`
-	Body       string   `yaml:"-" json:"body"`
+	Title      string `yaml:"title" json:"title"`
+	Body       string `yaml:"-" json:"body"`
 }
 
 func NewNote(id, title string) *Note {

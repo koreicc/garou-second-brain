@@ -30,8 +30,9 @@ data class DashboardUiState(
 sealed interface DashboardEvent {
     data class LoadData(val force: Boolean = false) : DashboardEvent
     data class UpdateQuickTaskInput(val input: String) : DashboardEvent
-    data object CreateQuickTask : DashboardEvent
+    data class CreateQuickTask(val title: String) : DashboardEvent
     data class CompleteQuickTask(val id: String) : DashboardEvent
+    data class DeleteQuickTask(val id: String) : DashboardEvent
     data class DismissError(val message: String) : DashboardEvent
 }
 
@@ -55,8 +56,9 @@ class DashboardViewModel(
             is DashboardEvent.UpdateQuickTaskInput -> {
                 _state.update { it.copy(quickTaskInput = event.input) }
             }
-            is DashboardEvent.CreateQuickTask -> createQuickTask()
+            is DashboardEvent.CreateQuickTask -> createQuickTask(event.title)
             is DashboardEvent.CompleteQuickTask -> completeQuickTask(event.id)
+            is DashboardEvent.DeleteQuickTask -> deleteQuickTask(event.id)
             is DashboardEvent.DismissError -> {
                 _state.update { it.copy(error = null) }
             }
@@ -104,12 +106,12 @@ class DashboardViewModel(
         }
     }
 
-    private fun createQuickTask() {
-        val title = _state.value.quickTaskInput.trim()
-        if (title.isEmpty()) return
+    private fun createQuickTask(title: String) {
+        val trimmedTitle = title.trim()
+        if (trimmedTitle.isEmpty()) return
 
         viewModelScope.launch {
-            quickTaskRepository.create(title).onSuccess {
+            quickTaskRepository.create(trimmedTitle).onSuccess {
                 _state.update { state ->
                     state.copy(quickTaskInput = "")
                 }
@@ -123,6 +125,16 @@ class DashboardViewModel(
     private fun completeQuickTask(id: String) {
         viewModelScope.launch {
             quickTaskRepository.complete(id).onSuccess {
+                loadData()
+            }.onFailure { e ->
+                _state.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    private fun deleteQuickTask(id: String) {
+        viewModelScope.launch {
+            quickTaskRepository.delete(id).onSuccess {
                 loadData()
             }.onFailure { e ->
                 _state.update { it.copy(error = e.message) }

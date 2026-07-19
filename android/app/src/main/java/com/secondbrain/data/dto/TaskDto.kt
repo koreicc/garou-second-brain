@@ -54,7 +54,8 @@ data class CreateTaskRequest(
     val endDate: String = "",
     val recurrence: RecurrenceDto? = null,
     val subtasks: List<SubtaskDto> = emptyList(),
-    val content: String = ""
+    @SerialName("body")
+    val body: String = ""
 )
 
 @Serializable
@@ -71,7 +72,8 @@ data class UpdateTaskRequest(
     val endDate: String? = null,
     val recurrence: RecurrenceDto? = null,
     val subtasks: List<SubtaskDto>? = null,
-    val content: String? = null
+    @SerialName("body")
+    val body: String? = null
 )
 
 fun TaskDto.toDomain(): Task = Task(
@@ -86,7 +88,7 @@ fun TaskDto.toDomain(): Task = Task(
     endDate = endDate,
     recurrence = recurrence?.toDomain(),
     subtasks = subtasks.map { it.toDomain() },
-    content = content,
+    body = body,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

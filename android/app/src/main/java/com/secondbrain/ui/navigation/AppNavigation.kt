@@ -10,10 +10,12 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.NoteAlt
 import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -38,6 +40,7 @@ import com.secondbrain.ui.notes.NoteListScreen
 import com.secondbrain.ui.people.PersonDetailScreen
 import com.secondbrain.ui.people.PersonEditScreen
 import com.secondbrain.ui.people.PersonListScreen
+import com.secondbrain.ui.search.SearchScreen
 import com.secondbrain.ui.tasks.TaskDetailScreen
 import com.secondbrain.ui.tasks.TaskEditScreen
 import com.secondbrain.ui.tasks.TaskListScreen
@@ -55,6 +58,12 @@ private val bottomNavItems = listOf(
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home,
         route = Screen.Dashboard
+    ),
+    BottomNavItem(
+        label = "Search",
+        selectedIcon = Icons.Filled.Search,
+        unselectedIcon = Icons.Outlined.Search,
+        route = Screen.Search
     ),
     BottomNavItem(
         label = "Notes",
@@ -227,6 +236,21 @@ fun AppNavigation() {
                 val screen: Screen.PersonEdit = backStackEntry.toRoute()
                 PersonEditScreen(
                     personId = screen.personId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<Screen.Search> {
+                SearchScreen(
+                    onNavigateToNoteDetail = { noteId ->
+                        navController.navigate(Screen.NoteDetail(noteId))
+                    },
+                    onNavigateToTaskDetail = { taskId ->
+                        navController.navigate(Screen.TaskDetail(taskId))
+                    },
+                    onNavigateToPersonDetail = { personId ->
+                        navController.navigate(Screen.PersonDetail(personId))
+                    },
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

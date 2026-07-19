@@ -8,6 +8,9 @@ sealed interface Screen {
     data object Dashboard : Screen
 
     @Serializable
+    data object Search : Screen
+
+    @Serializable
     data object NoteList : Screen
 
     @Serializable

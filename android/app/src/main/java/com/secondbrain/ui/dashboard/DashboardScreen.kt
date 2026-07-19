@@ -5,10 +5,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,6 +19,45 @@ import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Note
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Task
+
+@Composable
+private fun QuickTaskRow(
+    quickTask: QuickTask,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = quickTask.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(onClick = onComplete) {
+                Icon(
+                    Icons.Default.CheckCircleOutline,
+                    contentDescription = "Complete",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +97,9 @@ fun DashboardScreen(
         ) {
             item {
                 QuickTaskCard(
-                    onAddQuickTask = { title -> viewModel.onEvent(DashboardEvent.CreateQuickTask(title)) }
+                    onAddQuickTask = { title ->
+                        viewModel.onEvent(DashboardEvent.CreateQuickTask(title = title))
+                    }
                 )
             }
 
@@ -65,6 +109,22 @@ fun DashboardScreen(
                     taskCount = state.taskCount,
                     quickTaskCount = state.quickTasks.size
                 )
+            }
+
+            if (state.quickTasks.isNotEmpty()) {
+                item {
+                    Text(
+                        "Quick Tasks (${state.quickTasks.size})",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+                items(state.quickTasks, key = { it.id }) { qt ->
+                    QuickTaskRow(
+                        quickTask = qt,
+                        onComplete = { viewModel.onEvent(DashboardEvent.CompleteQuickTask(qt.id)) },
+                        onDelete = { viewModel.onEvent(DashboardEvent.DeleteQuickTask(qt.id)) }
+                    )
+                }
             }
 
             if (state.recentNotes.isNotEmpty()) {

@@ -5,6 +5,7 @@ import com.secondbrain.data.api.KtorApiService
 import com.secondbrain.data.repository.NoteRepository
 import com.secondbrain.data.repository.PersonRepository
 import com.secondbrain.data.repository.QuickTaskRepository
+import com.secondbrain.data.repository.SearchRepository
 import com.secondbrain.data.repository.TaskRepository
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -47,5 +48,9 @@ object AppModule {
 
     val personRepository: PersonRepository by lazy {
         PersonRepository(apiService)
+    }
+
+    val searchRepository: SearchRepository by lazy {
+        SearchRepository(apiService)
     }
 }

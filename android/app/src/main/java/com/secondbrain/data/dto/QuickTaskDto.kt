@@ -18,6 +18,11 @@ data class CreateQuickTaskRequest(
     val title: String
 )
 
+@Serializable
+data class UpdateQuickTaskRequest(
+    val status: String
+)
+
 fun QuickTaskDto.toDomain(): QuickTask = QuickTask(
     id = id,
     title = title,

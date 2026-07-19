@@ -81,9 +81,8 @@ class KtorApiService(
     }
 
     override suspend fun completeQuickTask(id: String): ApiResponse<QuickTaskDto> {
-        return client.put("$baseUrl/quick-tasks/$id") {
+        return client.put("$baseUrl/quick-tasks/$id/complete") {
             contentType(ContentType.Application.Json)
-            setBody(UpdateQuickTaskRequest(status = "completed"))
         }.body()
     }
 
