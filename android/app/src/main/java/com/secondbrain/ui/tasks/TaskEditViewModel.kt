@@ -175,8 +175,8 @@ class TaskEditViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
             val tags = s.tagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
-            val startDateISO = if (s.startDate.isNotBlank()) "${s.startDate}T00:00:00Z" else ""
-            val endDateISO = if (s.endDate.isNotBlank()) "${s.endDate}T23:59:59Z" else ""
+            val startDateISO = if (s.startDate.isNotBlank()) "${s.startDate}T00:00:00Z" else null
+            val endDateISO = if (s.endDate.isNotBlank()) "${s.endDate}T23:59:59Z" else null
 
             val recurrence = s.recurrenceType?.let { type ->
                 RecurrenceDto(type = type, interval = s.recurrenceInterval)

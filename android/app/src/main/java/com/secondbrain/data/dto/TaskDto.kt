@@ -49,9 +49,9 @@ data class CreateTaskRequest(
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
     @SerialName("start_date")
-    val startDate: String = "",
+    val startDate: String? = null,
     @SerialName("end_date")
-    val endDate: String = "",
+    val endDate: String? = null,
     val recurrence: RecurrenceDto? = null,
     val subtasks: List<SubtaskDto> = emptyList(),
     @SerialName("body")
