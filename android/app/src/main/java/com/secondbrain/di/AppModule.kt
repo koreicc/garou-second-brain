@@ -1,5 +1,6 @@
 package com.secondbrain.di
 
+import com.secondbrain.BuildConfig
 import com.secondbrain.data.api.ApiService
 import com.secondbrain.data.api.KtorApiService
 import com.secondbrain.data.repository.NoteRepository
@@ -14,7 +15,7 @@ import kotlinx.serialization.json.Json
 
 object AppModule {
 
-    private const val DEFAULT_BASE_URL = "http://10.0.2.2:8080/api/v1"
+    private val DEFAULT_BASE_URL = BuildConfig.API_BASE_URL
 
     private val json = Json {
         ignoreUnknownKeys = true
