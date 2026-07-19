@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +41,11 @@ fun NoteListScreen(
 ) {
     val viewModel = rememberNoteListViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Reload notes every time this screen becomes visible (e.g. navigating back from edit)
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(NoteListEvent.LoadNotes)
+    }
 
     Scaffold(
         topBar = {

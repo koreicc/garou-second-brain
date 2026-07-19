@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -85,7 +86,20 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Dashboard") })
+            TopAppBar(
+                title = { Text("Dashboard") },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.onEvent(DashboardEvent.LoadData(force = true)) },
+                        enabled = !state.isLoading
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Reload from server"
+                        )
+                    }
+                }
+            )
         }
     ) { padding ->
         LazyColumn(

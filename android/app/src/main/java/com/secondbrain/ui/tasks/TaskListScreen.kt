@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,11 @@ fun TaskListScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Reload tasks every time this screen becomes visible
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(TaskListEvent.LoadTasks)
+    }
 
     Scaffold(
         topBar = {

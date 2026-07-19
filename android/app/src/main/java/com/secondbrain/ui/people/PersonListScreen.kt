@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,11 @@ fun PersonListScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Reload people every time this screen becomes visible
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(PersonListEvent.LoadPeople)
+    }
 
     Scaffold(
         topBar = {
