@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,6 +41,14 @@ fun PersonDetailScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors in snackbar
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
 
     // Reload person data when navigating back from edit screen
     RefreshOnResume {
@@ -47,17 +56,24 @@ fun PersonDetailScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(state.person?.name ?: "Person") },
+                title = {
+                    Text(
+                        text = state.person?.name ?: "Person",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to people")
                     }
                 },
                 actions = {
                     IconButton(onClick = onEditClick) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        Icon(Icons.Default.Edit, contentDescription = "Edit person")
                     }
                 }
             )
@@ -82,18 +98,18 @@ fun PersonDetailScreen(
                         Text("Contacts", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         person.contacts.forEach { contact ->
-                            ContactRow(contact = contact)
-                            Spacer(modifier = Modifier.height(4.dp))
+                            ContactCard(contact = contact)
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
 
                     if (person.socialLinks.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text("Social Links", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         person.socialLinks.forEach { link ->
-                            SocialLinkRow(link = link)
-                            Spacer(modifier = Modifier.height(4.dp))
+                            SocialLinkCard(link = link)
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
 
@@ -119,33 +135,72 @@ fun PersonDetailScreen(
 }
 
 @Composable
-private fun ContactRow(contact: Contact) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = when (contact.type) {
-                "phone" -> Icons.Default.Phone
-                "email" -> Icons.Default.Email
-                else -> Icons.Default.Link
-            },
-            contentDescription = null,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Column {
-            Text(text = contact.value, style = MaterialTheme.typography.bodyMedium)
-            if (contact.label.isNotEmpty()) {
-                Text(text = contact.label, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun ContactCard(contact: Contact) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = when (contact.type) {
+                    "phone" -> Icons.Default.Phone
+                    "email" -> Icons.Default.Email
+                    else -> Icons.Default.Link
+                },
+                contentDescription = when (contact.type) {
+                    "phone" -> "Phone contact"
+                    "email" -> "Email contact"
+                    else -> "Contact"
+                },
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(text = contact.value, style = MaterialTheme.typography.bodyMedium)
+                if (contact.label.isNotEmpty()) {
+                    Text(
+                        text = contact.label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SocialLinkRow(link: SocialLink) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "${link.platform}: ${link.url}", style = MaterialTheme.typography.bodyMedium)
+private fun SocialLinkCard(link: SocialLink) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Link,
+                contentDescription = "${link.platform} link",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = link.platform,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = link.url,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

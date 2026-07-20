@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -38,6 +39,14 @@ fun TaskDetailScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors in snackbar
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
 
     // Reload task data when navigating back from edit screen
     RefreshOnResume {
@@ -45,22 +54,29 @@ fun TaskDetailScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(state.task?.title ?: "Task") },
+                title = {
+                    Text(
+                        text = state.task?.title ?: "Task",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to tasks")
                     }
                 },
                 actions = {
                     if (state.task?.status != "completed") {
                         IconButton(onClick = { viewModel.onEvent(TaskDetailEvent.Complete) }) {
-                            Icon(Icons.Default.Check, contentDescription = "Complete")
+                            Icon(Icons.Default.Check, contentDescription = "Complete task")
                         }
                     }
                     IconButton(onClick = onEditClick) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        Icon(Icons.Default.Edit, contentDescription = "Edit task")
                     }
                 }
             )
@@ -105,7 +121,10 @@ fun TaskDetailScreen(
                         Text("Subtasks", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         task.subtasks.forEach { subtask ->
-                            SubtaskRow(subtask = subtask)
+                            SubtaskRow(
+                                subtask = subtask,
+                                onCheckedChange = { viewModel.onEvent(TaskDetailEvent.ToggleSubtask(subtask.id)) }
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
                         }
                     }
@@ -121,11 +140,11 @@ fun TaskDetailScreen(
 }
 
 @Composable
-private fun SubtaskRow(subtask: Subtask) {
+private fun SubtaskRow(subtask: Subtask, onCheckedChange: ((Boolean) -> Unit)?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
             checked = subtask.completed,
-            onCheckedChange = null
+            onCheckedChange = onCheckedChange
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(

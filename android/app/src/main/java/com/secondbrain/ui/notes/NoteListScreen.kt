@@ -20,10 +20,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Note
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.util.formatRelativeTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +46,14 @@ fun NoteListScreen(
 ) {
     val viewModel = rememberNoteListViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors in snackbar
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
 
     // Reload notes every time this screen becomes visible (e.g. navigating back from edit)
     RefreshOnResume {
@@ -48,9 +61,16 @@ fun NoteListScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Notes") },
+                title = {
+                    Text(
+                        text = "Notes",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 actions = {
                     IconButton(onClick = onAddNote) {
                         Icon(Icons.Filled.Add, contentDescription = "Add note")
@@ -100,15 +120,6 @@ fun NoteListScreen(
                 }
             }
         }
-
-        state.error?.let { error ->
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(16.dp)
-            )
-        }
     }
 }
 
@@ -149,16 +160,18 @@ private fun NoteCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text(
-                    text = "Updated: ${note.updatedAt.take(10)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (note.updatedAt.isNotEmpty()) {
+                    Text(
+                        text = formatRelativeTime(note.updatedAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
-                    contentDescription = "Delete note",
+                    contentDescription = "Delete note: ${note.title}",
                     tint = MaterialTheme.colorScheme.error
                 )
             }

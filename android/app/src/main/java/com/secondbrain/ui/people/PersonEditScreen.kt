@@ -29,11 +29,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -61,18 +64,33 @@ fun PersonEditScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.isSaved) {
         if (state.isSaved) onNavigateBack()
     }
 
+    // Show errors in snackbar
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (personId != null) "Edit Person" else "New Person") },
+                title = {
+                    Text(
+                        text = if (personId != null) "Edit Person" else "New Person",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to people")
                     }
                 },
                 actions = {
@@ -80,7 +98,7 @@ fun PersonEditScreen(
                         onClick = { viewModel.onEvent(PersonEditEvent.Save) },
                         enabled = state.name.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Save")
+                        Icon(Icons.Default.Add, contentDescription = "Save person")
                     }
                 }
             )
@@ -166,7 +184,7 @@ fun PersonEditScreen(
                         ) {
                             Icon(
                                 Icons.Default.Link,
-                                contentDescription = null,
+                                contentDescription = "${link.platform} link",
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -192,7 +210,7 @@ fun PersonEditScreen(
                             ) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Remove link",
+                                    contentDescription = "Remove ${link.platform} link",
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -230,7 +248,7 @@ fun PersonEditScreen(
                         onClick = { viewModel.onEvent(PersonEditEvent.AddSocialLink) },
                         enabled = state.newPlatform.isNotBlank() && state.newUrl.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add link")
+                        Icon(Icons.Default.Add, contentDescription = "Add social link")
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -247,15 +265,6 @@ fun PersonEditScreen(
                         .height(120.dp),
                     minLines = 3
                 )
-
-                state.error?.let { error ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
             }
         }
     }
