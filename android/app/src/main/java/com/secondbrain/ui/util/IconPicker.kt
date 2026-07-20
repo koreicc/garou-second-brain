@@ -75,7 +75,7 @@ private val taskIcons: List<IconEntry> = listOf(
     IconEntry("task", Icons.Default.CheckCircle),
     IconEntry("edit", Icons.Default.Edit),
     IconEntry("create", Icons.Default.Create),
-    IconEntry("write", Icons.Default.EditNote),
+    IconEntry("write", Icons.Default.Create),
     IconEntry("book", Icons.Default.Book),
     IconEntry("note", Icons.Default.NoteAlt),
     IconEntry("list", Icons.Default.ListAlt),
