@@ -5,14 +5,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withAnnotation
-import androidx.compose.ui.graphics.Color
 
 /**
  * Renders text that may contain [[wikilink]] references.
@@ -55,6 +56,7 @@ fun WikilinkText(
  * Builds an AnnotatedString from raw text, marking [[wikilink]] regions with
  * a "wikilink" annotation and applying link styling.
  */
+@OptIn(ExperimentalTextApi::class)
 private fun buildWikilinkAnnotatedString(
     text: String,
     linkColor: Color
