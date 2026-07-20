@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.secondbrain.data.dto.UpdateTaskRequest
 import com.secondbrain.data.repository.TaskRepository
 import com.secondbrain.domain.model.Task
-import com.secondbrain.domain.model.toDto
+import com.secondbrain.data.dto.toDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
