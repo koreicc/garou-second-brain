@@ -1,5 +1,6 @@
 package com.secondbrain.ui.tasks
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -181,10 +183,11 @@ fun TaskEditScreen(
                 ) {
                     // Icon picker button
                     Surface(
-                        onClick = { viewModel.onEvent(TaskEditEvent.ShowIconPicker) },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clickable { viewModel.onEvent(TaskEditEvent.ShowIconPicker) },
                         shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(56.dp)
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             val icon = resolveIcon(state.icon)

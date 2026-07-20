@@ -52,7 +52,6 @@ import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Write
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -76,7 +75,7 @@ private val taskIcons: List<IconEntry> = listOf(
     IconEntry("task", Icons.Default.CheckCircle),
     IconEntry("edit", Icons.Default.Edit),
     IconEntry("create", Icons.Default.Create),
-    IconEntry("write", Icons.Default.Write),
+    IconEntry("write", Icons.Default.EditNote),
     IconEntry("book", Icons.Default.Book),
     IconEntry("note", Icons.Default.NoteAlt),
     IconEntry("list", Icons.Default.ListAlt),
