@@ -312,8 +312,6 @@ fun TaskEditScreen(
                         .height(150.dp),
                     minLines = 5
                 )
-
-
             }
         }
     }

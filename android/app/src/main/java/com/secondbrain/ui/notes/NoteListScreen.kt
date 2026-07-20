@@ -160,11 +160,13 @@ private fun NoteCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Text(
-                    text = formatRelativeTime(note.updatedAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (note.updatedAt.isNotEmpty()) {
+                    Text(
+                        text = formatRelativeTime(note.updatedAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             IconButton(onClick = onDelete) {
                 Icon(

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -42,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Task
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -190,26 +190,5 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun StatusBadge(status: String) {
-    val (label, containerColor, contentColor) = when (status) {
-        "pending" -> Triple("Pending", MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f), MaterialTheme.colorScheme.tertiary)
-        "in-progress" -> Triple("In Progress", MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), MaterialTheme.colorScheme.primary)
-        "completed" -> Triple("Done", MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f), MaterialTheme.colorScheme.secondary)
-        else -> Triple(status, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), MaterialTheme.colorScheme.outline)
-    }
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = containerColor
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-        )
     }
 }
