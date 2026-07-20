@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 data class NoteEditUiState(
     val title: String = "",
-    val tagsInput: String = "",
+    val tags: List<String> = emptyList(),
     val body: String = "",
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
@@ -22,7 +22,7 @@ data class NoteEditUiState(
 
 sealed interface NoteEditEvent {
     data class UpdateTitle(val title: String) : NoteEditEvent
-    data class UpdateTags(val tags: String) : NoteEditEvent
+    data class SetTags(val tags: List<String>) : NoteEditEvent
     data class UpdateBody(val body: String) : NoteEditEvent
     data object Save : NoteEditEvent
 }
@@ -49,7 +49,7 @@ class NoteEditViewModel(
                     _state.update {
                         it.copy(
                             title = note.title,
-                            tagsInput = note.tags.joinToString(", "),
+                            tags = note.tags,
                             body = note.body,
                             isLoading = false
                         )
@@ -64,7 +64,7 @@ class NoteEditViewModel(
     fun onEvent(event: NoteEditEvent) {
         when (event) {
             is NoteEditEvent.UpdateTitle -> _state.update { it.copy(title = event.title) }
-            is NoteEditEvent.UpdateTags -> _state.update { it.copy(tagsInput = event.tags) }
+            is NoteEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
             is NoteEditEvent.UpdateBody -> _state.update { it.copy(body = event.body) }
             is NoteEditEvent.Save -> save()
         }
@@ -76,18 +76,17 @@ class NoteEditViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            val tags = s.tagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
             val result = if (noteId != null) {
                 noteRepository.update(noteId, UpdateNoteRequest(
                     title = s.title,
-                    tags = tags,
+                    tags = s.tags,
                     body = s.body
                 ))
             } else {
                 noteRepository.create(CreateNoteRequest(
                     title = s.title,
-                    tags = tags,
+                    tags = s.tags,
                     body = s.body
                 ))
             }

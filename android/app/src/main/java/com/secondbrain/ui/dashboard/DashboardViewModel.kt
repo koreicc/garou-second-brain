@@ -9,6 +9,7 @@ import com.secondbrain.data.repository.TaskRepository
 import com.secondbrain.domain.model.Note
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Task
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,8 @@ data class DashboardUiState(
     val recentNotes: List<Note> = emptyList(),
     val recentTasks: List<Task> = emptyList(),
     val quickTasks: List<QuickTask> = emptyList(),
+    /** Quick tasks that are completed and awaiting deletion with countdown */
+    val completingQuickTasks: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val quickTaskInput: String = ""
@@ -65,12 +68,43 @@ class DashboardViewModel(
         }
     }
 
+    /**
+     * Silently reloads data without showing loading indicator.
+     * Used by RefreshOnResume to avoid flicker.
+     */
+    fun silentReload() {
+        viewModelScope.launch {
+            // Don't set isLoading = true to avoid flicker
+            val loads = listOf(
+                launch {
+                    noteRepository.getAll().onSuccess { notes ->
+                        _state.update { it.copy(noteCount = notes.size, recentNotes = notes.take(5)) }
+                    }
+                },
+                launch {
+                    taskRepository.getAll().onSuccess { tasks ->
+                        _state.update { it.copy(taskCount = tasks.size, recentTasks = tasks.take(5)) }
+                    }
+                },
+                launch {
+                    personRepository.getAll().onSuccess { people ->
+                        _state.update { it.copy(personCount = people.size) }
+                    }
+                },
+                launch {
+                    quickTaskRepository.getAll().onSuccess { quickTasks ->
+                        _state.update { it.copy(quickTasks = quickTasks) }
+                    }
+                }
+            )
+            loads.forEach { it.join() }
+        }
+    }
+
     private fun loadData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            // Load counts and quick tasks in parallel, then clear loading once
-            // every source has responded (previously isLoading was cleared early).
             val loads = listOf(
                 launch {
                     noteRepository.getAll().onSuccess { notes ->
@@ -124,20 +158,47 @@ class DashboardViewModel(
 
     private fun completeQuickTask(id: String) {
         viewModelScope.launch {
-            quickTaskRepository.complete(id).onSuccess {
-                loadData()
-            }.onFailure { e ->
+            // Optimistic: immediately remove from list and show countdown
+            _state.update {
+                it.copy(
+                    quickTasks = it.quickTasks.filter { qt -> qt.id != id },
+                    completingQuickTasks = it.completingQuickTasks + (id to 5)
+                )
+            }
+
+            // Countdown from 5 to 1
+            for (remaining in 4 downTo 1) {
+                delay(1000)
+                _state.update {
+                    it.copy(completingQuickTasks = it.completingQuickTasks + (id to remaining))
+                }
+            }
+
+            // Wait last second
+            delay(1000)
+
+            // Mark as completed on backend (which triggers 5-second backend delete)
+            quickTaskRepository.complete(id).onFailure { e ->
                 _state.update { it.copy(error = e.message) }
+            }
+
+            // Remove countdown entry
+            _state.update {
+                it.copy(completingQuickTasks = it.completingQuickTasks - id)
             }
         }
     }
 
     private fun deleteQuickTask(id: String) {
         viewModelScope.launch {
-            quickTaskRepository.delete(id).onSuccess {
-                loadData()
-            }.onFailure { e ->
+            // Optimistic: remove from list immediately
+            _state.update {
+                it.copy(quickTasks = it.quickTasks.filter { qt -> qt.id != id })
+            }
+
+            quickTaskRepository.delete(id).onFailure { e ->
                 _state.update { it.copy(error = e.message) }
+                loadData()
             }
         }
     }

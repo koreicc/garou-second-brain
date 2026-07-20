@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.ui.util.TagInput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,12 +154,10 @@ fun PersonEditScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Tags
-                OutlinedTextField(
-                    value = state.tagsInput,
-                    onValueChange = { viewModel.onEvent(PersonEditEvent.UpdateTags(it)) },
-                    label = { Text("Tags (comma separated)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                TagInput(
+                    tags = state.tags,
+                    onTagsChanged = { viewModel.onEvent(PersonEditEvent.SetTags(it)) },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 

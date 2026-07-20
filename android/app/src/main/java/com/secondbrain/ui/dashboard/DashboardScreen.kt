@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +41,7 @@ import com.secondbrain.ui.util.formatRelativeTime
 @Composable
 private fun QuickTaskRow(
     quickTask: QuickTask,
+    countdown: Int?,
     onComplete: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -60,18 +62,35 @@ private fun QuickTaskRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (quickTask.createdAt.isNotEmpty()) {
+                if (quickTask.createdAt.isNotEmpty() && countdown == null) {
                     Text(
                         text = formatRelativeTime(quickTask.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (countdown != null) {
+                    Text(
+                        text = "Completed. Deleting in $countdown...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
-            Checkbox(
-                checked = false,
-                onCheckedChange = { onComplete() }
-            )
+            if (countdown == null) {
+                Checkbox(
+                    checked = false,
+                    onCheckedChange = { onComplete() }
+                )
+            } else {
+                Text(
+                    text = countdown.toString(),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.secondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
@@ -115,9 +134,9 @@ fun DashboardScreen(
         }
     }
 
-    // Reload data every time the screen resumes (e.g. navigating back from detail/edit)
+    // Reload data silently every time the screen resumes (no loading flicker)
     RefreshOnResume {
-        viewModel.onEvent(DashboardEvent.LoadData)
+        viewModel.silentReload()
     }
 
     Scaffold(
@@ -176,8 +195,10 @@ fun DashboardScreen(
                     )
                 }
                 items(state.quickTasks, key = { it.id }) { qt ->
+                    val countdown = state.completingQuickTasks[qt.id]
                     QuickTaskRow(
                         quickTask = qt,
+                        countdown = countdown,
                         onComplete = { viewModel.onEvent(DashboardEvent.CompleteQuickTask(qt.id)) },
                         onDelete = { viewModel.onEvent(DashboardEvent.DeleteQuickTask(qt.id)) }
                     )
