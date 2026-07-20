@@ -13,12 +13,17 @@ import kotlinx.coroutines.launch
 data class TaskListUiState(
     val tasks: List<Task> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showDeleteDialog: Boolean = false,
+    val pendingDeleteTask: Task? = null
 )
 
 sealed interface TaskListEvent {
     data object LoadTasks : TaskListEvent
     data class DeleteTask(val id: String) : TaskListEvent
+    data class ShowDeleteConfirmation(val task: Task) : TaskListEvent
+    data object DismissDelete : TaskListEvent
+    data object ConfirmDelete : TaskListEvent
 }
 
 class TaskListViewModel(
@@ -36,6 +41,29 @@ class TaskListViewModel(
         when (event) {
             is TaskListEvent.LoadTasks -> loadTasks()
             is TaskListEvent.DeleteTask -> deleteTask(event.id)
+            is TaskListEvent.ShowDeleteConfirmation -> {
+                _state.update { it.copy(showDeleteDialog = true, pendingDeleteTask = event.task) }
+            }
+            is TaskListEvent.DismissDelete -> {
+                _state.update { it.copy(showDeleteDialog = false, pendingDeleteTask = null) }
+            }
+            is TaskListEvent.ConfirmDelete -> {
+                val task = _state.value.pendingDeleteTask ?: return
+                _state.update { it.copy(showDeleteDialog = false) }
+                deleteTask(task.id)
+            }
+        }
+    }
+
+    /**
+     * Silently reloads without showing the loading indicator.
+     */
+    fun silentReload() {
+        viewModelScope.launch {
+            taskRepository.getAll()
+                .onSuccess { tasks ->
+                    _state.update { it.copy(tasks = tasks) }
+                }
         }
     }
 
@@ -50,9 +78,15 @@ class TaskListViewModel(
 
     private fun deleteTask(id: String) {
         viewModelScope.launch {
+            // Optimistic removal
+            _state.update { it.copy(tasks = it.tasks.filter { t -> t.id != id }) }
+
             taskRepository.delete(id)
-                .onSuccess { loadTasks() }
-                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+                .onSuccess { silentReload() }
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message) }
+                    silentReload()
+                }
         }
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,9 +57,32 @@ fun NoteListScreen(
         }
     }
 
-    // Reload notes every time this screen becomes visible (e.g. navigating back from edit)
+    // Reload notes silently every time the screen resumes (no loading flicker)
     RefreshOnResume {
-        viewModel.onEvent(NoteListEvent.LoadNotes)
+        viewModel.silentReload()
+    }
+
+    // Delete confirmation dialog
+    if (state.showDeleteDialog && state.pendingDeleteNote != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onEvent(NoteListEvent.DismissDelete) },
+            title = { Text("Delete Note") },
+            text = {
+                Text("Are you sure you want to delete \"${state.pendingDeleteNote!!.title.ifEmpty { "Untitled" }}\"? This action cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.onEvent(NoteListEvent.ConfirmDelete) }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onEvent(NoteListEvent.DismissDelete) }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -79,7 +104,7 @@ fun NoteListScreen(
             )
         }
     ) { innerPadding ->
-        if (state.isLoading) {
+        if (state.isLoading && state.notes.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -115,7 +140,7 @@ fun NoteListScreen(
                     NoteCard(
                         note = note,
                         onClick = { onNoteClick(note.id) },
-                        onDelete = { viewModel.onEvent(NoteListEvent.DeleteNote(note.id)) }
+                        onDelete = { viewModel.onEvent(NoteListEvent.ShowDeleteConfirmation(note)) }
                     )
                 }
             }

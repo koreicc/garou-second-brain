@@ -1,6 +1,7 @@
 package com.secondbrain.ui.tasks
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.ui.util.IconPickerDialog
+import com.secondbrain.ui.util.TagInput
+import com.secondbrain.ui.util.resolveIcon
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -93,6 +97,18 @@ fun TaskEditScreen(
         DatePickerDialogContent(
             onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetStartDate(date)) },
             onDismiss = { viewModel.onEvent(TaskEditEvent.DismissStartDatePicker) }
+        )
+    }
+
+    // Icon picker dialog
+    if (state.showIconPicker) {
+        IconPickerDialog(
+            currentIcon = state.icon,
+            onIconSelected = { icon ->
+                viewModel.onEvent(TaskEditEvent.UpdateIcon(icon))
+                viewModel.onEvent(TaskEditEvent.DismissIconPicker)
+            },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissIconPicker) }
         )
     }
 
@@ -157,18 +173,37 @@ fun TaskEditScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Icon + Location row
+                // Icon picker + Location row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = state.icon,
-                        onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateIcon(it)) },
-                        label = { Text("Icon") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
+                    // Icon picker button
+                    Surface(
+                        onClick = { viewModel.onEvent(TaskEditEvent.ShowIconPicker) },
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            val icon = resolveIcon(state.icon)
+                            if (icon != null) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = "Task icon",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Text(
+                                    text = "T",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                     OutlinedTextField(
                         value = state.location,
                         onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
@@ -233,12 +268,10 @@ fun TaskEditScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Tags
-                OutlinedTextField(
-                    value = state.tagsInput,
-                    onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateTags(it)) },
-                    label = { Text("Tags (comma separated)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                TagInput(
+                    tags = state.tags,
+                    onTagsChanged = { viewModel.onEvent(TaskEditEvent.SetTags(it)) },
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 

@@ -20,8 +20,10 @@ data class TaskEditUiState(
     val title: String = "",
     val icon: String = "",
     val location: String = "",
-    val tagsInput: String = "",
+    val tags: List<String> = emptyList(),
     val body: String = "",
+    // Icon picker
+    val showIconPicker: Boolean = false,
     // Date fields as ISO date strings (YYYY-MM-DD)
     val startDate: String = "",
     val endDate: String = "",
@@ -49,8 +51,11 @@ sealed interface TaskEditEvent {
     data class UpdateTitle(val title: String) : TaskEditEvent
     data class UpdateIcon(val icon: String) : TaskEditEvent
     data class UpdateLocation(val location: String) : TaskEditEvent
-    data class UpdateTags(val tags: String) : TaskEditEvent
+    data class SetTags(val tags: List<String>) : TaskEditEvent
     data class UpdateBody(val body: String) : TaskEditEvent
+    // Icon events
+    data object ShowIconPicker : TaskEditEvent
+    data object DismissIconPicker : TaskEditEvent
     // Date events
     data object ShowStartDatePicker : TaskEditEvent
     data object DismissStartDatePicker : TaskEditEvent
@@ -94,7 +99,7 @@ class TaskEditViewModel(
                             title = task.title,
                             icon = task.icon,
                             location = task.location,
-                            tagsInput = task.tags.joinToString(", "),
+                            tags = task.tags,
                             body = task.body,
                             startDate = task.startDate.take(10),
                             endDate = task.endDate.take(10),
@@ -116,8 +121,11 @@ class TaskEditViewModel(
             is TaskEditEvent.UpdateTitle -> _state.update { it.copy(title = event.title) }
             is TaskEditEvent.UpdateIcon -> _state.update { it.copy(icon = event.icon) }
             is TaskEditEvent.UpdateLocation -> _state.update { it.copy(location = event.location) }
-            is TaskEditEvent.UpdateTags -> _state.update { it.copy(tagsInput = event.tags) }
+            is TaskEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
             is TaskEditEvent.UpdateBody -> _state.update { it.copy(body = event.body) }
+            // Icon events
+            is TaskEditEvent.ShowIconPicker -> _state.update { it.copy(showIconPicker = true) }
+            is TaskEditEvent.DismissIconPicker -> _state.update { it.copy(showIconPicker = false) }
             // Date events
             is TaskEditEvent.ShowStartDatePicker -> _state.update { it.copy(showStartDatePicker = true) }
             is TaskEditEvent.DismissStartDatePicker -> _state.update { it.copy(showStartDatePicker = false) }
@@ -173,8 +181,6 @@ class TaskEditViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            val tags = s.tagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-
             val startDateISO = if (s.startDate.isNotBlank()) "${s.startDate}T00:00:00Z" else null
             val endDateISO = if (s.endDate.isNotBlank()) "${s.endDate}T23:59:59Z" else null
 
@@ -191,7 +197,7 @@ class TaskEditViewModel(
                     title = s.title,
                     icon = s.icon,
                     location = s.location,
-                    tags = if (tags.isNotEmpty()) tags else null,
+                    tags = if (s.tags.isNotEmpty()) s.tags else null,
                     body = s.body,
                     startDate = startDateISO,
                     endDate = endDateISO,
@@ -203,7 +209,7 @@ class TaskEditViewModel(
                     title = s.title,
                     icon = s.icon,
                     location = s.location,
-                    tags = tags,
+                    tags = s.tags,
                     body = s.body,
                     startDate = startDateISO,
                     endDate = endDateISO,

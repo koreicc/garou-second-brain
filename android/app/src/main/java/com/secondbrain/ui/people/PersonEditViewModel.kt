@@ -14,7 +14,7 @@ data class PersonEditUiState(
     val name: String = "",
     val phone: String = "",
     val email: String = "",
-    val tagsInput: String = "",
+    val tags: List<String> = emptyList(),
     val notes: String = "",
     val socialLinks: List<SocialLinkItem> = emptyList(),
     val newPlatform: String = "",
@@ -33,7 +33,7 @@ sealed interface PersonEditEvent {
     data class UpdateName(val name: String) : PersonEditEvent
     data class UpdatePhone(val phone: String) : PersonEditEvent
     data class UpdateEmail(val email: String) : PersonEditEvent
-    data class UpdateTags(val tags: String) : PersonEditEvent
+    data class SetTags(val tags: List<String>) : PersonEditEvent
     data class UpdateNotes(val notes: String) : PersonEditEvent
     data class UpdateNewPlatform(val platform: String) : PersonEditEvent
     data class UpdateNewUrl(val url: String) : PersonEditEvent
@@ -68,7 +68,7 @@ class PersonEditViewModel(
                             name = person.name,
                             phone = phone,
                             email = email,
-                            tagsInput = person.tags.joinToString(", "),
+                            tags = person.tags,
                             notes = person.notes,
                             socialLinks = person.socialLinks.map { SocialLinkItem(platform = it.platform, url = it.url) },
                             isLoading = false
@@ -84,7 +84,7 @@ class PersonEditViewModel(
             is PersonEditEvent.UpdateName -> _state.update { it.copy(name = event.name) }
             is PersonEditEvent.UpdatePhone -> _state.update { it.copy(phone = event.phone) }
             is PersonEditEvent.UpdateEmail -> _state.update { it.copy(email = event.email) }
-            is PersonEditEvent.UpdateTags -> _state.update { it.copy(tagsInput = event.tags) }
+            is PersonEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
             is PersonEditEvent.UpdateNotes -> _state.update { it.copy(notes = event.notes) }
             is PersonEditEvent.UpdateNewPlatform -> _state.update { it.copy(newPlatform = event.platform) }
             is PersonEditEvent.UpdateNewUrl -> _state.update { it.copy(newUrl = event.url) }
@@ -119,7 +119,6 @@ class PersonEditViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            val tags = s.tagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val contacts = buildList {
                 if (s.phone.isNotBlank()) add(ContactDto(type = "phone", value = s.phone, label = "Personal"))
                 if (s.email.isNotBlank()) add(ContactDto(type = "email", value = s.email, label = "Personal"))
@@ -129,7 +128,7 @@ class PersonEditViewModel(
             val result = if (personId != null) {
                 personRepository.update(personId, UpdatePersonRequest(
                     name = s.name,
-                    tags = if (tags.isNotEmpty()) tags else null,
+                    tags = if (s.tags.isNotEmpty()) s.tags else null,
                     contacts = if (contacts.isNotEmpty()) contacts else null,
                     socialLinks = if (socialLinkDtos.isNotEmpty()) socialLinkDtos else null,
                     notes = s.notes
@@ -137,7 +136,7 @@ class PersonEditViewModel(
             } else {
                 personRepository.create(CreatePersonRequest(
                     name = s.name,
-                    tags = tags,
+                    tags = s.tags,
                     contacts = contacts,
                     socialLinks = socialLinkDtos,
                     notes = s.notes

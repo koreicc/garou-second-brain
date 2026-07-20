@@ -13,12 +13,17 @@ import kotlinx.coroutines.launch
 data class NoteListUiState(
     val notes: List<Note> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showDeleteDialog: Boolean = false,
+    val pendingDeleteNote: Note? = null
 )
 
 sealed interface NoteListEvent {
     data object LoadNotes : NoteListEvent
     data class DeleteNote(val id: String) : NoteListEvent
+    data class ShowDeleteConfirmation(val note: Note) : NoteListEvent
+    data object DismissDelete : NoteListEvent
+    data object ConfirmDelete : NoteListEvent
     data class DismissError(val message: String) : NoteListEvent
 }
 
@@ -37,7 +42,31 @@ class NoteListViewModel(
         when (event) {
             is NoteListEvent.LoadNotes -> loadNotes()
             is NoteListEvent.DeleteNote -> deleteNote(event.id)
+            is NoteListEvent.ShowDeleteConfirmation -> {
+                _state.update { it.copy(showDeleteDialog = true, pendingDeleteNote = event.note) }
+            }
+            is NoteListEvent.DismissDelete -> {
+                _state.update { it.copy(showDeleteDialog = false, pendingDeleteNote = null) }
+            }
+            is NoteListEvent.ConfirmDelete -> {
+                val note = _state.value.pendingDeleteNote ?: return
+                _state.update { it.copy(showDeleteDialog = false) }
+                deleteNote(note.id)
+            }
             is NoteListEvent.DismissError -> _state.update { it.copy(error = null) }
+        }
+    }
+
+    /**
+     * Silently reloads without showing the loading indicator.
+     * Used by RefreshOnResume to avoid screen flicker.
+     */
+    fun silentReload() {
+        viewModelScope.launch {
+            noteRepository.getAll()
+                .onSuccess { notes ->
+                    _state.update { it.copy(notes = notes) }
+                }
         }
     }
 
@@ -56,10 +85,14 @@ class NoteListViewModel(
 
     private fun deleteNote(id: String) {
         viewModelScope.launch {
+            // Optimistic removal
+            _state.update { it.copy(notes = it.notes.filter { n -> n.id != id }) }
+
             noteRepository.delete(id)
-                .onSuccess { loadNotes() }
+                .onSuccess { silentReload() }
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message) }
+                    silentReload()
                 }
         }
     }
