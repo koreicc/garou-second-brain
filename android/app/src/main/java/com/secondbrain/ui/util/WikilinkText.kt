@@ -1,6 +1,5 @@
 package com.secondbrain.ui.util
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -13,7 +12,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withAnnotation
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 
 /**
  * Renders text that may contain [[wikilink]] references.
@@ -37,7 +36,8 @@ fun WikilinkText(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge
 ) {
-    val annotatedString = remember(text) { buildWikilinkAnnotatedString(text, style) }
+    val linkColor = MaterialTheme.colorScheme.primary
+    val annotatedString = remember(text, linkColor) { buildWikilinkAnnotatedString(text, linkColor) }
 
     ClickableText(
         text = annotatedString,
@@ -57,9 +57,8 @@ fun WikilinkText(
  */
 private fun buildWikilinkAnnotatedString(
     text: String,
-    defaultStyle: TextStyle
+    linkColor: Color
 ): AnnotatedString {
-    val linkColor = MaterialTheme.colorScheme.primary
     val linkStyle = SpanStyle(
         color = linkColor,
         fontWeight = FontWeight.SemiBold,

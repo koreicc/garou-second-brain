@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.secondbrain.di.AppModule
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
@@ -41,6 +42,7 @@ fun NoteDetailScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Show errors in snackbar
     LaunchedEffect(state.error) {
@@ -135,7 +137,9 @@ fun NoteDetailScreen(
                         WikilinkText(
                             text = note.body,
                             onWikilinkClick = { target ->
-                                snackbarHostState.showSnackbar("WikiLink: $target")
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("WikiLink: $target")
+                                }
                             },
                             style = MaterialTheme.typography.bodyLarge
                         )
