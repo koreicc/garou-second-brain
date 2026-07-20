@@ -215,22 +215,39 @@ SearchResult) separate from DTOs.
 **di/** -- Manual dependency injection via AppModule providing
 HttpClient, ApiService, and Repository instances.
 
-**ui/theme/** -- Material3 theming with custom colors, typography, and shapes.
+**ui/theme/** -- Material You (Material Design 3) theming system:
+
+| File | Purpose |
+|---|---|
+| `Color.kt` | Full M3 color palette: light/dark schemes, surface containers (dim through highest), outline/inverse colors, medium-contrast variants |
+| `Theme.kt` | `SecondBrainTheme` composable with dynamic color (Android 12+), contrast awareness (Android 14+ via `UiModeManager.contrast`), status bar styling |
+| `Type.kt` | Complete 15-slot M3 typography scale with brand (SemiBold for Display/Headline/Title) and plain (Normal/Medium for Body/Label) typefaces |
+| `Shape.kt` | Custom 5-level M3 shape system (extraSmall 4dp through extraLarge 28dp) |
+
+**ui/util/** -- Shared composable utilities:
+
+| File | Purpose |
+|---|---|
+| `StatusBadge.kt` | Color-coded task status badge (Pending/In Progress/Done) using theme shapes |
+| `TimeFormatUtil.kt` | `formatRelativeTime()` converts ISO 8601 to human-readable relative time strings |
+| `LifecycleUtil.kt` | `RefreshOnResume()` composable for reloading data on screen resume |
 
 **ui/navigation/** -- Sealed class Screen routes, NavHost composable,
 and a bottom navigation bar with tabs: Dashboard, Notes, Tasks, People.
 
-**ui/dashboard/** -- Dashboard screen showing quick stats (entity counts)
-and a quick task creation card with the latest quick tasks listed.
+**ui/dashboard/** -- Dashboard screen showing quick stats (entity counts
+with Material icons), quick task creation card, recent notes and active tasks.
 
-**ui/notes/** -- Note listing (LazyColumn), detail view with markdown
-content, and edit screen for title/tags/body.
+**ui/notes/** -- Note listing (LazyColumn with relative timestamps),
+detail view with empty-state illustration, edit screen with Snackbar error handling.
 
-**ui/tasks/** -- Task listing with status filtering, detail view with
-subtask checkboxes, and edit screen for all task fields.
+**ui/tasks/** -- Task listing with status badges and relative timestamps,
+detail view with interactive subtask toggles, edit screen with date pickers
+and recurrence configuration.
 
-**ui/people/** -- Person listing (alphabetical), detail view with
-contacts/social links/notes, and edit screen.
+**ui/people/** -- Person listing with contact preview and relative timestamps,
+detail view with ContactCard / SocialLinkCard composables, edit screen with
+dynamic social link management.
 
 ## Concurrency & File Safety
 

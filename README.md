@@ -39,9 +39,24 @@ Android (Ktor Client) <--> HTTP/JSON <--> Go API (echo) <--> Vault (.md files)
 ## Stack
 
 - **Backend:** Go, echo framework, yaml.v3, google/uuid
-- **Frontend:** Kotlin, Jetpack Compose, Material3, MVI Architecture, Ktor, kotlinx-serialization
+- **Frontend:** Kotlin, Jetpack Compose, Material You (Material Design 3), MVI Architecture, Ktor, kotlinx-serialization
 - **Data:** Markdown (.md) with YAML frontmatter
 - **Auth:** None (single-user, localhost only)
+
+## Design System
+
+The app uses **Material You (Material Design 3)** with:
+
+| Feature | Details |
+|---|---|
+| **Dynamic Colors** | Android 12+ uses wallpaper-based dynamic color schemes via `dynamicLightColorScheme` / `dynamicDarkColorScheme`. Falls back to custom blue-tone palette on older devices. |
+| **Contrast Awareness** | Android 14+ detects system contrast preference (`UiModeManager.contrast`) and switches to medium-contrast color variants automatically. |
+| **Custom Shapes** | Five Material 3 shape levels: extraSmall (4dp), small (8dp), medium/12dp, large/16dp, extraLarge/28dp. |
+| **Complete Typography** | All 15 Material 3 type scale slots filled with custom sizes and weights (bodyLarge: 17sp, bodyMedium: 15sp). |
+| **Surface Container Colors** | Full surface container family (surfaceDim through surfaceContainerHighest) for proper Material 3 elevation rendering. |
+| **Status Badges** | Reusable `StatusBadge` component with color-coded labels (Pending, In Progress, Done). |
+| **Relative Time** | `formatRelativeTime()` utility for human-readable dates ("2 minutes ago", "1 hour ago"). |
+| **Accessibility** | Descriptive `contentDescription` on all interactive elements. |
 
 ## Project Structure
 
@@ -62,12 +77,13 @@ Android (Ktor Client) <--> HTTP/JSON <--> Go API (echo) <--> Vault (.md files)
 │       ├── di/               # Manual dependency injection
 │       ├── domain/model/     # Domain models
 │       └── ui/               # Compose screens with MVI architecture
-│           ├── dashboard/    # Dashboard with quick stats and quick task creation
+│           ├── dashboard/    # Dashboard with quick stats, recent items, quick task creation
 │           ├── navigation/   # Sealed Screen routes, NavHost, bottom nav bar
 │           ├── notes/        # Note list, detail, edit screens
-│           ├── tasks/        # Task list, detail, edit screens
+│           ├── tasks/        # Task list, detail, edit screens (with subtask toggle)
 │           ├── people/       # Person list, detail, edit screens
-│           └── theme/        # Material3 theming (colors, typography, shapes)
+│           ├── theme/        # Material You theming (Color.kt, Theme.kt, Type.kt, Shape.kt)
+│           └── util/         # Shared utilities (StatusBadge, TimeFormatUtil, LifecycleUtil)
 └── docs/
     ├── ARCHITECTURE.md       # Detailed architecture and design decisions
     └── agent-anti-patterns.md # Go anti-patterns reference
@@ -162,6 +178,16 @@ Recurrence is evaluated on API request (no cron needed).
 ```bash
 cd backend && go test ./... -race
 ```
+
+## Screens
+
+| Screen | Features |
+|---|---|
+| **Dashboard** | Quick stats (notes/tasks count with icons), quick task creation, recent notes, active tasks, pull-to-refresh |
+| **Notes** | List with relative timestamps, detail view with markdown body, edit/create screen, delete with confirmation |
+| **Tasks** | List with status badges and relative timestamps, detail with interactive subtask toggles, edit with date pickers and recurrence settings |
+| **People** | List with contact preview and relative timestamps, detail with contact/social link cards, edit with dynamic form fields |
+| **Search** | Cross-entity full-text search with type-based result icons |
 
 ## License
 
