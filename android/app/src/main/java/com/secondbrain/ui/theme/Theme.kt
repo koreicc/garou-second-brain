@@ -17,27 +17,22 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    // Primary
     primary = Primary,
     onPrimary = OnPrimary,
     primaryContainer = PrimaryContainer,
     onPrimaryContainer = OnPrimaryContainer,
-    // Secondary
     secondary = Secondary,
     onSecondary = OnSecondary,
     secondaryContainer = SecondaryContainer,
     onSecondaryContainer = OnSecondaryContainer,
-    // Tertiary
     tertiary = Tertiary,
     onTertiary = OnTertiary,
     tertiaryContainer = TertiaryContainer,
     onTertiaryContainer = OnTertiaryContainer,
-    // Error
     error = Error,
     onError = OnError,
     errorContainer = ErrorContainer,
     onErrorContainer = OnErrorContainer,
-    // Surface and background
     background = Background,
     onBackground = OnBackground,
     surface = Surface,
@@ -51,37 +46,30 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainer = SurfaceContainer,
     surfaceContainerHigh = SurfaceContainerHigh,
     surfaceContainerHighest = SurfaceContainerHighest,
-    // Outline
     outline = Outline,
     outlineVariant = OutlineVariant,
-    // Inverse
     inversePrimary = InversePrimary,
     inverseSurface = InverseSurface,
-    onInverseSurface = OnInverseSurface
+    inverseOnSurface = InverseOnSurface
 )
 
 private val DarkColorScheme = darkColorScheme(
-    // Primary
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
     primaryContainer = DarkPrimaryContainer,
     onPrimaryContainer = DarkOnPrimaryContainer,
-    // Secondary
     secondary = DarkSecondary,
     onSecondary = DarkOnSecondary,
     secondaryContainer = DarkSecondaryContainer,
     onSecondaryContainer = DarkOnSecondaryContainer,
-    // Tertiary
     tertiary = DarkTertiary,
     onTertiary = DarkOnTertiary,
     tertiaryContainer = DarkTertiaryContainer,
     onTertiaryContainer = DarkOnTertiaryContainer,
-    // Error
     error = DarkError,
     onError = DarkOnError,
     errorContainer = DarkErrorContainer,
     onErrorContainer = DarkOnErrorContainer,
-    // Surface and background
     background = DarkBackground,
     onBackground = DarkOnBackground,
     surface = DarkSurface,
@@ -95,13 +83,11 @@ private val DarkColorScheme = darkColorScheme(
     surfaceContainer = DarkSurfaceContainer,
     surfaceContainerHigh = DarkSurfaceContainerHigh,
     surfaceContainerHighest = DarkSurfaceContainerHighest,
-    // Outline
     outline = DarkOutline,
     outlineVariant = DarkOutlineVariant,
-    // Inverse
     inversePrimary = DarkInversePrimary,
     inverseSurface = DarkInverseSurface,
-    onInverseSurface = DarkOnInverseSurface
+    inverseOnSurface = DarkInverseOnSurface
 )
 
 private val LightMediumContrastColorScheme = lightColorScheme(
@@ -117,7 +103,6 @@ private val LightMediumContrastColorScheme = lightColorScheme(
     onSurface = LightMediumOnSurface,
     surfaceVariant = LightMediumSurfaceVariant,
     onSurfaceVariant = LightMediumOnSurfaceVariant,
-    // Reuse remaining slots from LightColorScheme
     onSecondaryContainer = OnSecondaryContainer,
     tertiaryContainer = TertiaryContainer,
     onTertiaryContainer = OnTertiaryContainer,
@@ -138,7 +123,7 @@ private val LightMediumContrastColorScheme = lightColorScheme(
     outlineVariant = OutlineVariant,
     inversePrimary = InversePrimary,
     inverseSurface = InverseSurface,
-    onInverseSurface = OnInverseSurface
+    inverseOnSurface = InverseOnSurface
 )
 
 private val DarkMediumContrastColorScheme = darkColorScheme(
@@ -154,7 +139,6 @@ private val DarkMediumContrastColorScheme = darkColorScheme(
     onSurface = DarkMediumOnSurface,
     surfaceVariant = DarkMediumSurfaceVariant,
     onSurfaceVariant = DarkMediumOnSurfaceVariant,
-    // Reuse remaining slots from DarkColorScheme
     onSecondaryContainer = DarkOnSecondaryContainer,
     tertiaryContainer = DarkTertiaryContainer,
     onTertiaryContainer = DarkOnTertiaryContainer,
@@ -175,7 +159,7 @@ private val DarkMediumContrastColorScheme = darkColorScheme(
     outlineVariant = DarkOutlineVariant,
     inversePrimary = DarkInversePrimary,
     inverseSurface = DarkInverseSurface,
-    onInverseSurface = DarkOnInverseSurface
+    inverseOnSurface = DarkInverseOnSurface
 )
 
 /**

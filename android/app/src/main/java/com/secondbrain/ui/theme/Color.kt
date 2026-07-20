@@ -50,7 +50,7 @@ val OutlineVariant = Color(0xFFC3C6CF)
 // Inverse
 val InversePrimary = Color(0xFF9ECAFF)
 val InverseSurface = Color(0xFF2F3033)
-val OnInverseSurface = Color(0xFFF1F0F4)
+val InverseOnSurface = Color(0xFFF1F0F4)
 
 // Status colors
 val StatusPending = Color(0xFF9E9E9E)
@@ -107,7 +107,7 @@ val DarkOutlineVariant = Color(0xFF43474E)
 // Inverse
 val DarkInversePrimary = Color(0xFF1565C0)
 val DarkInverseSurface = Color(0xFFE3E2E6)
-val DarkOnInverseSurface = Color(0xFF1A1C1E)
+val DarkInverseOnSurface = Color(0xFF1A1C1E)
 
 
 // -- Medium contrast (light) --
