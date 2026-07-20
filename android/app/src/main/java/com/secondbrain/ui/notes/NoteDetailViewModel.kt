@@ -28,6 +28,22 @@ class NoteDetailViewModel(
         loadNote()
     }
 
+    /**
+     * Reloads the note data without showing a loading indicator.
+     * Called when the screen resumes to reflect edits made elsewhere.
+     */
+    fun reload() {
+        viewModelScope.launch {
+            noteRepository.get(noteId)
+                .onSuccess { note ->
+                    _state.update { it.copy(note = note, isLoading = false) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message) }
+                }
+        }
+    }
+
     private fun loadNote() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -20,6 +19,7 @@ import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Note
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Task
+import com.secondbrain.ui.util.RefreshOnResume
 
 @Composable
 private fun QuickTaskRow(
@@ -42,13 +42,10 @@ private fun QuickTaskRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            IconButton(onClick = onComplete) {
-                Icon(
-                    Icons.Default.CheckCircleOutline,
-                    contentDescription = "Complete",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            Checkbox(
+                checked = false,
+                onCheckedChange = { onComplete() }
+            )
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
@@ -84,13 +81,18 @@ fun DashboardScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    // Reload data every time the screen resumes (e.g. navigating back from detail/edit)
+    RefreshOnResume {
+        viewModel.onEvent(DashboardEvent.LoadData)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Dashboard") },
                 actions = {
                     IconButton(
-                        onClick = { viewModel.onEvent(DashboardEvent.LoadData(force = true)) },
+                        onClick = { viewModel.onEvent(DashboardEvent.LoadData) },
                         enabled = !state.isLoading
                     ) {
                         Icon(

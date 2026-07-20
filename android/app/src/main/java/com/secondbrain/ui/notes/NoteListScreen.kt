@@ -23,7 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Note
+import com.secondbrain.ui.util.RefreshOnResume
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +43,7 @@ fun NoteListScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     // Reload notes every time this screen becomes visible (e.g. navigating back from edit)
-    LaunchedEffect(Unit) {
+    RefreshOnResume {
         viewModel.onEvent(NoteListEvent.LoadNotes)
     }
 

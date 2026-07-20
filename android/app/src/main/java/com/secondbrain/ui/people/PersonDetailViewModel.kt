@@ -28,6 +28,18 @@ class PersonDetailViewModel(
         loadPerson()
     }
 
+    /**
+     * Reloads the person data without showing a loading indicator.
+     * Called when the screen resumes to reflect edits made elsewhere.
+     */
+    fun reload() {
+        viewModelScope.launch {
+            personRepository.get(personId)
+                .onSuccess { person -> _state.update { it.copy(person = person, isLoading = false) } }
+                .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
+        }
+    }
+
     private fun loadPerson() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }

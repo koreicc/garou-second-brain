@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Contact
 import com.secondbrain.domain.model.SocialLink
+import com.secondbrain.ui.util.RefreshOnResume
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +40,11 @@ fun PersonDetailScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Reload person data when navigating back from edit screen
+    RefreshOnResume {
+        viewModel.reload()
+    }
 
     Scaffold(
         topBar = {

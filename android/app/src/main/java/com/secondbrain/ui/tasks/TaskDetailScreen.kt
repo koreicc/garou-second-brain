@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Subtask
+import com.secondbrain.ui.util.RefreshOnResume
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,11 @@ fun TaskDetailScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Reload task data when navigating back from edit screen
+    RefreshOnResume {
+        viewModel.reload()
+    }
 
     Scaffold(
         topBar = {

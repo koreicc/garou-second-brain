@@ -33,6 +33,18 @@ class TaskDetailViewModel(
         loadTask()
     }
 
+    /**
+     * Reloads the task data without showing a loading indicator.
+     * Called when the screen resumes to reflect edits made elsewhere.
+     */
+    fun reload() {
+        viewModelScope.launch {
+            taskRepository.get(taskId)
+                .onSuccess { task -> _state.update { it.copy(task = task, isLoading = false) } }
+                .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
+        }
+    }
+
     fun onEvent(event: TaskDetailEvent) {
         when (event) {
             is TaskDetailEvent.Complete -> completeTask()

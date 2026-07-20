@@ -28,7 +28,7 @@ data class DashboardUiState(
 )
 
 sealed interface DashboardEvent {
-    data class LoadData(val force: Boolean = false) : DashboardEvent
+    data object LoadData : DashboardEvent
     data class UpdateQuickTaskInput(val input: String) : DashboardEvent
     data class CreateQuickTask(val title: String) : DashboardEvent
     data class CompleteQuickTask(val id: String) : DashboardEvent
@@ -52,7 +52,7 @@ class DashboardViewModel(
 
     fun onEvent(event: DashboardEvent) {
         when (event) {
-            is DashboardEvent.LoadData -> loadData(force = event.force)
+            is DashboardEvent.LoadData -> loadData()
             is DashboardEvent.UpdateQuickTaskInput -> {
                 _state.update { it.copy(quickTaskInput = event.input) }
             }
@@ -65,7 +65,7 @@ class DashboardViewModel(
         }
     }
 
-    private fun loadData(force: Boolean = false) {
+    private fun loadData() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 

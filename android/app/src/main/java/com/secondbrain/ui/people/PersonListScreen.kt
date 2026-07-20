@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Person
+import com.secondbrain.ui.util.RefreshOnResume
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +35,7 @@ fun PersonListScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     // Reload people every time this screen becomes visible
-    LaunchedEffect(Unit) {
+    RefreshOnResume {
         viewModel.onEvent(PersonListEvent.LoadPeople)
     }
 
