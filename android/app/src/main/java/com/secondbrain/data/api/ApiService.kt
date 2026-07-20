@@ -32,4 +32,7 @@ interface ApiService {
 
     // Search
     suspend fun search(query: String): ApiResponse<List<SearchResultDto>>
+
+    // WikiLink
+    suspend fun resolveWikilink(query: String): ApiResponse<WikilinkResponse>
 }

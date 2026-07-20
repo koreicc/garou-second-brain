@@ -27,6 +27,7 @@ func (h *TaskHandler) List(c echo.Context) error {
 	if tasks == nil {
 		tasks = []*model.Task{}
 	}
+	tasks = paginate(tasks, c)
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
 }
 

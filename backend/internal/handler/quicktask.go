@@ -35,6 +35,7 @@ func (h *QuickTaskHandler) List(c echo.Context) error {
 	if qts == nil {
 		qts = []*model.QuickTask{}
 	}
+	qts = paginate(qts, c)
 	return c.JSON(http.StatusOK, model.DataResponse(qts))
 }
 

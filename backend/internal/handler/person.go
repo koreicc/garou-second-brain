@@ -27,6 +27,7 @@ func (h *PersonHandler) List(c echo.Context) error {
 	if people == nil {
 		people = []*model.Person{}
 	}
+	people = paginate(people, c)
 	return c.JSON(http.StatusOK, model.DataResponse(people))
 }
 

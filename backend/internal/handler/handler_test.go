@@ -881,6 +881,117 @@ func TestSearchHandlerEmptyQuery(t *testing.T) {
 	}
 }
 
+// ---------- WikiLink Handler Tests ----------
+
+func TestWikiLinkByTitle(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewSearchHandler(v)
+	noteHandler := NewNoteHandler(v)
+
+	// Create a note
+	createBody := `{"title":"Go Programming","body":"Learning Go"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/notes", strings.NewReader(createBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	if err := noteHandler.Create(c); err != nil {
+		t.Fatalf("Create note: %v", err)
+	}
+
+	// Resolve by title
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/wikilink?q=Go+Programming", nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+
+	if err := h.WikiLink(c2); err != nil {
+		t.Fatalf("WikiLink: %v", err)
+	}
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec2.Code, http.StatusOK, rec2.Body.String())
+	}
+
+	resp := parseResponse(t, rec2.Body.Bytes())
+	data, _ := resp.Data.(map[string]interface{})
+	if data == nil {
+		t.Fatal("expected data map")
+	}
+	if data["type"] != "note" {
+		t.Fatalf("type = %q, want %q", data["type"], "note")
+	}
+	if data["title"] != "Go Programming" {
+		t.Fatalf("title = %q, want %q", data["title"], "Go Programming")
+	}
+}
+
+func TestWikiLinkByID(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewSearchHandler(v)
+	noteHandler := NewNoteHandler(v)
+
+	// Create a note and capture its ID
+	createBody := `{"title":"Test Note"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/notes", strings.NewReader(createBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	if err := noteHandler.Create(c); err != nil {
+		t.Fatalf("Create note: %v", err)
+	}
+
+	resp := parseResponse(t, rec.Body.Bytes())
+	noteData, _ := json.Marshal(resp.Data)
+	var note model.Note
+	json.Unmarshal(noteData, &note)
+
+	// Resolve by ID
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/wikilink?q="+note.ID, nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+
+	if err := h.WikiLink(c2); err != nil {
+		t.Fatalf("WikiLink: %v", err)
+	}
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+}
+
+func TestWikiLinkNotFound(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewSearchHandler(v)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/wikilink?q=Nonexistent", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.WikiLink(c); err != nil {
+		t.Fatalf("WikiLink: %v", err)
+	}
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestWikiLinkEmptyQuery(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewSearchHandler(v)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/wikilink", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.WikiLink(c); err != nil {
+		t.Fatalf("WikiLink: %v", err)
+	}
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
 // ---------- Error Response Tests ----------
 
 func TestErrorResponseFormat(t *testing.T) {

@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Subtask
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.util.WikilinkText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +132,13 @@ fun TaskDetailScreen(
 
                     if (task.body.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(task.body, style = MaterialTheme.typography.bodyLarge)
+                        WikilinkText(
+                            text = task.body,
+                            onWikilinkClick = { target ->
+                                snackbarHostState.showSnackbar("WikiLink: $target")
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
             }

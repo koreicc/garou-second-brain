@@ -183,7 +183,8 @@ fun DashboardScreen(
                 StatsRow(
                     noteCount = state.noteCount,
                     taskCount = state.taskCount,
-                    quickTaskCount = state.quickTasks.size
+                    quickTaskCount = state.quickTasks.size,
+                    personCount = state.personCount
                 )
             }
 
@@ -273,7 +274,7 @@ private fun QuickTaskCard(onAddQuickTask: (String) -> Unit) {
 }
 
 @Composable
-private fun StatsRow(noteCount: Int, taskCount: Int, quickTaskCount: Int) {
+private fun StatsRow(noteCount: Int, taskCount: Int, quickTaskCount: Int, personCount: Int) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard(
             icon = Icons.Default.NoteAlt,
@@ -291,6 +292,12 @@ private fun StatsRow(noteCount: Int, taskCount: Int, quickTaskCount: Int) {
             icon = Icons.Default.AddTask,
             label = "Quick",
             value = quickTaskCount.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            icon = Icons.Default.Person,
+            label = "People",
+            value = personCount.toString(),
             modifier = Modifier.weight(1f)
         )
     }

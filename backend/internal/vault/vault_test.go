@@ -640,3 +640,291 @@ func TestFileIgnoresNonMdFiles(t *testing.T) {
 		t.Fatalf("unexpected note ID: %q", notes[0].ID)
 	}
 }
+
+// ---------- Archive Tests ----------
+
+func TestDeleteMovesToArchive(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	note := model.NewNote(uuid.NewString(), "Archive Test")
+	if err := v.WriteNote(note); err != nil {
+		t.Fatalf("WriteNote: %v", err)
+	}
+
+	if err := v.Delete(model.TypeNote, note.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	// Should exist in archive
+	archivedIDs, err := v.ListArchivedIDs(model.TypeNote)
+	if err != nil {
+		t.Fatalf("ListArchivedIDs: %v", err)
+	}
+	if len(archivedIDs) != 1 {
+		t.Fatalf("expected 1 archived note, got %d", len(archivedIDs))
+	}
+	if archivedIDs[0] != note.ID {
+		t.Fatalf("archived ID = %q, want %q", archivedIDs[0], note.ID)
+	}
+
+	// Should be readable from archive
+	archivedNote, err := v.ReadArchivedNote(note.ID)
+	if err != nil {
+		t.Fatalf("ReadArchivedNote: %v", err)
+	}
+	if archivedNote.Title != "Archive Test" {
+		t.Fatalf("archived title = %q, want %q", archivedNote.Title, "Archive Test")
+	}
+
+	// Should NOT be readable from original location
+	_, err = v.ReadNote(note.ID)
+	if err == nil {
+		t.Fatal("expected error reading deleted note, got nil")
+	}
+}
+
+func TestDeleteMovesTaskToArchive(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	task := model.NewTask(uuid.NewString(), "Archive Task")
+	task.Body = "Task body"
+	if err := v.WriteTask(task); err != nil {
+		t.Fatalf("WriteTask: %v", err)
+	}
+
+	if err := v.Delete(model.TypeTask, task.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	archivedIDs, err := v.ListArchivedIDs(model.TypeTask)
+	if err != nil {
+		t.Fatalf("ListArchivedIDs: %v", err)
+	}
+	if len(archivedIDs) != 1 {
+		t.Fatalf("expected 1 archived task, got %d", len(archivedIDs))
+	}
+
+	archivedTask, err := v.ReadArchivedTask(task.ID)
+	if err != nil {
+		t.Fatalf("ReadArchivedTask: %v", err)
+	}
+	if archivedTask.Title != "Archive Task" {
+		t.Fatalf("archived title = %q, want %q", archivedTask.Title, "Archive Task")
+	}
+}
+
+func TestDeleteMovesPersonToArchive(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	person := model.NewPerson(uuid.NewString(), "Archive Person")
+	if err := v.WritePerson(person); err != nil {
+		t.Fatalf("WritePerson: %v", err)
+	}
+
+	if err := v.Delete(model.TypePerson, person.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	archivedIDs, err := v.ListArchivedIDs(model.TypePerson)
+	if err != nil {
+		t.Fatalf("ListArchivedIDs: %v", err)
+	}
+	if len(archivedIDs) != 1 {
+		t.Fatalf("expected 1 archived person, got %d", len(archivedIDs))
+	}
+
+	archivedPerson, err := v.ReadArchivedPerson(person.ID)
+	if err != nil {
+		t.Fatalf("ReadArchivedPerson: %v", err)
+	}
+	if archivedPerson.Name != "Archive Person" {
+		t.Fatalf("archived name = %q, want %q", archivedPerson.Name, "Archive Person")
+	}
+}
+
+func TestRestoreArchive(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	note := model.NewNote(uuid.NewString(), "Restore Me")
+	note.Body = "Body content to restore"
+	if err := v.WriteNote(note); err != nil {
+		t.Fatalf("WriteNote: %v", err)
+	}
+
+	if err := v.Delete(model.TypeNote, note.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	// Restore
+	if err := v.RestoreArchive(model.TypeNote, note.ID); err != nil {
+		t.Fatalf("RestoreArchive: %v", err)
+	}
+
+	// Should be readable from original location
+	restored, err := v.ReadNote(note.ID)
+	if err != nil {
+		t.Fatalf("ReadNote after restore: %v", err)
+	}
+	if restored.Title != "Restore Me" {
+		t.Fatalf("restored title = %q, want %q", restored.Title, "Restore Me")
+	}
+
+	// Should be removed from archive
+	archivedIDs, err := v.ListArchivedIDs(model.TypeNote)
+	if err != nil {
+		t.Fatalf("ListArchivedIDs: %v", err)
+	}
+	if len(archivedIDs) != 0 {
+		t.Fatalf("expected 0 archived notes, got %d", len(archivedIDs))
+	}
+}
+
+func TestListArchivedEmpty(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	ids, err := v.ListArchivedIDs(model.TypeNote)
+	if err != nil {
+		t.Fatalf("ListArchivedIDs: %v", err)
+	}
+	if len(ids) != 0 {
+		t.Fatalf("expected 0, got %d", len(ids))
+	}
+}
+
+func TestRestoreArchivedNotFound(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	err := v.RestoreArchive(model.TypeNote, "nonexistent-id")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected 'not found' error, got %q", err.Error())
+	}
+}
+
+func TestArchiveQuickTask(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	qt := model.NewQuickTask(uuid.NewString(), "Archive QT")
+	if err := v.WriteQuickTask(qt); err != nil {
+		t.Fatalf("WriteQuickTask: %v", err)
+	}
+
+	if err := v.Delete(model.TypeQuickTask, qt.ID); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	archivedIDs, err := v.ListArchivedIDs(model.TypeQuickTask)
+	if err != nil {
+		t.Fatalf("ListArchivedIDs: %v", err)
+	}
+	if len(archivedIDs) != 1 {
+		t.Fatalf("expected 1 archived quick task, got %d", len(archivedIDs))
+	}
+
+	archivedQT, err := v.ReadArchivedQuickTask(qt.ID)
+	if err != nil {
+		t.Fatalf("ReadArchivedQuickTask: %v", err)
+	}
+	if archivedQT.Title != "Archive QT" {
+		t.Fatalf("archived title = %q, want %q", archivedQT.Title, "Archive QT")
+	}
+
+	// Restore quick task
+	if err := v.RestoreArchive(model.TypeQuickTask, qt.ID); err != nil {
+		t.Fatalf("RestoreArchive: %v", err)
+	}
+
+	restoredQT, err := v.ReadQuickTask(qt.ID)
+	if err != nil {
+		t.Fatalf("ReadQuickTask after restore: %v", err)
+	}
+	if restoredQT.Title != "Archive QT" {
+		t.Fatalf("restored title = %q, want %q", restoredQT.Title, "Archive QT")
+	}
+}
+
+func TestArchiveRestoreAllTypes(t *testing.T) {
+	t.Parallel()
+	v := setupTestVault(t)
+
+	// Create one of each type
+	note := model.NewNote(uuid.NewString(), "Note")
+	task := model.NewTask(uuid.NewString(), "Task")
+	qt := model.NewQuickTask(uuid.NewString(), "Quick")
+	person := model.NewPerson(uuid.NewString(), "Person")
+
+	for _, w := range []struct {
+		entityType string
+		writer     func() error
+	}{
+		{model.TypeNote, func() error { return v.WriteNote(note) }},
+		{model.TypeTask, func() error { return v.WriteTask(task) }},
+		{model.TypeQuickTask, func() error { return v.WriteQuickTask(qt) }},
+		{model.TypePerson, func() error { return v.WritePerson(person) }},
+	} {
+		if err := w.writer(); err != nil {
+			t.Fatalf("write %s: %v", w.entityType, err)
+		}
+	}
+
+	// Delete all
+	for _, d := range []struct {
+		entityType string
+		id         string
+	}{
+		{model.TypeNote, note.ID},
+		{model.TypeTask, task.ID},
+		{model.TypeQuickTask, qt.ID},
+		{model.TypePerson, person.ID},
+	} {
+		if err := v.Delete(d.entityType, d.id); err != nil {
+			t.Fatalf("delete %s: %v", d.entityType, err)
+		}
+	}
+
+	// Verify all archived
+	for _, et := range []string{model.TypeNote, model.TypeTask, model.TypeQuickTask, model.TypePerson} {
+		ids, err := v.ListArchivedIDs(et)
+		if err != nil {
+			t.Fatalf("ListArchivedIDs %s: %v", et, err)
+		}
+		if len(ids) != 1 {
+			t.Fatalf("expected 1 archived %s, got %d", et, len(ids))
+		}
+	}
+
+	// Restore all
+	for _, r := range []struct {
+		entityType string
+		id         string
+	}{
+		{model.TypeNote, note.ID},
+		{model.TypeTask, task.ID},
+		{model.TypeQuickTask, qt.ID},
+		{model.TypePerson, person.ID},
+	} {
+		if err := v.RestoreArchive(r.entityType, r.id); err != nil {
+			t.Fatalf("restore %s: %v", r.entityType, err)
+		}
+	}
+
+	// Verify all restored and archive empty
+	for _, et := range []string{model.TypeNote, model.TypeTask, model.TypeQuickTask, model.TypePerson} {
+		ids, err := v.ListArchivedIDs(et)
+		if err != nil {
+			t.Fatalf("ListArchivedIDs %s: %v", et, err)
+		}
+		if len(ids) != 0 {
+			t.Fatalf("expected 0 archived %s, got %d", et, len(ids))
+		}
+	}
+}
