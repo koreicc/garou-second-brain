@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,18 +33,33 @@ fun NoteEditScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.isSaved) {
         if (state.isSaved) onNavigateBack()
     }
 
+    // Show errors in snackbar
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (noteId != null) "Edit Note" else "New Note") },
+                title = {
+                    Text(
+                        text = if (noteId != null) "Edit Note" else "New Note",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to notes")
                     }
                 },
                 actions = {
@@ -51,7 +67,7 @@ fun NoteEditScreen(
                         onClick = { viewModel.onEvent(NoteEditEvent.Save) },
                         enabled = state.title.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = "Save")
+                        Icon(Icons.Default.Save, contentDescription = "Save note")
                     }
                 }
             )
@@ -89,14 +105,6 @@ fun NoteEditScreen(
                     .weight(1f),
                 minLines = 10
             )
-            if (state.error != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = state.error ?: "",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
         }
     }
 }

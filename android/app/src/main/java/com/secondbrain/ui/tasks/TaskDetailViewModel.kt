@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.secondbrain.data.dto.UpdateTaskRequest
 import com.secondbrain.data.repository.TaskRepository
 import com.secondbrain.domain.model.Task
+import com.secondbrain.domain.model.toDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +20,7 @@ data class TaskDetailUiState(
 
 sealed interface TaskDetailEvent {
     data object Complete : TaskDetailEvent
+    data class ToggleSubtask(val subtaskId: String) : TaskDetailEvent
 }
 
 class TaskDetailViewModel(
@@ -48,6 +50,7 @@ class TaskDetailViewModel(
     fun onEvent(event: TaskDetailEvent) {
         when (event) {
             is TaskDetailEvent.Complete -> completeTask()
+            is TaskDetailEvent.ToggleSubtask -> toggleSubtask(event.subtaskId)
         }
     }
 
@@ -63,6 +66,21 @@ class TaskDetailViewModel(
     private fun completeTask() {
         viewModelScope.launch {
             taskRepository.update(taskId, UpdateTaskRequest(status = "completed"))
+                .onSuccess { loadTask() }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+        }
+    }
+
+    private fun toggleSubtask(subtaskId: String) {
+        viewModelScope.launch {
+            val task = _state.value.task ?: return@launch
+            val updatedSubtasks = task.subtasks.map { subtask ->
+                if (subtask.id == subtaskId) subtask.copy(completed = !subtask.completed) else subtask
+            }
+            taskRepository.update(
+                taskId,
+                UpdateTaskRequest(subtasks = updatedSubtasks.map { it.toDto() })
+            )
                 .onSuccess { loadTask() }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }

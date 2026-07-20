@@ -1,16 +1,31 @@
 package com.secondbrain.ui.dashboard
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddTask
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -20,6 +35,7 @@ import com.secondbrain.domain.model.Note
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Task
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.util.formatRelativeTime
 
 @Composable
 private fun QuickTaskRow(
@@ -27,7 +43,10 @@ private fun QuickTaskRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -41,6 +60,13 @@ private fun QuickTaskRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (quickTask.createdAt.isNotEmpty()) {
+                    Text(
+                        text = formatRelativeTime(quickTask.createdAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Checkbox(
                 checked = false,
@@ -49,7 +75,7 @@ private fun QuickTaskRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = "Delete quick task: ${quickTask.title}",
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -80,6 +106,14 @@ fun DashboardScreen(
         }
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors in snackbar
+    LaunchedEffect(state.error) {
+        state.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
 
     // Reload data every time the screen resumes (e.g. navigating back from detail/edit)
     RefreshOnResume {
@@ -87,9 +121,16 @@ fun DashboardScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Dashboard") },
+                title = {
+                    Text(
+                        text = "Dashboard",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 actions = {
                     IconButton(
                         onClick = { viewModel.onEvent(DashboardEvent.LoadData) },
@@ -97,7 +138,7 @@ fun DashboardScreen(
                     ) {
                         Icon(
                             Icons.Default.Refresh,
-                            contentDescription = "Reload from server"
+                            contentDescription = "Refresh dashboard"
                         )
                     }
                 }
@@ -169,14 +210,7 @@ fun DashboardScreen(
                 }
             }
 
-            state.error?.let { error ->
-                item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                        Text(text = error, modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer)
-                    }
-                }
-            }
+
         }
     }
 }
@@ -184,7 +218,10 @@ fun DashboardScreen(
 @Composable
 private fun QuickTaskCard(onAddQuickTask: (String) -> Unit) {
     var title by remember { mutableStateOf("") }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Quick Task", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
@@ -219,29 +256,68 @@ private fun QuickTaskCard(onAddQuickTask: (String) -> Unit) {
 @Composable
 private fun StatsRow(noteCount: Int, taskCount: Int, quickTaskCount: Int) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        StatCard("Notes", noteCount.toString(), Modifier.weight(1f))
-        StatCard("Tasks", taskCount.toString(), Modifier.weight(1f))
-        StatCard("Quick", quickTaskCount.toString(), Modifier.weight(1f))
+        StatCard(
+            icon = Icons.Default.NoteAlt,
+            label = "Notes",
+            value = noteCount.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            icon = Icons.Default.CheckCircle,
+            label = "Tasks",
+            value = taskCount.toString(),
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            icon = Icons.Default.AddTask,
+            label = "Quick",
+            value = quickTaskCount.toString(),
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
 @Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+private fun StatCard(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(value, style = MaterialTheme.typography.headlineMedium)
-            Text(label, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
 private fun NoteCard(note: Note, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(note.title, style = MaterialTheme.typography.titleMedium)
             if (note.tags.isNotEmpty()) {
@@ -250,13 +326,25 @@ private fun NoteCard(note: Note, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary)
             }
+            if (note.updatedAt.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = formatRelativeTime(note.updatedAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun TaskCard(task: Task, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             val statusColor = when (task.status) {
                 "pending" -> MaterialTheme.colorScheme.tertiary
@@ -275,12 +363,43 @@ private fun TaskCard(task: Task, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(task.title, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(task.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    StatusBadge(status = task.status)
+                }
                 if (task.location.isNotEmpty()) {
                     Text(task.location, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (task.updatedAt.isNotEmpty()) {
+                    Text(
+                        text = formatRelativeTime(task.updatedAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun StatusBadge(status: String) {
+    val (label, containerColor, contentColor) = when (status) {
+        "pending" -> Triple("Pending", MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f), MaterialTheme.colorScheme.tertiary)
+        "in-progress" -> Triple("In Progress", MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), MaterialTheme.colorScheme.primary)
+        "completed" -> Triple("Done", MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f), MaterialTheme.colorScheme.secondary)
+        else -> Triple(status, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), MaterialTheme.colorScheme.outline)
+    }
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = containerColor
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
     }
 }
