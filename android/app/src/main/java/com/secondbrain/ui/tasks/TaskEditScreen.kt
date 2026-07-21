@@ -122,7 +122,11 @@ fun TaskEditScreen(
         )
     }
 
+import androidx.compose.ui.graphics.Color
+import com.secondbrain.ui.theme.transparentTopAppBarColors
+
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -145,7 +149,8 @@ fun TaskEditScreen(
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Save task")
                     }
-                }
+                },
+                colors = transparentTopAppBarColors()
             )
         }
     ) { padding ->
@@ -163,194 +168,245 @@ fun TaskEditScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Title
-                OutlinedTextField(
-                    value = state.title,
-                    onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateTitle(it)) },
-                    label = { Text("Title") },
+                // Section 1: Task Core Details
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Icon picker + Location row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
                 ) {
-                    // Icon picker button
-                    Surface(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clickable { viewModel.onEvent(TaskEditEvent.ShowIconPicker) },
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            val icon = resolveIcon(state.icon)
-                            if (icon != null) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = "Task icon",
-                                    modifier = Modifier.size(28.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            } else {
-                                Text(
-                                    text = "T",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = state.location,
-                        onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
-                        label = { Text("Location") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Start date
-                DateField(
-                    label = "Start Date",
-                    date = state.startDate,
-                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartDatePicker) },
-                    onClear = { viewModel.onEvent(TaskEditEvent.SetStartDate("")) }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // End date
-                DateField(
-                    label = "End Date",
-                    date = state.endDate,
-                    onClick = { viewModel.onEvent(TaskEditEvent.ShowEndDatePicker) },
-                    onClear = { viewModel.onEvent(TaskEditEvent.SetEndDate("")) }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Recurrence
-                Text("Recurrence", style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RecurrenceChip("None", null, state.recurrenceType) {
-                        viewModel.onEvent(TaskEditEvent.SetRecurrenceType(null))
-                    }
-                    RecurrenceChip("Daily", "daily", state.recurrenceType) {
-                        viewModel.onEvent(TaskEditEvent.SetRecurrenceType("daily"))
-                    }
-                    RecurrenceChip("Weekly", "weekly", state.recurrenceType) {
-                        viewModel.onEvent(TaskEditEvent.SetRecurrenceType("weekly"))
-                    }
-                    RecurrenceChip("Monthly", "monthly", state.recurrenceType) {
-                        viewModel.onEvent(TaskEditEvent.SetRecurrenceType("monthly"))
-                    }
-                }
-                if (state.recurrenceType != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.recurrenceInterval.toString(),
-                        onValueChange = { value ->
-                            val intVal = value.toIntOrNull()
-                            if (intVal != null && intVal > 0) {
-                                viewModel.onEvent(TaskEditEvent.SetRecurrenceInterval(intVal))
-                            }
-                        },
-                        label = { Text("Every N periods") },
-                        modifier = Modifier.width(160.dp),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Tags
-                TagInput(
-                    tags = state.tags,
-                    onTagsChanged = { viewModel.onEvent(TaskEditEvent.SetTags(it)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Subtasks section
-                Text("Subtasks", style = MaterialTheme.typography.titleSmall)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = state.newSubtaskTitle,
-                        onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateNewSubtaskTitle(it)) },
-                        placeholder = { Text("New subtask") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = { viewModel.onEvent(TaskEditEvent.AddSubtask) }
-                        )
-                    )
-                    IconButton(
-                        onClick = { viewModel.onEvent(TaskEditEvent.AddSubtask) },
-                        enabled = state.newSubtaskTitle.isNotBlank()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add subtask")
-                    }
-                }
-                state.subtasks.forEach { subtask ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = subtask.completed,
-                            onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = subtask.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                            textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = "Task Info",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                        IconButton(
-                            onClick = { viewModel.onEvent(TaskEditEvent.RemoveSubtask(subtask.id)) },
-                            modifier = Modifier.size(32.dp)
+                        OutlinedTextField(
+                            value = state.title,
+                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateTitle(it)) },
+                            label = { Text("Title") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Remove subtask",
-                                modifier = Modifier.size(16.dp)
+                            Surface(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clickable { viewModel.onEvent(TaskEditEvent.ShowIconPicker) },
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    val icon = resolveIcon(state.icon)
+                                    if (icon != null) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = "Task icon",
+                                            modifier = Modifier.size(28.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "T",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                            OutlinedTextField(
+                                value = state.location,
+                                onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
+                                label = { Text("Location") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = MaterialTheme.shapes.medium
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
 
-                // Body
-                OutlinedTextField(
-                    value = state.body,
-                    onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateBody(it)) },
-                    label = { Text("Description") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    minLines = 5
-                )
+                // Section 2: Dates & Recurrence
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Dates & Recurrence",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        DateField(
+                            label = "Start Date",
+                            date = state.startDate,
+                            onClick = { viewModel.onEvent(TaskEditEvent.ShowStartDatePicker) },
+                            onClear = { viewModel.onEvent(TaskEditEvent.SetStartDate("")) }
+                        )
+
+                        DateField(
+                            label = "End Date",
+                            date = state.endDate,
+                            onClick = { viewModel.onEvent(TaskEditEvent.ShowEndDatePicker) },
+                            onClear = { viewModel.onEvent(TaskEditEvent.SetEndDate("")) }
+                        )
+
+                        Text("Recurrence", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            RecurrenceChip("None", null, state.recurrenceType) {
+                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType(null))
+                            }
+                            RecurrenceChip("Daily", "daily", state.recurrenceType) {
+                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType("daily"))
+                            }
+                            RecurrenceChip("Weekly", "weekly", state.recurrenceType) {
+                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType("weekly"))
+                            }
+                            RecurrenceChip("Monthly", "monthly", state.recurrenceType) {
+                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType("monthly"))
+                            }
+                        }
+                        if (state.recurrenceType != null) {
+                            OutlinedTextField(
+                                value = state.recurrenceInterval.toString(),
+                                onValueChange = { value ->
+                                    val intVal = value.toIntOrNull()
+                                    if (intVal != null && intVal > 0) {
+                                        viewModel.onEvent(TaskEditEvent.SetRecurrenceInterval(intVal))
+                                    }
+                                },
+                                label = { Text("Every N periods") },
+                                modifier = Modifier.width(160.dp),
+                                singleLine = true,
+                                shape = MaterialTheme.shapes.medium,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                            )
+                        }
+                    }
+                }
+
+                // Section 3: Tags & Subtasks
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Tags & Subtasks",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        TagInput(
+                            tags = state.tags,
+                            onTagsChanged = { viewModel.onEvent(TaskEditEvent.SetTags(it)) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = state.newSubtaskTitle,
+                                onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateNewSubtaskTitle(it)) },
+                                placeholder = { Text("New subtask") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = MaterialTheme.shapes.medium,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { viewModel.onEvent(TaskEditEvent.AddSubtask) }
+                                )
+                            )
+                            IconButton(
+                                onClick = { viewModel.onEvent(TaskEditEvent.AddSubtask) },
+                                enabled = state.newSubtaskTitle.isNotBlank()
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add subtask")
+                            }
+                        }
+                        state.subtasks.forEach { subtask ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = subtask.completed,
+                                    onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = subtask.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f),
+                                    textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                IconButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.RemoveSubtask(subtask.id)) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove subtask",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Section 4: Description Body
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = state.body,
+                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateBody(it)) },
+                            label = { Text("Description") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 5,
+                            shape = MaterialTheme.shapes.medium
+                        )
+                    }
+                }
             }
         }
     }
+}
 }
 
 @Composable
