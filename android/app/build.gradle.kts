@@ -58,10 +58,10 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
 
     // Polygon morphing shapes (RoundedPolygon, Morph)
-    implementation("androidx.graphics:graphics-shapes:1.0.0-alpha05")
+    implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Dynamic color scheme with seed colors
-    implementation("com.materialkolor:materialkolor:2.0.0")
+    implementation("com.materialkolor:material-kolor:4.1.1")
 
     // Activity & Lifecycle
     implementation("androidx.activity:activity-compose:1.9.3")
