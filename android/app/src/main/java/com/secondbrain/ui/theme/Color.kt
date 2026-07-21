@@ -2,7 +2,11 @@ package com.secondbrain.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// -- Light theme colors --
+// ============================================================================
+// Default seed palette (static fallback when dynamic colors are disabled)
+// ============================================================================
+
+// -- Light theme --
 
 // Primary
 val Primary = Color(0xFF1565C0)
@@ -58,8 +62,7 @@ val StatusInProgress = Color(0xFFFFA726)
 val StatusCompleted = Color(0xFF66BB6A)
 val StatusExpired = Color(0xFFEF5350)
 
-
-// -- Dark theme colors --
+// -- Dark theme --
 
 // Primary
 val DarkPrimary = Color(0xFF9ECAFF)
@@ -109,38 +112,52 @@ val DarkInversePrimary = Color(0xFF1565C0)
 val DarkInverseSurface = Color(0xFFE3E2E6)
 val DarkInverseOnSurface = Color(0xFF1A1C1E)
 
-
 // -- Medium contrast (light) --
 val LightMediumPrimary = Color(0xFF003D6B)
 val LightMediumOnPrimary = Color(0xFFFFFFFF)
 val LightMediumPrimaryContainer = Color(0xFF3F7ED9)
 val LightMediumOnPrimaryContainer = Color(0xFFFFFFFF)
-
 val LightMediumSecondary = Color(0xFF253140)
 val LightMediumOnSecondary = Color(0xFFFFFFFF)
-
 val LightMediumTertiary = Color(0xFF3B2946)
 val LightMediumOnTertiary = Color(0xFFFFFFFF)
-
 val LightMediumSurface = Color(0xFFFDFBFF)
 val LightMediumOnSurface = Color(0xFF1A1C1E)
 val LightMediumSurfaceVariant = Color(0xFFDFE2EB)
 val LightMediumOnSurfaceVariant = Color(0xFF32363D)
-
 
 // -- Medium contrast (dark) --
 val DarkMediumPrimary = Color(0xFFB3D4FF)
 val DarkMediumOnPrimary = Color(0xFF001E39)
 val DarkMediumPrimaryContainer = Color(0xFF5F9AF5)
 val DarkMediumOnPrimaryContainer = Color(0xFF000A16)
-
 val DarkMediumSecondary = Color(0xFFD1DBF0)
 val DarkMediumOnSecondary = Color(0xFF111C2B)
-
 val DarkMediumTertiary = Color(0xFFEED2F7)
 val DarkMediumOnTertiary = Color(0xFF271430)
-
 val DarkMediumSurface = Color(0xFF1A1C1E)
 val DarkMediumOnSurface = Color(0xFFF9F9FD)
 val DarkMediumSurfaceVariant = Color(0xFF43474E)
 val DarkMediumOnSurfaceVariant = Color(0xFFCFD2DB)
+
+// ============================================================================
+// OLED Black Mode surface values
+// ============================================================================
+val OledBackground = Color.Black
+val OledSurface = Color(0xFF050505)
+val OledSurfaceContainerLow = Color(0xFF111111)
+val OledSurfaceContainer = Color(0xFF1A1A1A)
+val OledSurfaceContainerHigh = Color(0xFF242424)
+val OledSurfaceContainerHighest = Color(0xFF303030)
+
+// ============================================================================
+// Curated seed colors for palette system
+// ============================================================================
+val DefaultSeed = Color(0xFF1565C0) // matches existing Primary
+val SeedEmber = Color(0xFFF97316)
+val SeedGrove = Color(0xFF6B8E23)
+val SeedHoney = Color(0xFFFACC15)
+val SeedOcean = Color(0xFF0284C7)
+val SeedIris = Color(0xFF7C3AED)
+val SeedDusk = Color(0xFF6B7280)
+val SeedBerry = Color(0xFFD946EF)
