@@ -3,6 +3,7 @@ package com.secondbrain.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Outline.Generic
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Shape
@@ -49,7 +50,7 @@ internal class RoundedPolygonShape(
     ): Outline {
         val path = polygon.toPath().asComposePath()
         path.transform(pathBoundsMatrix(path, size))
-        return Outline.Generic(path)
+        return Generic(path)
     }
 }
 
@@ -67,7 +68,7 @@ internal class MorphPolygonShape(
     ): Outline {
         val path = morph.toPath(progress = progress).asComposePath()
         path.transform(pathBoundsMatrix(path, size))
-        return Outline.Generic(path)
+        return Generic(path)
     }
 }
 
