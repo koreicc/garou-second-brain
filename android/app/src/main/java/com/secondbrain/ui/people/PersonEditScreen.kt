@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -39,12 +40,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.TagInput
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,10 +80,6 @@ fun PersonEditScreen(
             snackbarHostState.showSnackbar(error)
         }
     }
-
-import androidx.compose.material3.Surface
-import androidx.compose.ui.graphics.Color
-import com.secondbrain.ui.theme.transparentTopAppBarColors
 
     Scaffold(
         containerColor = Color.Transparent,

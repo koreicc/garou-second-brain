@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.IconPickerDialog
 import com.secondbrain.ui.util.TagInput
 import com.secondbrain.ui.util.resolveIcon
@@ -121,9 +123,6 @@ fun TaskEditScreen(
             onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndDatePicker) }
         )
     }
-
-import androidx.compose.ui.graphics.Color
-import com.secondbrain.ui.theme.transparentTopAppBarColors
 
     Scaffold(
         containerColor = Color.Transparent,
