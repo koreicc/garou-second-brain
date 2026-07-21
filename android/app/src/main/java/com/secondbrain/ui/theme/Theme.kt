@@ -14,9 +14,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -39,14 +37,13 @@ import com.materialkolor.rememberDynamicColorScheme
 import com.secondbrain.data.ThemeState
 
 /**
- * Main theme composable using Material 3 Expressive with dynamic color support,
+ * Main theme composable using Material 3 with dynamic color support,
  * gradient backgrounds, and Bikram Design DNA aesthetics.
  *
  * @param themeState Runtime theme configuration (color source, palette, gradient, etc.)
  * @param paintBackground When false, skips the full-screen gradient (for translucent activities)
  * @param content Child content
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SecondBrainTheme(
     themeState: ThemeState = ThemeState(),
@@ -102,9 +99,8 @@ fun SecondBrainTheme(
         LocalReducedMotion provides reducedMotion,
         LocalThemeState provides themeState,
     ) {
-        MaterialExpressiveTheme(
+        MaterialTheme(
             colorScheme = targetColorScheme,
-            motionScheme = MotionScheme.expressive(),
             shapes = SecondBrainShapes,
             typography = AppTypography,
         ) {

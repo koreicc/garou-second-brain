@@ -1,7 +1,6 @@
 package com.secondbrain.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -28,20 +27,13 @@ val compactControlShape = RoundedCornerShape(12.dp)
  * - medium (14dp): Cards, small FABs
  * - large (18dp): Extended FABs, dialogs
  * - extraLarge (24dp): Bottom sheets
- * - largeIncreased (22dp): Custom card variants
- * - extraLargeIncreased (28dp): Wide panels
- * - extraExtraLarge (36dp): Hero elements
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 val SecondBrainShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
     small = RoundedCornerShape(10.dp),
     medium = RoundedCornerShape(14.dp),
     large = RoundedCornerShape(18.dp),
     extraLarge = RoundedCornerShape(24.dp),
-    largeIncreased = RoundedCornerShape(22.dp),
-    extraLargeIncreased = RoundedCornerShape(28.dp),
-    extraExtraLarge = RoundedCornerShape(36.dp),
 )
 
 /**
