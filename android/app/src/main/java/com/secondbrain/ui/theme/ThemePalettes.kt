@@ -82,6 +82,20 @@ fun colorSourceSeed(source: ColorSource): Color =
         ColorSource.CURATED_BERRY -> SeedBerry
     }
 
+/** Display label for each PaletteStyleOpt. */
+fun paletteStyleLabel(style: PaletteStyleOpt): String =
+    when (style) {
+        PaletteStyleOpt.TONAL_SPOT -> "Tonal Spot"
+        PaletteStyleOpt.NEUTRAL -> "Neutral"
+        PaletteStyleOpt.VIBRANT -> "Vibrant"
+        PaletteStyleOpt.EXPRESSIVE -> "Expressive"
+        PaletteStyleOpt.RAINBOW -> "Rainbow"
+        PaletteStyleOpt.FRUIT_SALAD -> "Fruit Salad"
+        PaletteStyleOpt.MONOCHROME -> "Monochrome"
+        PaletteStyleOpt.FIDELITY -> "Fidelity"
+        PaletteStyleOpt.CONTENT -> "Content"
+    }
+
 /** Display label for each ColorSource. */
 fun colorSourceLabel(source: ColorSource): String =
     when (source) {

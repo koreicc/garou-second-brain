@@ -4,30 +4,17 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.NoteAlt
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.NoteAlt
-import androidx.compose.material.icons.outlined.People
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -35,247 +22,259 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import com.secondbrain.data.repository.NetworkResult
 import com.secondbrain.ui.dashboard.DashboardScreen
 import com.secondbrain.ui.notes.NoteDetailScreen
 import com.secondbrain.ui.notes.NoteEditScreen
-import com.secondbrain.ui.notes.NoteListScreen
 import com.secondbrain.ui.people.PersonDetailScreen
 import com.secondbrain.ui.people.PersonEditScreen
-import com.secondbrain.ui.people.PersonListScreen
-import com.secondbrain.ui.search.SearchScreen
+import com.secondbrain.ui.settings.SettingsScreen
 import com.secondbrain.ui.tasks.TaskDetailScreen
 import com.secondbrain.ui.tasks.TaskEditScreen
-import com.secondbrain.ui.tasks.TaskListScreen
+import com.secondbrain.ui.workspace.WorkspaceScreen
 
-private data class BottomNavItem(
-    val label: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector,
-    val route: Screen
-)
-
-private val bottomNavItems = listOf(
-    BottomNavItem(
-        label = "Dashboard",
-        selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home,
-        route = Screen.Dashboard
-    ),
-    BottomNavItem(
-        label = "Search",
-        selectedIcon = Icons.Filled.Search,
-        unselectedIcon = Icons.Outlined.Search,
-        route = Screen.Search
-    ),
-    BottomNavItem(
-        label = "Notes",
-        selectedIcon = Icons.Filled.NoteAlt,
-        unselectedIcon = Icons.Outlined.NoteAlt,
-        route = Screen.NoteList
-    ),
-    BottomNavItem(
-        label = "Tasks",
-        selectedIcon = Icons.Filled.CheckCircle,
-        unselectedIcon = Icons.Outlined.CheckCircle,
-        route = Screen.TaskList
-    ),
-    BottomNavItem(
-        label = "People",
-        selectedIcon = Icons.Filled.People,
-        unselectedIcon = Icons.Outlined.People,
-        route = Screen.PersonList
-    )
-)
-
+/**
+ * Root navigation composable.
+ *
+ * Uses a Box wrapper to layer the FAB creation menu over the main scaffold.
+ * Bottom bar has 3 tabs (Dashboard, Workspace, Settings) with a floating FAB
+ * in the center for quick entity creation.
+ */
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val showBottomBar = bottomNavItems.any { item ->
-        currentDestination?.hasRoute(item.route::class) == true
-    }
+    // FAB menu visibility
+    var fabMenuVisible by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                    bottomNavItems.forEach { item ->
-                        val selected = currentDestination?.hasRoute(item.route::class) == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+    // Show bottom bar only on main destinations (not detail/edit screens)
+    val bottomBarRoutes = listOf(Screen.Dashboard, Screen.Workspace, Screen.Settings)
+    val showBottomBar = currentDestination?.let { dest ->
+        bottomBarRoutes.any { dest.hasRoute(it::class) }
+    } ?: true
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                if (showBottomBar) {
+                    SecondBrainBottomBar(
+                        currentDestination = currentDestination,
+                        onTabSelected = { screen ->
+                            navController.navigate(screen) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label
-                                )
-                            },
-                            label = { Text(item.label) }
-                        )
-                    }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onFabClick = { fabMenuVisible = true }
+                    )
+                }
+            }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Dashboard,
+                modifier = Modifier.padding(innerPadding),
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                }
+            ) {
+                // -- Bottom tab destinations --
+
+                composable<Screen.Dashboard> {
+                    DashboardScreen(
+                        onNavigateToNotes = {
+                            navController.navigate(Screen.Workspace) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToTasks = {
+                            navController.navigate(Screen.Workspace) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToPeople = {
+                            navController.navigate(Screen.Workspace) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToNoteDetail = { noteId ->
+                            navController.navigate(Screen.NoteDetail(noteId))
+                        },
+                        onNavigateToTaskDetail = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        }
+                    )
+                }
+
+                composable<Screen.Workspace> {
+                    WorkspaceScreen(
+                        onNavigateToNoteDetail = { noteId ->
+                            navController.navigate(Screen.NoteDetail(noteId))
+                        },
+                        onNavigateToTaskDetail = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        },
+                        onNavigateToPersonDetail = { personId ->
+                            navController.navigate(Screen.PersonDetail(personId))
+                        },
+                        onNavigateToNoteEdit = {
+                            navController.navigate(Screen.NoteEdit())
+                        },
+                        onNavigateToTaskEdit = {
+                            navController.navigate(Screen.TaskEdit())
+                        },
+                        onNavigateToPersonEdit = {
+                            navController.navigate(Screen.PersonEdit())
+                        }
+                    )
+                }
+
+                composable<Screen.Settings> {
+                    SettingsScreen()
+                }
+
+                // -- Detail and Edit screens (pushed on top) --
+
+                composable<Screen.NoteDetail> { backStackEntry ->
+                    val screen: Screen.NoteDetail = backStackEntry.toRoute()
+                    NoteDetailScreen(
+                        noteId = screen.noteId,
+                        onEditClick = {
+                            navController.navigate(Screen.NoteEdit(noteId = screen.noteId))
+                        },
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToNote = { noteId ->
+                            navController.navigate(Screen.NoteDetail(noteId))
+                        },
+                        onNavigateToTask = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        },
+                        onNavigateToPerson = { personId ->
+                            navController.navigate(Screen.PersonDetail(personId))
+                        }
+                    )
+                }
+
+                composable<Screen.NoteEdit> { backStackEntry ->
+                    val screen: Screen.NoteEdit = backStackEntry.toRoute()
+                    NoteEditScreen(
+                        noteId = screen.noteId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable<Screen.TaskDetail> { backStackEntry ->
+                    val screen: Screen.TaskDetail = backStackEntry.toRoute()
+                    TaskDetailScreen(
+                        taskId = screen.taskId,
+                        onEditClick = {
+                            navController.navigate(Screen.TaskEdit(taskId = screen.taskId))
+                        },
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToNote = { noteId ->
+                            navController.navigate(Screen.NoteDetail(noteId))
+                        },
+                        onNavigateToTask = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        },
+                        onNavigateToPerson = { personId ->
+                            navController.navigate(Screen.PersonDetail(personId))
+                        }
+                    )
+                }
+
+                composable<Screen.TaskEdit> { backStackEntry ->
+                    val screen: Screen.TaskEdit = backStackEntry.toRoute()
+                    TaskEditScreen(
+                        taskId = screen.taskId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable<Screen.PersonDetail> { backStackEntry ->
+                    val screen: Screen.PersonDetail = backStackEntry.toRoute()
+                    PersonDetailScreen(
+                        personId = screen.personId,
+                        onEditClick = {
+                            navController.navigate(Screen.PersonEdit(personId = screen.personId))
+                        },
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToNote = { noteId ->
+                            navController.navigate(Screen.NoteDetail(noteId))
+                        },
+                        onNavigateToTask = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        },
+                        onNavigateToPerson = { personId ->
+                            navController.navigate(Screen.PersonDetail(personId))
+                        }
+                    )
+                }
+
+                composable<Screen.PersonEdit> { backStackEntry ->
+                    val screen: Screen.PersonEdit = backStackEntry.toRoute()
+                    PersonEditScreen(
+                        personId = screen.personId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
             }
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = {
-                slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+
+        // FAB creation menu overlay (drawn above scaffold)
+        FabMenuOverlay(
+            isVisible = fabMenuVisible,
+            onDismiss = { fabMenuVisible = false },
+            onNewNote = {
+                fabMenuVisible = false
+                navController.navigate(Screen.NoteEdit())
             },
-            exitTransition = {
-                slideOutOfContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = tween(300)
-                ) + fadeOut(animationSpec = tween(300))
+            onNewTask = {
+                fabMenuVisible = false
+                navController.navigate(Screen.TaskEdit())
             },
-            popEnterTransition = {
-                slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = tween(300)
-                ) + fadeOut(animationSpec = tween(300))
+            onNewPerson = {
+                fabMenuVisible = false
+                navController.navigate(Screen.PersonEdit())
             }
-        ) {
-            composable<Screen.Dashboard> {
-                DashboardScreen(
-                    onNavigateToNotes = { navController.navigate(Screen.NoteList) },
-                    onNavigateToTasks = { navController.navigate(Screen.TaskList) },
-                    onNavigateToPeople = { navController.navigate(Screen.PersonList) },
-                    onNavigateToNoteDetail = { noteId ->
-                        navController.navigate(Screen.NoteDetail(noteId))
-                    },
-                    onNavigateToTaskDetail = { taskId ->
-                        navController.navigate(Screen.TaskDetail(taskId))
-                    }
-                )
-            }
-
-            composable<Screen.NoteList> {
-                NoteListScreen(
-                    onNoteClick = { noteId ->
-                        navController.navigate(Screen.NoteDetail(noteId))
-                    },
-                    onAddNote = {
-                        navController.navigate(Screen.NoteEdit())
-                    }
-                )
-            }
-
-            composable<Screen.NoteDetail> { backStackEntry ->
-                val screen: Screen.NoteDetail = backStackEntry.toRoute()
-                NoteDetailScreen(
-                    noteId = screen.noteId,
-                    onEditClick = {
-                        navController.navigate(Screen.NoteEdit(noteId = screen.noteId))
-                    },
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable<Screen.NoteEdit> { backStackEntry ->
-                val screen: Screen.NoteEdit = backStackEntry.toRoute()
-                NoteEditScreen(
-                    noteId = screen.noteId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable<Screen.TaskList> {
-                TaskListScreen(
-                    onTaskClick = { taskId ->
-                        navController.navigate(Screen.TaskDetail(taskId))
-                    },
-                    onAddTask = {
-                        navController.navigate(Screen.TaskEdit())
-                    }
-                )
-            }
-
-            composable<Screen.TaskDetail> { backStackEntry ->
-                val screen: Screen.TaskDetail = backStackEntry.toRoute()
-                TaskDetailScreen(
-                    taskId = screen.taskId,
-                    onEditClick = {
-                        navController.navigate(Screen.TaskEdit(taskId = screen.taskId))
-                    },
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable<Screen.TaskEdit> { backStackEntry ->
-                val screen: Screen.TaskEdit = backStackEntry.toRoute()
-                TaskEditScreen(
-                    taskId = screen.taskId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable<Screen.PersonList> {
-                PersonListScreen(
-                    onPersonClick = { personId ->
-                        navController.navigate(Screen.PersonDetail(personId))
-                    },
-                    onAddPerson = {
-                        navController.navigate(Screen.PersonEdit())
-                    }
-                )
-            }
-
-            composable<Screen.PersonDetail> { backStackEntry ->
-                val screen: Screen.PersonDetail = backStackEntry.toRoute()
-                PersonDetailScreen(
-                    personId = screen.personId,
-                    onEditClick = {
-                        navController.navigate(Screen.PersonEdit(personId = screen.personId))
-                    },
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable<Screen.PersonEdit> { backStackEntry ->
-                val screen: Screen.PersonEdit = backStackEntry.toRoute()
-                PersonEditScreen(
-                    personId = screen.personId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable<Screen.Search> {
-                SearchScreen(
-                    onNavigateToNoteDetail = { noteId ->
-                        navController.navigate(Screen.NoteDetail(noteId))
-                    },
-                    onNavigateToTaskDetail = { taskId ->
-                        navController.navigate(Screen.TaskDetail(taskId))
-                    },
-                    onNavigateToPersonDetail = { personId ->
-                        navController.navigate(Screen.PersonDetail(personId))
-                    },
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-        }
+        )
     }
 }

@@ -1,6 +1,8 @@
 package com.secondbrain.ui.people
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +21,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,16 +42,22 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.domain.model.LinkedEntityInfo
+import com.secondbrain.ui.common.LinkPickerSheet
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.TagInput
 
@@ -70,6 +81,10 @@ fun PersonEditScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Load all entities for the link picker
+    var allLinkableEntities by remember { mutableStateOf<List<LinkedEntityInfo>>(emptyList()) }
+    var isLinkPickerLoading by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.isSaved) {
         if (state.isSaved) onNavigateBack()
     }
@@ -79,6 +94,29 @@ fun PersonEditScreen(
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
         }
+    }
+
+    // Load entities when link picker opens
+    LaunchedEffect(state.showLinkPicker) {
+        if (state.showLinkPicker && allLinkableEntities.isEmpty()) {
+            isLinkPickerLoading = true
+            val result = AppModule.linkingRepository.getAllLinkableEntities()
+            allLinkableEntities = result.getOrNull() ?: emptyList()
+            isLinkPickerLoading = false
+        }
+    }
+
+    // Show Link Picker
+    if (state.showLinkPicker) {
+        LinkPickerSheet(
+            allEntities = allLinkableEntities,
+            initiallySelectedIds = state.links.toSet(),
+            isLoading = isLinkPickerLoading,
+            onDismiss = { viewModel.onEvent(PersonEditEvent.DismissLinkPicker) },
+            onConfirm = { selectedIds ->
+                viewModel.onEvent(PersonEditEvent.SetLinks(selectedIds.toList()))
+            }
+        )
     }
 
     Scaffold(
@@ -178,6 +216,98 @@ fun PersonEditScreen(
                             tags = state.tags,
                             onTagsChanged = { viewModel.onEvent(PersonEditEvent.SetTags(it)) },
                             modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // Linked Entities Section
+                if (state.links.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 1.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Linked Entities",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            state.links.forEach { linkId ->
+                                val entityInfo = allLinkableEntities.find { it.id == linkId }
+                                if (entityInfo != null) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val (chipIcon, color) = when (entityInfo.type) {
+                                            "note" -> Icons.Default.NoteAlt to MaterialTheme.colorScheme.tertiary
+                                            "task" -> Icons.Default.TaskAlt to MaterialTheme.colorScheme.primary
+                                            else -> Icons.Default.People to MaterialTheme.colorScheme.secondary
+                                        }
+                                        Surface(
+                                            shape = MaterialTheme.shapes.small,
+                                            color = color.copy(alpha = 0.12f),
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = chipIcon,
+                                                    contentDescription = null,
+                                                    tint = color,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = entityInfo.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    HorizontalDivider()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Add Link Button
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.onEvent(PersonEditEvent.ShowLinkPicker) },
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Link,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = if (state.links.isEmpty()) "Add Links" else "Edit Links (${state.links.size})",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
