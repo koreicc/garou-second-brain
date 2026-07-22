@@ -1,5 +1,14 @@
 package com.secondbrain.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,19 +30,18 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 
@@ -70,6 +78,20 @@ private val navPillItems = listOf(
 )
 
 // ============================================================================
+// Spring animation spec matching Remember's bouncy style
+// ============================================================================
+
+private val pillSpringSpec = spring<Float>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessLow
+)
+
+private val pillDpSpringSpec = spring<androidx.compose.ui.unit.Dp>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessLow
+)
+
+// ============================================================================
 // SecondBrainBottomBar -- floating pill + FAB (Remember-style)
 // ============================================================================
 
@@ -79,6 +101,9 @@ private val navPillItems = listOf(
  * Consists of a rounded pill containing 3 tab icons, with a separate FAB
  * positioned to the right. Both float above the screen content rather than
  * being attached to the bottom edge.
+ *
+ * Features animated tab selection: the selected tab expands with a bouncy spring
+ * animation to reveal its label, while unselected tabs remain compact with icons only.
  *
  * @param currentDestination Current nav destination to determine selection
  * @param onTabSelected Called when a navigation tab is tapped
@@ -95,16 +120,16 @@ fun SecondBrainBottomBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp),
+            .padding(bottom = 28.dp), // Higher position above bottom edge
         contentAlignment = Alignment.BottomCenter
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Floating pill with 3 nav tabs
+            // Floating pill with 3 animated nav tabs
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -124,46 +149,11 @@ fun SecondBrainBottomBar(
                 ) {
                     navPillItems.forEach { item ->
                         val selected = currentDestination?.hasRoute(item.route::class) == true
-
-                        IconButton(
-                            onClick = { onTabSelected(item.route) },
-                            modifier = Modifier
-                                .height(48.dp)
-                                .then(
-                                    if (selected) Modifier.width(80.dp) else Modifier.width(48.dp)
-                                ),
-                            colors = if (selected) {
-                                IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            } else {
-                                IconButtonDefaults.iconButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(horizontal = if (selected) 8.dp else 0.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                if (selected) {
-                                    Text(
-                                        text = item.label,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(start = 6.dp),
-                                        maxLines = 1
-                                    )
-                                }
-                            }
-                        }
+                        NavPillTab(
+                            item = item,
+                            selected = selected,
+                            onClick = { onTabSelected(item.route) }
+                        )
                     }
                 }
             }
@@ -184,6 +174,86 @@ fun SecondBrainBottomBar(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Create new",
                     modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Animated nav pill tab item (Remember-style)
+// ============================================================================
+
+@Composable
+private fun NavPillTab(
+    item: NavPillItem,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    // Animate width: selected = icon + label (~88dp), unselected = icon only (48dp)
+    val animatedWidth by animateDpAsState(
+        targetValue = if (selected) 88.dp else 48.dp,
+        animationSpec = pillDpSpringSpec,
+        label = "pill_tab_width"
+    )
+
+    // Animate container color
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            Color.Transparent
+        },
+        animationSpec = pillSpringSpec,
+        label = "pill_tab_bg"
+    )
+
+    // Animate content color
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = pillSpringSpec,
+        label = "pill_tab_content"
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        color = containerColor,
+        modifier = Modifier
+            .height(48.dp)
+            .width(animatedWidth)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = if (selected) 12.dp else 0.dp)
+        ) {
+            Icon(
+                imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                contentDescription = item.label,
+                modifier = Modifier.size(24.dp),
+                tint = contentColor
+            )
+
+            // Animated label: appears only when selected with fade + slide
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(animationSpec = pillSpringSpec) +
+                    slideInVertically(animationSpec = pillSpringSpec) { it },
+                exit = fadeOut(animationSpec = pillSpringSpec) +
+                    slideOutVertically(animationSpec = pillSpringSpec) { it }
+            ) {
+                Text(
+                    text = item.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                    modifier = Modifier.padding(start = 6.dp),
+                    maxLines = 1
                 )
             }
         }
