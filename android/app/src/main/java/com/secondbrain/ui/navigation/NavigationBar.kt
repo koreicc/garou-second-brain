@@ -1,7 +1,7 @@
 package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
@@ -79,7 +79,7 @@ private val navPillItems = listOf(
 // Spring animation spec matching Remember's bouncy style
 // ============================================================================
 
-private fun pillDpSpringSpec() = spring<androidx.compose.ui.unit.Dp>(
+private fun pillSpringSpec() = spring<Float>(
     dampingRatio = Spring.DampingRatioMediumBouncy,
     stiffness = Spring.StiffnessLow
 )
@@ -188,11 +188,14 @@ private fun NavPillTab(
     onClick: () -> Unit
 ) {
     // Animate label width: 72dp when selected, 0dp when not (Remember-style)
-    val labelWidth by animateDpAsState(
-        targetValue = if (selected) 72.dp else 0.dp,
-        animationSpec = pillDpSpringSpec(),
-        label = "nav_label_width"
+    // Uses animateFloatAsState and converts to Dp to avoid a Kotlin Compose
+    // compiler plugin issue with Dp.compareTo on this Kotlin version
+    val labelWidthFraction by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = pillSpringSpec(),
+        label = "nav_label_width_fraction"
     )
+    val labelWidth = labelWidthFraction * 72.dp
 
     // Animate container color
     val containerColor by animateColorAsState(
@@ -239,7 +242,7 @@ private fun NavPillTab(
 
             // Label only renders when labelWidth exceeds a small threshold
             // This prevents layout shifts while allowing smooth width animation
-            if (labelWidth > 4.dp) {
+            if (labelWidthFraction > 0.05f) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = item.label,
