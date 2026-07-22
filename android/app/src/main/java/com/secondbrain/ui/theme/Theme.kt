@@ -351,6 +351,7 @@ private fun rememberWallpaperTintColor(
     }
 
     fun readWallpaperTint(): Color? {
+        if (Build.VERSION.SDK_INT < 27) return null
         val colors = runCatching {
             wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
         }.getOrNull()
