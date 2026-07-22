@@ -96,6 +96,26 @@ func (h *SearchHandler) Search(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.DataResponse(results))
 }
 
+// WikiLink resolves a [[wikilink]] reference (by title or ID) to an entity.
+// GET /api/v1/wikilink?q=Title
+func (h *SearchHandler) WikiLink(c echo.Context) error {
+	q := c.QueryParam("q")
+	if strings.TrimSpace(q) == "" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("query parameter 'q' is required"))
+	}
+
+	entityType, id, title, err := h.vault.ResolveWikiLink(strings.TrimSpace(q))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, model.ErrorResponse("wikilink not found: "+q))
+	}
+
+	return c.JSON(http.StatusOK, model.DataResponse(map[string]string{
+		"type":  entityType,
+		"id":    id,
+		"title": title,
+	}))
+}
+
 func matchesEntity(title string, tags []string, body string, query string) bool {
 	if strings.Contains(strings.ToLower(title), query) {
 		return true

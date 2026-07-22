@@ -16,9 +16,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Subtask
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.util.WikilinkText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +42,7 @@ fun TaskDetailScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Show errors in snackbar
     LaunchedEffect(state.error) {
@@ -131,7 +134,15 @@ fun TaskDetailScreen(
 
                     if (task.body.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(task.body, style = MaterialTheme.typography.bodyLarge)
+                        WikilinkText(
+                            text = task.body,
+                            onWikilinkClick = { target ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("WikiLink: $target")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
             }

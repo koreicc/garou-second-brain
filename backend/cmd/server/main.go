@@ -73,6 +73,11 @@ func main() {
 
 	searchHandler := handler.NewSearchHandler(v)
 	api.GET("/search", searchHandler.Search)
+	api.GET("/wikilink", searchHandler.WikiLink)
+
+	archiveHandler := handler.NewArchiveHandler(v)
+	api.GET("/archive", archiveHandler.List)
+	api.POST("/archive/:type/:id/restore", archiveHandler.Restore)
 
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})

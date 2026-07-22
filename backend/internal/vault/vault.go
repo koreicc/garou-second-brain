@@ -126,7 +126,10 @@ func (v *Vault) read(entityType, id string, dest interface{}) (body string, err 
 	if err != nil {
 		return "", err
 	}
+	return v.readFile(path, entityType, id, dest)
+}
 
+func (v *Vault) readFile(path, entityType, id string, dest interface{}) (body string, err error) {
 	mu := v.getFileLock(path)
 	mu.Lock()
 	defer mu.Unlock()
@@ -211,6 +214,179 @@ func (v *Vault) listFiles(subdir string) ([]string, error) {
 		ids = append(ids, strings.TrimSuffix(entry.Name(), ".md"))
 	}
 	return ids, nil
+}
+
+// archiveFilePath returns the path to an archived entity file.
+func (v *Vault) archiveFilePath(entityType, id string) (string, error) {
+	dir, err := entityDir(entityType)
+	if err != nil {
+		return "", err
+	}
+	if id == "" || strings.ContainsAny(id, "/\\") || id == "." || id == ".." {
+		return "", fmt.Errorf("invalid id: %q", id)
+	}
+	path := filepath.Join(v.root, DirArchive, dir, id+".md")
+	cleanRoot := filepath.Clean(v.root)
+	cleanPath := filepath.Clean(path)
+	if cleanPath != cleanRoot && !strings.HasPrefix(cleanPath, cleanRoot+string(filepath.Separator)) {
+		return "", fmt.Errorf("invalid id: %q", id)
+	}
+	return path, nil
+}
+
+// readArchived reads an archived entity and unmarshals its frontmatter.
+func (v *Vault) readArchived(entityType, id string, dest interface{}) (body string, err error) {
+	path, err := v.archiveFilePath(entityType, id)
+	if err != nil {
+		return "", err
+	}
+	return v.readFile(path, entityType, id, dest)
+}
+
+// ListArchivedIDs returns the IDs of archived entities of the given type.
+func (v *Vault) ListArchivedIDs(entityType string) ([]string, error) {
+	dir, err := entityDir(entityType)
+	if err != nil {
+		return nil, err
+	}
+	subdir := filepath.Join(DirArchive, dir)
+	return v.listFiles(subdir)
+}
+
+// ReadArchivedNote reads a note from the archive.
+func (v *Vault) ReadArchivedNote(id string) (*model.Note, error) {
+	var note model.Note
+	body, err := v.readArchived(model.TypeNote, id, &note)
+	if err != nil {
+		return nil, err
+	}
+	note.Body = body
+	return &note, nil
+}
+
+// ReadArchivedTask reads a task from the archive.
+func (v *Vault) ReadArchivedTask(id string) (*model.Task, error) {
+	var task model.Task
+	body, err := v.readArchived(model.TypeTask, id, &task)
+	if err != nil {
+		return nil, err
+	}
+	task.Body = body
+	return &task, nil
+}
+
+// ReadArchivedQuickTask reads a quick task from the archive.
+func (v *Vault) ReadArchivedQuickTask(id string) (*model.QuickTask, error) {
+	var qt model.QuickTask
+	_, err := v.readArchived(model.TypeQuickTask, id, &qt)
+	if err != nil {
+		return nil, err
+	}
+	return &qt, nil
+}
+
+// ReadArchivedPerson reads a person from the archive.
+func (v *Vault) ReadArchivedPerson(id string) (*model.Person, error) {
+	var person model.Person
+	body, err := v.readArchived(model.TypePerson, id, &person)
+	if err != nil {
+		return nil, err
+	}
+	person.Body = body
+	return &person, nil
+}
+
+// RestoreArchive restores an archived entity back to its original location.
+func (v *Vault) RestoreArchive(entityType, id string) error {
+	switch entityType {
+	case model.TypeNote:
+		note, err := v.ReadArchivedNote(id)
+		if err != nil {
+			return err
+		}
+		if err := v.WriteNote(note); err != nil {
+			return err
+		}
+	case model.TypeTask:
+		task, err := v.ReadArchivedTask(id)
+		if err != nil {
+			return err
+		}
+		if err := v.WriteTask(task); err != nil {
+			return err
+		}
+	case model.TypeQuickTask:
+		qt, err := v.ReadArchivedQuickTask(id)
+		if err != nil {
+			return err
+		}
+		if err := v.WriteQuickTask(qt); err != nil {
+			return err
+		}
+	case model.TypePerson:
+		person, err := v.ReadArchivedPerson(id)
+		if err != nil {
+			return err
+		}
+		if err := v.WritePerson(person); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown entity type: %s", entityType)
+	}
+
+	// Remove from archive after successful restore
+	archivePath, err := v.archiveFilePath(entityType, id)
+	if err != nil {
+		return fmt.Errorf("archive path: %w", err)
+	}
+	if err := os.Remove(archivePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove archived %s: %w", archivePath, err)
+	}
+
+	return nil
+}
+
+// ResolveWikiLink finds an entity by its title or ID across all entity types.
+// Returns the entity type, ID, and display title if found.
+func (v *Vault) ResolveWikiLink(query string) (entityType string, id string, title string, err error) {
+	notes, err := v.ListNotes()
+	if err == nil {
+		for _, n := range notes {
+			if strings.EqualFold(n.Title, query) || n.ID == query {
+				return model.TypeNote, n.ID, n.Title, nil
+			}
+		}
+	}
+
+	tasks, err := v.ListTasks()
+	if err == nil {
+		for _, t := range tasks {
+			if strings.EqualFold(t.Title, query) || t.ID == query {
+				return model.TypeTask, t.ID, t.Title, nil
+			}
+		}
+	}
+
+	qts, err := v.ListQuickTasks()
+	if err == nil {
+		for _, qt := range qts {
+			if strings.EqualFold(qt.Title, query) || qt.ID == query {
+				return model.TypeQuickTask, qt.ID, qt.Title, nil
+			}
+		}
+	}
+
+	people, err := v.ListPeople()
+	if err == nil {
+		for _, p := range people {
+			if strings.EqualFold(p.Name, query) || p.ID == query {
+				return model.TypePerson, p.ID, p.Name, nil
+			}
+		}
+	}
+
+	return "", "", "", fmt.Errorf("wikilink %q: %w", query, ErrNotFound)
 }
 
 func (v *Vault) ReadNote(id string) (*model.Note, error) {
@@ -342,11 +518,38 @@ func (v *Vault) Delete(entityType, id string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if err := os.Remove(path); err != nil {
+	// Read the file content before deleting
+	data, err := os.ReadFile(path)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("%s %s: %w", entityType, id, ErrNotFound)
 		}
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+
+	// Remove original
+	if err := os.Remove(path); err != nil {
 		return fmt.Errorf("delete %s: %w", path, err)
+	}
+
+	// Archive the content (best-effort, atomic write)
+	dir, err := entityDir(entityType)
+	if err != nil {
+		return nil
+	}
+	archiveDir := filepath.Join(v.root, DirArchive, dir)
+	if err := os.MkdirAll(archiveDir, 0755); err != nil {
+		return nil
+	}
+	archivePath := filepath.Join(archiveDir, id+".md")
+	tmpPath := archivePath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		os.Remove(tmpPath)
+		return nil
+	}
+	if err := os.Rename(tmpPath, archivePath); err != nil {
+		os.Remove(tmpPath)
+		return nil
 	}
 
 	return nil

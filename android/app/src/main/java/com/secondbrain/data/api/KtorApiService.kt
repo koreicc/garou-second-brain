@@ -125,4 +125,12 @@ class KtorApiService(
             parameter("q", query)
         }.body()
     }
+
+    // ===== WikiLink =====
+
+    override suspend fun resolveWikilink(query: String): ApiResponse<WikilinkResponse> {
+        return client.get("$baseUrl/wikilink") {
+            parameter("q", query)
+        }.body()
+    }
 }

@@ -27,6 +27,7 @@ func (h *NoteHandler) List(c echo.Context) error {
 	if notes == nil {
 		notes = []*model.Note{}
 	}
+	notes = paginate(notes, c)
 	return c.JSON(http.StatusOK, model.DataResponse(notes))
 }
 
@@ -87,10 +88,11 @@ func (h *NoteHandler) Create(c echo.Context) error {
 }
 
 type UpdateNoteRequest struct {
-	Title string   `json:"title"`
-	Tags  []string `json:"tags"`
-	Links []string `json:"links"`
-	Body  string   `json:"body"`
+	Title  string   `json:"title"`
+	Status string   `json:"status"`
+	Tags   []string `json:"tags"`
+	Links  []string `json:"links"`
+	Body   string   `json:"body"`
 }
 
 func (h *NoteHandler) Update(c echo.Context) error {
@@ -110,6 +112,9 @@ func (h *NoteHandler) Update(c echo.Context) error {
 
 	if req.Title != "" {
 		note.Title = req.Title
+	}
+	if req.Status != "" {
+		note.Status = model.EntityStatus(req.Status)
 	}
 	if req.Tags != nil {
 		note.Tags = req.Tags

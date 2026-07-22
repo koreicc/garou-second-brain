@@ -1,0 +1,51 @@
+name: Backend Build
+
+on:
+  push:
+    branches: [main, feat/**, fix/**]
+  pull_request:
+    branches: [main, feat/**, fix/**]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ["1.22", "1.23"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: backend/go.sum
+
+      - name: Tidy dependencies
+        run: |
+          cd backend
+          go mod tidy
+
+      - name: Check formatting
+        run: |
+          cd backend
+          gofmt -l . 2>&1 | head -20
+          test -z "$(gofmt -l .)"
+
+      - name: Build
+        run: |
+          cd backend
+          go build ./...
+
+      - name: Vet
+        run: |
+          cd backend
+          go vet ./...
+
+      - name: Run tests with race detector
+        run: |
+          cd backend
+          go test -race -count=1 ./...

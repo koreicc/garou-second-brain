@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.TextSnippet
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,8 +17,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.secondbrain.di.AppModule
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.util.WikilinkText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +42,7 @@ fun NoteDetailScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Show errors in snackbar
     LaunchedEffect(state.error) {
@@ -68,6 +73,13 @@ fun NoteDetailScreen(
                     }
                 },
                 actions = {
+                    val isArchived = state.note?.status == "archived"
+                    IconButton(onClick = { viewModel.onEvent(NoteDetailEvent.ToggleArchive) }) {
+                        Icon(
+                            imageVector = if (isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                            contentDescription = if (isArchived) "Restore note" else "Archive note"
+                        )
+                    }
                     IconButton(onClick = onEditClick) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit note")
                     }
@@ -122,8 +134,13 @@ fun NoteDetailScreen(
                             }
                         }
                     } else {
-                        Text(
+                        WikilinkText(
                             text = note.body,
+                            onWikilinkClick = { target ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("WikiLink: $target")
+                                }
+                            },
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
