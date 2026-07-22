@@ -32,6 +32,7 @@ data class TaskEditUiState(
     // Recurrence
     val recurrenceType: String? = null,
     val recurrenceInterval: Int = 1,
+    val recurrenceDaysOfWeek: List<Int> = emptyList(),
     // Subtasks
     val subtasks: List<SubtaskEditItem> = emptyList(),
     val newSubtaskTitle: String = "",
@@ -66,11 +67,13 @@ sealed interface TaskEditEvent {
     // Recurrence events
     data class SetRecurrenceType(val type: String?) : TaskEditEvent
     data class SetRecurrenceInterval(val interval: Int) : TaskEditEvent
+    data class SetRecurrenceDaysOfWeek(val days: List<Int>) : TaskEditEvent
     // Subtask events
     data class UpdateNewSubtaskTitle(val title: String) : TaskEditEvent
     data object AddSubtask : TaskEditEvent
     data class RemoveSubtask(val id: String) : TaskEditEvent
     data class ToggleSubtask(val id: String) : TaskEditEvent
+    data class MoveSubtask(val id: String, val direction: Int) : TaskEditEvent
     // Save
     data object Save : TaskEditEvent
 }
@@ -105,6 +108,7 @@ class TaskEditViewModel(
                             endDate = task.endDate.take(10),
                             recurrenceType = task.recurrence?.type,
                             recurrenceInterval = task.recurrence?.interval ?: 1,
+                            recurrenceDaysOfWeek = task.recurrence?.daysOfWeek ?: emptyList(),
                             subtasks = task.subtasks.map { s ->
                                 SubtaskEditItem(id = s.id, title = s.title, completed = s.completed)
                             },
@@ -134,13 +138,15 @@ class TaskEditViewModel(
             is TaskEditEvent.DismissEndDatePicker -> _state.update { it.copy(showEndDatePicker = false) }
             is TaskEditEvent.SetEndDate -> _state.update { it.copy(endDate = event.date, showEndDatePicker = false) }
             // Recurrence
-            is TaskEditEvent.SetRecurrenceType -> _state.update { it.copy(recurrenceType = event.type) }
+            is TaskEditEvent.SetRecurrenceType -> _state.update { it.copy(recurrenceType = event.type, recurrenceDaysOfWeek = emptyList()) }
             is TaskEditEvent.SetRecurrenceInterval -> _state.update { it.copy(recurrenceInterval = event.interval) }
+            is TaskEditEvent.SetRecurrenceDaysOfWeek -> _state.update { it.copy(recurrenceDaysOfWeek = event.days) }
             // Subtasks
             is TaskEditEvent.UpdateNewSubtaskTitle -> _state.update { it.copy(newSubtaskTitle = event.title) }
             is TaskEditEvent.AddSubtask -> addSubtask()
             is TaskEditEvent.RemoveSubtask -> removeSubtask(event.id)
             is TaskEditEvent.ToggleSubtask -> toggleSubtask(event.id)
+            is TaskEditEvent.MoveSubtask -> moveSubtask(event.id, event.direction)
             // Save
             is TaskEditEvent.Save -> save()
         }
@@ -175,6 +181,19 @@ class TaskEditViewModel(
         }
     }
 
+    private fun moveSubtask(id: String, direction: Int) {
+        _state.update { state ->
+            val list = state.subtasks.toMutableList()
+            val index = list.indexOfFirst { it.id == id }
+            if (index == -1) return@update state
+            val newIndex = index + direction
+            if (newIndex < 0 || newIndex >= list.size) return@update state
+            val item = list.removeAt(index)
+            list.add(newIndex, item)
+            state.copy(subtasks = list)
+        }
+    }
+
     private fun save() {
         val s = _state.value
         if (s.title.isBlank()) return
@@ -185,7 +204,11 @@ class TaskEditViewModel(
             val endDateISO = if (s.endDate.isNotBlank()) "${s.endDate}T23:59:59Z" else null
 
             val recurrence = s.recurrenceType?.let { type ->
-                RecurrenceDto(type = type, interval = s.recurrenceInterval)
+                RecurrenceDto(
+                    type = type,
+                    interval = s.recurrenceInterval,
+                    daysOfWeek = if (type == "weekly") s.recurrenceDaysOfWeek else emptyList()
+                )
             }
 
             val subtaskDtos = s.subtasks.map { sub ->

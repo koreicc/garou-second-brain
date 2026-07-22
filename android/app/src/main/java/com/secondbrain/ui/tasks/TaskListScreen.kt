@@ -207,11 +207,11 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        val statusColor = when (task.status) {
-            "pending" -> MaterialTheme.colorScheme.tertiary
-            "in-progress" -> MaterialTheme.colorScheme.primary
-            "completed" -> MaterialTheme.colorScheme.secondary
-            else -> MaterialTheme.colorScheme.outline
+        val (statusColor, onStatusColor) = when (task.status) {
+            "pending" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
+            "in-progress" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+            "completed" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
+            else -> MaterialTheme.colorScheme.outline to MaterialTheme.colorScheme.onSurface
         }
 
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
@@ -238,7 +238,7 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
                         val displayIcon = if (task.icon.isNotEmpty()) task.icon else task.title.take(1).uppercase()
                         Text(
                             text = displayIcon,
-                            color = Color.White
+                            color = onStatusColor
                         )
                     }
                 }

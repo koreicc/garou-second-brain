@@ -533,11 +533,11 @@ private fun TaskCard(task: Task, onClick: () -> Unit) {
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp), 
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val statusColor = when (task.status) {
-                "pending" -> MaterialTheme.colorScheme.tertiary
-                "in-progress" -> MaterialTheme.colorScheme.primary
-                "completed" -> MaterialTheme.colorScheme.secondary
-                else -> MaterialTheme.colorScheme.outline
+            val (statusColor, onStatusColor) = when (task.status) {
+                "pending" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
+                "in-progress" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+                "completed" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
+                else -> MaterialTheme.colorScheme.outline to MaterialTheme.colorScheme.onSurface
             }
             Surface(
                 shape = MaterialTheme.shapes.small,
@@ -547,7 +547,7 @@ private fun TaskCard(task: Task, onClick: () -> Unit) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = task.icon.ifEmpty { "T" },
-                        color = Color.White
+                        color = onStatusColor
                     )
                 }
             }

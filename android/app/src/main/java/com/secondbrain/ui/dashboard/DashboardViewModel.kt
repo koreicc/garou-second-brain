@@ -158,15 +158,12 @@ class DashboardViewModel(
 
     private fun completeQuickTask(id: String) {
         viewModelScope.launch {
-            // Optimistic: immediately remove from list and show countdown
+            // Show countdown while keeping task visible
             _state.update {
-                it.copy(
-                    quickTasks = it.quickTasks.filter { qt -> qt.id != id },
-                    completingQuickTasks = it.completingQuickTasks + (id to 5)
-                )
+                it.copy(completingQuickTasks = it.completingQuickTasks + (id to 5))
             }
 
-            // Countdown from 5 to 1
+            // Countdown from 5 to 1 (visible on the task card)
             for (remaining in 4 downTo 1) {
                 delay(1000)
                 _state.update {
@@ -177,14 +174,23 @@ class DashboardViewModel(
             // Wait last second
             delay(1000)
 
-            // Mark as completed on backend (which triggers 5-second backend delete)
-            quickTaskRepository.complete(id).onFailure { e ->
-                _state.update { it.copy(error = e.message) }
-            }
-
-            // Remove countdown entry
-            _state.update {
-                it.copy(completingQuickTasks = it.completingQuickTasks - id)
+            // Mark as completed on backend
+            quickTaskRepository.complete(id).onSuccess {
+                // Remove from quickTasks list (after backend confirms)
+                _state.update {
+                    it.copy(
+                        quickTasks = it.quickTasks.filter { qt -> qt.id != id },
+                        completingQuickTasks = it.completingQuickTasks - id
+                    )
+                }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        error = e.message,
+                        completingQuickTasks = it.completingQuickTasks - id
+                    )
+                }
+                silentReload()
             }
         }
     }

@@ -13,45 +13,58 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessAlarm
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bed
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Coffee
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.LocalDining
+import androidx.compose.material.icons.filled.LocalGroceryStore
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.TravelExplore
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wash
+import androidx.compose.material.icons.filled.Wc
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -75,11 +88,8 @@ private val taskIcons: List<IconEntry> = listOf(
     IconEntry("task", Icons.Default.CheckCircle),
     IconEntry("edit", Icons.Default.Edit),
     IconEntry("create", Icons.Default.Create),
-    IconEntry("write", Icons.Default.Create),
-    IconEntry("book", Icons.Default.Book),
     IconEntry("note", Icons.Default.NoteAlt),
     IconEntry("list", Icons.Default.ListAlt),
-    IconEntry("code", Icons.Default.Code),
     IconEntry("alarm", Icons.Default.AccessAlarm),
     IconEntry("schedule", Icons.Default.Schedule),
     IconEntry("timer", Icons.Default.Timer),
@@ -89,30 +99,44 @@ private val taskIcons: List<IconEntry> = listOf(
     IconEntry("refresh", Icons.Default.Refresh),
     IconEntry("search", Icons.Default.Search),
     IconEntry("home", Icons.Default.Home),
-    IconEntry("location", Icons.Default.LocationOn),
-    IconEntry("flight", Icons.Default.Flight),
-    IconEntry("dining", Icons.Default.LocalDining),
+    IconEntry("grocery", Icons.Default.LocalGroceryStore),
     IconEntry("cart", Icons.Default.ShoppingCart),
-    IconEntry("camera", Icons.Default.CameraAlt),
-    IconEntry("photo", Icons.Default.Photo),
-    IconEntry("video", Icons.Default.Videocam),
+    IconEntry("store", Icons.Default.Store),
+    IconEntry("money", Icons.Default.AttachMoney),
+    IconEntry("dining", Icons.Default.LocalDining),
+    IconEntry("restaurant", Icons.Default.Restaurant),
+    IconEntry("coffee", Icons.Default.Coffee),
+    IconEntry("kitchen", Icons.Default.Kitchen),
+    IconEntry("bed", Icons.Default.Bed),
+    IconEntry("ac", Icons.Default.AcUnit),
+    IconEntry("clean", Icons.Default.CleaningServices),
+    IconEntry("wash", Icons.Default.Wash),
+    IconEntry("wc", Icons.Default.Wc),
+    IconEntry("fitness", Icons.Default.FitnessCenter),
+    IconEntry("school", Icons.Default.School),
+    IconEntry("book", Icons.Default.MenuBook),
+    IconEntry("palette", Icons.Default.Palette),
     IconEntry("music", Icons.Default.MusicNote),
+    IconEntry("construction", Icons.Default.Construction),
+    IconEntry("build", Icons.Default.Build),
+    IconEntry("lock", Icons.Default.Lock),
+    IconEntry("hospital", Icons.Default.LocalHospital),
+    IconEntry("pets", Icons.Default.Pets),
+    IconEntry("favorite", Icons.Default.Favorite),
+    IconEntry("star", Icons.Default.Star),
+    IconEntry("light", Icons.Default.Lightbulb),
+    IconEntry("assignment", Icons.Default.Assignment),
+    IconEntry("auto", Icons.Default.AutoAwesome),
     IconEntry("person", Icons.Default.Person),
     IconEntry("group", Icons.Default.Group),
     IconEntry("phone", Icons.Default.Phone),
     IconEntry("email", Icons.Default.Email),
     IconEntry("chat", Icons.Default.QuestionAnswer),
     IconEntry("thumb", Icons.Default.ThumbUp),
-    IconEntry("star", Icons.Default.Star),
-    IconEntry("favorite", Icons.Default.Favorite),
-    IconEntry("build", Icons.Default.Build),
     IconEntry("settings", Icons.Default.Settings),
-    IconEntry("visibility", Icons.Default.Visibility),
-    IconEntry("explore", Icons.Default.TravelExplore),
-    IconEntry("light", Icons.Default.Lightbulb),
-    IconEntry("run", Icons.Default.DirectionsRun),
+    IconEntry("location", Icons.Default.LocationOn),
     IconEntry("warning", Icons.Default.Warning),
-    IconEntry("menu", Icons.Default.MenuBook)
+    IconEntry("flight", Icons.Default.Flight)
 )
 
 private val iconNames: Map<String, ImageVector> = taskIcons.associate { it.name to it.icon }

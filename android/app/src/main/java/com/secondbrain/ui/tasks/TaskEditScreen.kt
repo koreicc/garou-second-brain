@@ -19,6 +19,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -186,20 +188,19 @@ fun TaskEditScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        OutlinedTextField(
-                            value = state.title,
-                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateTitle(it)) },
-                            label = { Text("Title") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.medium
-                        )
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            OutlinedTextField(
+                                value = state.title,
+                                onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateTitle(it)) },
+                                label = { Text("Title") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = MaterialTheme.shapes.medium
+                            )
                             Surface(
                                 modifier = Modifier
                                     .size(56.dp)
@@ -225,15 +226,16 @@ fun TaskEditScreen(
                                     }
                                 }
                             }
-                            OutlinedTextField(
-                                value = state.location,
-                                onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
-                                label = { Text("Location") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                shape = MaterialTheme.shapes.medium
-                            )
                         }
+
+                        OutlinedTextField(
+                            value = state.location,
+                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
+                            label = { Text("Location") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium
+                        )
                     }
                 }
 
@@ -282,7 +284,7 @@ fun TaskEditScreen(
                                 viewModel.onEvent(TaskEditEvent.SetRecurrenceType("monthly"))
                             }
                         }
-                        if (state.recurrenceType != null) {
+                        if (state.recurrenceType != null && state.recurrenceType != "daily") {
                             OutlinedTextField(
                                 value = state.recurrenceInterval.toString(),
                                 onValueChange = { value ->
@@ -291,12 +293,52 @@ fun TaskEditScreen(
                                         viewModel.onEvent(TaskEditEvent.SetRecurrenceInterval(intVal))
                                     }
                                 },
-                                label = { Text("Every N periods") },
+                                label = {
+                                    when (state.recurrenceType) {
+                                        "weekly" -> Text("Every N weeks")
+                                        "monthly" -> Text("Every N months")
+                                        else -> Text("Every N periods")
+                                    }
+                                },
                                 modifier = Modifier.width(160.dp),
                                 singleLine = true,
                                 shape = MaterialTheme.shapes.medium,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
                             )
+                        }
+                        if (state.recurrenceType == "weekly") {
+                            val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                            androidx.compose.foundation.layout.FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                dayNames.forEachIndexed { index, name ->
+                                    val selected = state.recurrenceDaysOfWeek.contains(index + 1)
+                                    Surface(
+                                        modifier = Modifier
+                                            .clickable {
+                                                val newDays = if (selected) {
+                                                    state.recurrenceDaysOfWeek - (index + 1)
+                                                } else {
+                                                    state.recurrenceDaysOfWeek + (index + 1)
+                                                }
+                                                viewModel.onEvent(TaskEditEvent.SetRecurrenceDaysOfWeek(newDays))
+                                            },
+                                        shape = MaterialTheme.shapes.small,
+                                        color = if (selected) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            text = name,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                            color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -347,18 +389,41 @@ fun TaskEditScreen(
                                 Icon(Icons.Default.Add, contentDescription = "Add subtask")
                             }
                         }
-                        state.subtasks.forEach { subtask ->
+                        state.subtasks.forEachIndexed { index, subtask ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.MoveSubtask(subtask.id, -1)) },
+                                        modifier = Modifier.size(24.dp),
+                                        enabled = index > 0
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ArrowDropUp,
+                                            contentDescription = "Move up",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.MoveSubtask(subtask.id, 1)) },
+                                        modifier = Modifier.size(24.dp),
+                                        enabled = index < state.subtasks.lastIndex
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ArrowDropDown,
+                                            contentDescription = "Move down",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
                                 Checkbox(
                                     checked = subtask.completed,
                                     onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = subtask.title,
                                     style = MaterialTheme.typography.bodyMedium,
