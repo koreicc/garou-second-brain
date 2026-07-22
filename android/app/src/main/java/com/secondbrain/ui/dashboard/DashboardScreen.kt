@@ -50,6 +50,7 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
+import com.secondbrain.ui.util.resolveIcon
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -546,10 +547,20 @@ private fun TaskCard(task: Task, onClick: () -> Unit) {
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = task.icon.ifEmpty { "T" },
-                        color = onStatusColor
-                    )
+                    val iconVector = resolveIcon(task.icon)
+                    if (iconVector != null) {
+                        Icon(
+                            imageVector = iconVector,
+                            contentDescription = task.icon,
+                            modifier = Modifier.size(24.dp),
+                            tint = onStatusColor
+                        )
+                    } else {
+                        Text(
+                            text = task.icon.ifEmpty { task.title.take(1).uppercase() },
+                            color = onStatusColor
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))

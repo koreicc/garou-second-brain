@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import com.secondbrain.di.AppModule
 import com.secondbrain.ui.theme.pillShape
 import com.secondbrain.ui.theme.transparentTopAppBarColors
@@ -32,7 +31,10 @@ import com.secondbrain.ui.util.formatRelativeTime
 fun NoteDetailScreen(
     noteId: String,
     onEditClick: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToNote: (String) -> Unit = {},
+    onNavigateToTask: (String) -> Unit = {},
+    onNavigateToPerson: (String) -> Unit = {}
 ) {
     val viewModel: NoteDetailViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -40,6 +42,7 @@ fun NoteDetailScreen(
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 return NoteDetailViewModel(
                     noteRepository = AppModule.noteRepository,
+                    searchRepository = AppModule.searchRepository,
                     noteId = noteId
                 ) as T
             }
@@ -47,12 +50,23 @@ fun NoteDetailScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     // Show errors in snackbar
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+        }
+    }
+
+    // Navigate when a wikilink is resolved
+    LaunchedEffect(state.wikilinkNavigationTarget) {
+        state.wikilinkNavigationTarget?.let { target ->
+            viewModel.clearWikilinkNavigation()
+            when (target.type) {
+                "note" -> onNavigateToNote(target.id)
+                "task" -> onNavigateToTask(target.id)
+                "person" -> onNavigateToPerson(target.id)
+            }
         }
     }
 
@@ -187,9 +201,7 @@ fun NoteDetailScreen(
                         WikilinkText(
                             text = note.body,
                             onWikilinkClick = { target ->
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("WikiLink: $target")
-                                }
+                                viewModel.onEvent(NoteDetailEvent.ResolveWikilink(target))
                             },
                             style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp)
                         )

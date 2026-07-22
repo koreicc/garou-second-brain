@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Subtask
 import com.secondbrain.ui.theme.pillShape
@@ -30,13 +29,17 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
 import com.secondbrain.ui.util.StatusBadge
+import com.secondbrain.ui.util.resolveIcon
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskDetailScreen(
     taskId: String,
     onEditClick: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToNote: (String) -> Unit = {},
+    onNavigateToTask: (String) -> Unit = {},
+    onNavigateToPerson: (String) -> Unit = {}
 ) {
     val viewModel: TaskDetailViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -44,6 +47,7 @@ fun TaskDetailScreen(
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 return TaskDetailViewModel(
                     taskRepository = AppModule.taskRepository,
+                    searchRepository = AppModule.searchRepository,
                     taskId = taskId
                 ) as T
             }
@@ -51,12 +55,23 @@ fun TaskDetailScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     // Show errors in snackbar
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+        }
+    }
+
+    // Navigate when a wikilink is resolved
+    LaunchedEffect(state.wikilinkNavigationTarget) {
+        state.wikilinkNavigationTarget?.let { target ->
+            viewModel.clearWikilinkNavigation()
+            when (target.type) {
+                "note" -> onNavigateToNote(target.id)
+                "task" -> onNavigateToTask(target.id)
+                "person" -> onNavigateToPerson(target.id)
+            }
         }
     }
 
@@ -111,7 +126,28 @@ fun TaskDetailScreen(
                         .padding(horizontal = 20.dp, vertical = 16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Box(modifier = Modifier.padding(bottom = 24.dp)) {
+                    Row(
+                        modifier = Modifier.padding(bottom = 24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val iconVector = resolveIcon(task.icon)
+                        if (iconVector != null) {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = iconVector,
+                                        contentDescription = task.icon,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
                         StatusBadge(status = task.status)
                     }
 
@@ -228,9 +264,7 @@ fun TaskDetailScreen(
                                 WikilinkText(
                                     text = task.body,
                                     onWikilinkClick = { target ->
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("WikiLink: $target")
-                                        }
+                                        viewModel.onEvent(TaskDetailEvent.ResolveWikilink(target))
                                     },
                                     style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp)
                                 )

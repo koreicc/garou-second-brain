@@ -190,7 +190,16 @@ fun AppNavigation() {
                     onEditClick = {
                         navController.navigate(Screen.NoteEdit(noteId = screen.noteId))
                     },
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToNote = { noteId ->
+                        navController.navigate(Screen.NoteDetail(noteId))
+                    },
+                    onNavigateToTask = { taskId ->
+                        navController.navigate(Screen.TaskDetail(taskId))
+                    },
+                    onNavigateToPerson = { personId ->
+                        navController.navigate(Screen.PersonDetail(personId))
+                    }
                 )
             }
 
@@ -220,7 +229,16 @@ fun AppNavigation() {
                     onEditClick = {
                         navController.navigate(Screen.TaskEdit(taskId = screen.taskId))
                     },
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToNote = { noteId ->
+                        navController.navigate(Screen.NoteDetail(noteId))
+                    },
+                    onNavigateToTask = { taskId ->
+                        navController.navigate(Screen.TaskDetail(taskId))
+                    },
+                    onNavigateToPerson = { personId ->
+                        navController.navigate(Screen.PersonDetail(personId))
+                    }
                 )
             }
 

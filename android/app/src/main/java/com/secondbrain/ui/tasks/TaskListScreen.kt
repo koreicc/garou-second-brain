@@ -56,6 +56,7 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
+import com.secondbrain.ui.util.resolveIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -235,11 +236,20 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
                     modifier = Modifier.size(44.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        val displayIcon = if (task.icon.isNotEmpty()) task.icon else task.title.take(1).uppercase()
-                        Text(
-                            text = displayIcon,
-                            color = onStatusColor
-                        )
+                        val iconVector = resolveIcon(task.icon)
+                        if (iconVector != null) {
+                            Icon(
+                                imageVector = iconVector,
+                                contentDescription = task.icon,
+                                modifier = Modifier.size(24.dp),
+                                tint = onStatusColor
+                            )
+                        } else {
+                            Text(
+                                text = if (task.icon.isNotEmpty()) task.icon.take(1).uppercase() else task.title.take(1).uppercase(),
+                                color = onStatusColor
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
