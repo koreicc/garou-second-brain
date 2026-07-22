@@ -97,14 +97,41 @@ fun SecondBrainBottomBar(
             tonalElevation = 3.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Dashboard tab
-            DashboardTab(currentDestination, onTabSelected)
+            // Dashboard tab (first item)
+            val dashboardSelected = currentDestination?.hasRoute(Screen.Dashboard::class) == true
+            NavigationBarItem(
+                selected = dashboardSelected,
+                onClick = { onTabSelected(Screen.Dashboard) },
+                icon = {
+                    Icon(
+                        imageVector = if (dashboardSelected) Icons.Filled.Dashboard else Icons.Outlined.Dashboard,
+                        contentDescription = "Dashboard"
+                    )
+                },
+                label = {
+                    Text(
+                        text = "Dashboard",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (dashboardSelected) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
 
             // Spacer for FAB
             Spacer(modifier = Modifier.width(48.dp))
 
             // Remaining tabs (Workspace, Settings)
-            bottomNavItems.drop(1).forEach { item ->
+            listOf(
+                bottomNavItems[1],
+                bottomNavItems[2]
+            ).forEach { item ->
                 val selected = currentDestination?.hasRoute(item.route::class) == true
                 NavigationBarItem(
                     selected = selected,
@@ -154,40 +181,4 @@ fun SecondBrainBottomBar(
             )
         }
     }
-}
-
-// ============================================================================
-// Dashboard tab (first tab, rendered separately to accommodate FAB spacer)
-// ============================================================================
-
-@Composable
-private fun DashboardTab(
-    currentDestination: NavDestination?,
-    onTabSelected: (Screen) -> Unit
-) {
-    val selected = currentDestination?.hasRoute(Screen.Dashboard::class) == true
-    NavigationBarItem(
-        selected = selected,
-        onClick = { onTabSelected(Screen.Dashboard) },
-        icon = {
-            Icon(
-                imageVector = if (selected) Icons.Filled.Dashboard else Icons.Outlined.Dashboard,
-                contentDescription = "Dashboard"
-            )
-        },
-        label = {
-            Text(
-                text = "Dashboard",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-            )
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = MaterialTheme.colorScheme.primary,
-            selectedTextColor = MaterialTheme.colorScheme.primary,
-            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            indicatorColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    )
 }
