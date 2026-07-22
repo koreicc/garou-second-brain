@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NoteAlt
@@ -141,7 +142,7 @@ fun PersonEditScreen(
                         onClick = { viewModel.onEvent(PersonEditEvent.Save) },
                         enabled = state.name.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Save person")
+                        Icon(Icons.Default.Save, contentDescription = "Save person")
                     }
                 },
                 colors = transparentTopAppBarColors()

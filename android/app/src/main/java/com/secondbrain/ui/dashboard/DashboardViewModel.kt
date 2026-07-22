@@ -46,6 +46,7 @@ data class DashboardUiState(
     val hiddenQuickTaskIds: Set<String> = emptySet(),
     // Quick note
     val quickNoteTitle: String = "",
+    val quickNoteContent: String = "",
     // Loading
     val isLoading: Boolean = false,
     val error: String? = null
@@ -62,6 +63,7 @@ sealed interface DashboardEvent {
     data class DeleteQuickTask(val id: String) : DashboardEvent
     // Quick note
     data class UpdateQuickNoteTitle(val title: String) : DashboardEvent
+    data class UpdateQuickNoteContent(val content: String) : DashboardEvent
     data object CreateQuickNote : DashboardEvent
     // Error
     data object DismissError : DashboardEvent
@@ -90,6 +92,7 @@ class DashboardViewModel(
             is DashboardEvent.CompleteQuickTask -> completeQuickTask(event.id)
             is DashboardEvent.DeleteQuickTask -> deleteQuickTask(event.id)
             is DashboardEvent.UpdateQuickNoteTitle -> _state.update { it.copy(quickNoteTitle = event.title) }
+            is DashboardEvent.UpdateQuickNoteContent -> _state.update { it.copy(quickNoteContent = event.content) }
             is DashboardEvent.CreateQuickNote -> createQuickNote()
             is DashboardEvent.DismissError -> _state.update { it.copy(error = null) }
         }
@@ -284,11 +287,12 @@ class DashboardViewModel(
 
     private fun createQuickNote() {
         val title = _state.value.quickNoteTitle.trim()
+        val content = _state.value.quickNoteContent.trim()
         if (title.isEmpty()) return
         viewModelScope.launch {
-            noteRepository.create(CreateNoteRequest(title = title))
+            noteRepository.create(CreateNoteRequest(title = title, body = content))
                 .onSuccess {
-                    _state.update { it.copy(quickNoteTitle = "") }
+                    _state.update { it.copy(quickNoteTitle = "", quickNoteContent = "") }
                 }
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message) }

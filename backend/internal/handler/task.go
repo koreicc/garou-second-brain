@@ -175,14 +175,11 @@ func (h *TaskHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save task: %v", err)))
 	}
 
-	result := map[string]interface{}{
-		"task": task,
-	}
 	if spawnedTask != nil {
-		result["spawned_task"] = spawnedTask
+		_ = spawnedTask
 	}
 
-	return c.JSON(http.StatusOK, model.DataResponse(result))
+	return c.JSON(http.StatusOK, model.DataResponse(task))
 }
 
 func (h *TaskHandler) spawnRecurringTask(oldTask *model.Task) *model.Task {

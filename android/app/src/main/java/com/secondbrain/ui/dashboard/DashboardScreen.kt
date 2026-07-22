@@ -196,7 +196,9 @@ fun DashboardScreen(
             item(key = "quick-note-input") {
                 QuickNoteInputCard(
                     title = state.quickNoteTitle,
+                    content = state.quickNoteContent,
                     onTitleChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteTitle(it)) },
+                    onContentChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteContent(it)) },
                     onAddNote = { viewModel.onEvent(DashboardEvent.CreateQuickNote) }
                 )
             }
@@ -594,7 +596,9 @@ private fun QuickTaskRowCard(
 @Composable
 private fun QuickNoteInputCard(
     title: String,
+    content: String,
     onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
     onAddNote: () -> Unit
 ) {
     Surface(
@@ -620,26 +624,41 @@ private fun QuickNoteInputCard(
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = onTitleChange,
-                    placeholder = { Text("What's on your mind?") },
-                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                FilledTonalIconButton(
-                    onClick = onAddNote,
-                    enabled = title.isNotBlank(),
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = onContentChange,
+                    placeholder = { Text("What's on your mind?") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add quick note")
+                    FilledTonalButton(
+                        onClick = onAddNote,
+                        enabled = title.isNotBlank()
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Add Note")
+                    }
                 }
             }
         }
