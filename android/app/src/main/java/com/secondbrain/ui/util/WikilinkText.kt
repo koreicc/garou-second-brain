@@ -38,11 +38,15 @@ fun WikilinkText(
     style: TextStyle = MaterialTheme.typography.bodyLarge
 ) {
     val linkColor = MaterialTheme.colorScheme.primary
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val effectiveStyle = remember(style, textColor) {
+        style.copy(color = textColor)
+    }
     val annotatedString = remember(text, linkColor) { buildWikilinkAnnotatedString(text, linkColor) }
 
     ClickableText(
         text = annotatedString,
-        style = style,
+        style = effectiveStyle,
         modifier = modifier,
         onClick = { offset ->
             annotatedString.getStringAnnotations("wikilink", offset, offset).firstOrNull()?.let {
