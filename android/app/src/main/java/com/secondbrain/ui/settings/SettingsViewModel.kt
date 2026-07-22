@@ -3,6 +3,7 @@ package com.secondbrain.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.secondbrain.data.DarkModeOption
 import com.secondbrain.data.SavedSettings
 import com.secondbrain.data.SettingsPreferences
 import com.secondbrain.data.ThemeState
@@ -30,10 +31,6 @@ data class SettingsUiState(
     val isSaving: Boolean = false,
     val saveMessage: String? = null
 )
-
-enum class DarkModeOption {
-    SYSTEM, LIGHT, DARK
-}
 
 sealed interface SettingsEvent {
     data class UpdateServerUrl(val url: String) : SettingsEvent

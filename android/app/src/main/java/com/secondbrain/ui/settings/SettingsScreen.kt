@@ -1,5 +1,6 @@
 package com.secondbrain.ui.settings
 
+import com.secondbrain.data.DarkModeOption
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
