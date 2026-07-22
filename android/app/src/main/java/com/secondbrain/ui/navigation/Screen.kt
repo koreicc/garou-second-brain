@@ -8,10 +8,10 @@ sealed interface Screen {
     data object Dashboard : Screen
 
     @Serializable
-    data object Search : Screen
+    data object Workspace : Screen
 
     @Serializable
-    data object NoteList : Screen
+    data object Settings : Screen
 
     @Serializable
     data class NoteDetail(val noteId: String) : Screen
@@ -20,16 +20,10 @@ sealed interface Screen {
     data class NoteEdit(val noteId: String? = null) : Screen
 
     @Serializable
-    data object TaskList : Screen
-
-    @Serializable
     data class TaskDetail(val taskId: String) : Screen
 
     @Serializable
     data class TaskEdit(val taskId: String? = null) : Screen
-
-    @Serializable
-    data object PersonList : Screen
 
     @Serializable
     data class PersonDetail(val personId: String) : Screen
