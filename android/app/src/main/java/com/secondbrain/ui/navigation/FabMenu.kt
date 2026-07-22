@@ -77,7 +77,7 @@ fun FabMenuOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)
-                    .padding(bottom = 80.dp) // Clear the floating pill + FAB
+                    .padding(bottom = 80.dp), // Clear the floating pill + FAB
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
