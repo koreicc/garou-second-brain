@@ -309,4 +309,3 @@ fun PersonEditScreen(
         }
     }
 }
-}

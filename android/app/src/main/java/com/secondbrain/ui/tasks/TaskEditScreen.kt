@@ -406,7 +406,6 @@ fun TaskEditScreen(
         }
     }
 }
-}
 
 @Composable
 private fun DateField(
