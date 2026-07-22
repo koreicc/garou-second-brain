@@ -195,7 +195,7 @@ private fun NavPillTab(
         animationSpec = pillSpringSpec(),
         label = "nav_label_width_fraction"
     )
-    val labelWidth = labelWidthFraction * 72.dp
+    val labelWidth = 72.dp * labelWidthFraction
 
     // Animate container color
     val containerColor by animateColorAsState(
