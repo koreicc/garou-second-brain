@@ -25,6 +25,7 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
 import com.secondbrain.ui.util.formatRelativeTime
+import com.secondbrain.ui.common.LinkedEntitiesView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -166,6 +167,16 @@ fun NoteDetailScreen(
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    if (note.links.isNotEmpty()) {
+                        LinkedEntitiesView(
+                            linkIds = note.links,
+                            onNavigateToNote = onNavigateToNote,
+                            onNavigateToTask = onNavigateToTask,
+                            onNavigateToPerson = onNavigateToPerson
+                        )
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                     

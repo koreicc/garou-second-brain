@@ -27,13 +27,17 @@ import com.secondbrain.domain.model.SocialLink
 import com.secondbrain.ui.theme.pillShape
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.common.LinkedEntitiesView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PersonDetailScreen(
     personId: String,
     onEditClick: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToNote: (String) -> Unit = {},
+    onNavigateToTask: (String) -> Unit = {},
+    onNavigateToPerson: (String) -> Unit = {}
 ) {
     val viewModel: PersonDetailViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -150,6 +154,16 @@ fun PersonDetailScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
                             Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        if (person.links.isNotEmpty()) {
+                            LinkedEntitiesView(
+                                linkIds = person.links,
+                                onNavigateToNote = onNavigateToNote,
+                                onNavigateToTask = onNavigateToTask,
+                                onNavigateToPerson = onNavigateToPerson
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
                         }
 
                         if (person.tags.isNotEmpty()) {

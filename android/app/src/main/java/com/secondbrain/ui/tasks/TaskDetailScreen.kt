@@ -30,6 +30,7 @@ import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
 import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.resolveIcon
+import com.secondbrain.ui.common.LinkedEntitiesView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -218,6 +219,16 @@ fun TaskDetailScreen(
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    if (task.links.isNotEmpty()) {
+                        LinkedEntitiesView(
+                            linkIds = task.links,
+                            onNavigateToNote = onNavigateToNote,
+                            onNavigateToTask = onNavigateToTask,
+                            onNavigateToPerson = onNavigateToPerson
+                        )
                         Spacer(modifier = Modifier.height(24.dp))
                     }
 

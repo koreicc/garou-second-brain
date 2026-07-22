@@ -15,6 +15,9 @@ data class NoteEditUiState(
     val title: String = "",
     val tags: List<String> = emptyList(),
     val body: String = "",
+    val links: List<String> = emptyList(),
+    val showLinkPicker: Boolean = false,
+    val linkPickerLoading: Boolean = false,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     val error: String? = null
@@ -24,6 +27,9 @@ sealed interface NoteEditEvent {
     data class UpdateTitle(val title: String) : NoteEditEvent
     data class SetTags(val tags: List<String>) : NoteEditEvent
     data class UpdateBody(val body: String) : NoteEditEvent
+    data object ShowLinkPicker : NoteEditEvent
+    data object DismissLinkPicker : NoteEditEvent
+    data class SetLinks(val links: List<String>) : NoteEditEvent
     data object Save : NoteEditEvent
 }
 
@@ -51,6 +57,7 @@ class NoteEditViewModel(
                             title = note.title,
                             tags = note.tags,
                             body = note.body,
+                            links = note.links,
                             isLoading = false
                         )
                     }
@@ -66,6 +73,9 @@ class NoteEditViewModel(
             is NoteEditEvent.UpdateTitle -> _state.update { it.copy(title = event.title) }
             is NoteEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
             is NoteEditEvent.UpdateBody -> _state.update { it.copy(body = event.body) }
+            is NoteEditEvent.ShowLinkPicker -> _state.update { it.copy(showLinkPicker = true) }
+            is NoteEditEvent.DismissLinkPicker -> _state.update { it.copy(showLinkPicker = false) }
+            is NoteEditEvent.SetLinks -> _state.update { it.copy(links = event.links, showLinkPicker = false) }
             is NoteEditEvent.Save -> save()
         }
     }
@@ -81,13 +91,15 @@ class NoteEditViewModel(
                 noteRepository.update(noteId, UpdateNoteRequest(
                     title = s.title,
                     tags = s.tags,
-                    body = s.body
+                    body = s.body,
+                    links = if (s.links.isNotEmpty()) s.links else null
                 ))
             } else {
                 noteRepository.create(CreateNoteRequest(
                     title = s.title,
                     tags = s.tags,
-                    body = s.body
+                    body = s.body,
+                    links = s.links
                 ))
             }
 

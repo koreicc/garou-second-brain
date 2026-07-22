@@ -22,6 +22,9 @@ data class TaskEditUiState(
     val location: String = "",
     val tags: List<String> = emptyList(),
     val body: String = "",
+    val links: List<String> = emptyList(),
+    val showLinkPicker: Boolean = false,
+    val linkPickerLoading: Boolean = false,
     // Icon picker
     val showIconPicker: Boolean = false,
     // Date fields as ISO date strings (YYYY-MM-DD)
@@ -74,6 +77,10 @@ sealed interface TaskEditEvent {
     data class RemoveSubtask(val id: String) : TaskEditEvent
     data class ToggleSubtask(val id: String) : TaskEditEvent
     data class MoveSubtask(val id: String, val direction: Int) : TaskEditEvent
+    // Link Picker events
+    data object ShowLinkPicker : TaskEditEvent
+    data object DismissLinkPicker : TaskEditEvent
+    data class SetLinks(val links: List<String>) : TaskEditEvent
     // Save
     data object Save : TaskEditEvent
 }
@@ -104,6 +111,7 @@ class TaskEditViewModel(
                             location = task.location,
                             tags = task.tags,
                             body = task.body,
+                            links = task.links,
                             startDate = task.startDate.take(10),
                             endDate = task.endDate.take(10),
                             recurrenceType = task.recurrence?.type,
@@ -147,6 +155,10 @@ class TaskEditViewModel(
             is TaskEditEvent.RemoveSubtask -> removeSubtask(event.id)
             is TaskEditEvent.ToggleSubtask -> toggleSubtask(event.id)
             is TaskEditEvent.MoveSubtask -> moveSubtask(event.id, event.direction)
+            // Link picker
+            is TaskEditEvent.ShowLinkPicker -> _state.update { it.copy(showLinkPicker = true) }
+            is TaskEditEvent.DismissLinkPicker -> _state.update { it.copy(showLinkPicker = false) }
+            is TaskEditEvent.SetLinks -> _state.update { it.copy(links = event.links, showLinkPicker = false) }
             // Save
             is TaskEditEvent.Save -> save()
         }
@@ -222,6 +234,7 @@ class TaskEditViewModel(
                     location = s.location,
                     tags = if (s.tags.isNotEmpty()) s.tags else null,
                     body = s.body,
+                    links = if (s.links.isNotEmpty()) s.links else null,
                     startDate = startDateISO,
                     endDate = endDateISO,
                     recurrence = recurrence,
@@ -234,6 +247,7 @@ class TaskEditViewModel(
                     location = s.location,
                     tags = s.tags,
                     body = s.body,
+                    links = s.links,
                     startDate = startDateISO,
                     endDate = endDateISO,
                     recurrence = recurrence,

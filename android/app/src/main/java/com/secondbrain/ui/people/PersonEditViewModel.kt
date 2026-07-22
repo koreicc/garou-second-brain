@@ -16,6 +16,9 @@ data class PersonEditUiState(
     val email: String = "",
     val tags: List<String> = emptyList(),
     val notes: String = "",
+    val links: List<String> = emptyList(),
+    val showLinkPicker: Boolean = false,
+    val linkPickerLoading: Boolean = false,
     val socialLinks: List<SocialLinkItem> = emptyList(),
     val newPlatform: String = "",
     val newUrl: String = "",
@@ -39,6 +42,10 @@ sealed interface PersonEditEvent {
     data class UpdateNewUrl(val url: String) : PersonEditEvent
     data object AddSocialLink : PersonEditEvent
     data class RemoveSocialLink(val index: Int) : PersonEditEvent
+    // Link picker
+    data object ShowLinkPicker : PersonEditEvent
+    data object DismissLinkPicker : PersonEditEvent
+    data class SetLinks(val links: List<String>) : PersonEditEvent
     data object Save : PersonEditEvent
 }
 
@@ -70,6 +77,7 @@ class PersonEditViewModel(
                             email = email,
                             tags = person.tags,
                             notes = person.notes,
+                            links = person.links,
                             socialLinks = person.socialLinks.map { SocialLinkItem(platform = it.platform, url = it.url) },
                             isLoading = false
                         )
@@ -90,6 +98,10 @@ class PersonEditViewModel(
             is PersonEditEvent.UpdateNewUrl -> _state.update { it.copy(newUrl = event.url) }
             is PersonEditEvent.AddSocialLink -> addSocialLink()
             is PersonEditEvent.RemoveSocialLink -> removeSocialLink(event.index)
+            // Link picker
+            is PersonEditEvent.ShowLinkPicker -> _state.update { it.copy(showLinkPicker = true) }
+            is PersonEditEvent.DismissLinkPicker -> _state.update { it.copy(showLinkPicker = false) }
+            is PersonEditEvent.SetLinks -> _state.update { it.copy(links = event.links, showLinkPicker = false) }
             is PersonEditEvent.Save -> save()
         }
     }
@@ -131,7 +143,8 @@ class PersonEditViewModel(
                     tags = if (s.tags.isNotEmpty()) s.tags else null,
                     contacts = if (contacts.isNotEmpty()) contacts else null,
                     socialLinks = if (socialLinkDtos.isNotEmpty()) socialLinkDtos else null,
-                    notes = s.notes
+                    notes = s.notes,
+                    links = if (s.links.isNotEmpty()) s.links else null
                 ))
             } else {
                 personRepository.create(CreatePersonRequest(
@@ -139,7 +152,8 @@ class PersonEditViewModel(
                     tags = s.tags,
                     contacts = contacts,
                     socialLinks = socialLinkDtos,
-                    notes = s.notes
+                    notes = s.notes,
+                    links = s.links
                 ))
             }
 
