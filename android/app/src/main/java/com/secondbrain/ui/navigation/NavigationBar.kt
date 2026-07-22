@@ -1,14 +1,12 @@
 package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -239,13 +237,11 @@ private fun NavPillTab(
                 tint = contentColor
             )
 
-            // Animated label: appears only when selected with fade + slide
+            // Animated label: appears only when selected with fade
             AnimatedVisibility(
                 visible = selected,
-                enter = fadeIn(animationSpec = pillSpringSpec) +
-                    slideInVertically(animationSpec = pillSpringSpec) { it },
-                exit = fadeOut(animationSpec = pillSpringSpec) +
-                    slideOutVertically(animationSpec = pillSpringSpec) { it }
+                enter = fadeIn(animationSpec = pillSpringSpec),
+                exit = fadeOut(animationSpec = pillSpringSpec)
             ) {
                 Text(
                     text = item.label,
