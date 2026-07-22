@@ -1,6 +1,8 @@
 # Go
 backend/bin/
 backend/tmp/
+backend/second-brain
+backend/second-brain.exe
 
 # Android
 android/build/
