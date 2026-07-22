@@ -2,6 +2,7 @@ package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import com.secondbrain.ui.notes.NoteEditScreen
 import com.secondbrain.ui.people.PersonDetailScreen
 import com.secondbrain.ui.people.PersonEditScreen
 import com.secondbrain.ui.settings.SettingsScreen
+import com.secondbrain.ui.settings.SettingsViewModel
 import com.secondbrain.ui.tasks.TaskDetailScreen
 import com.secondbrain.ui.tasks.TaskEditScreen
 import com.secondbrain.ui.workspace.WorkspaceScreen
@@ -40,7 +42,9 @@ import com.secondbrain.ui.workspace.WorkspaceScreen
  * in the center for quick entity creation.
  */
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    settingsViewModel: SettingsViewModel? = null
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -168,7 +172,8 @@ fun AppNavigation() {
                 }
 
                 composable<Screen.Settings> {
-                    SettingsScreen()
+                    val vm = settingsViewModel ?: viewModel()
+                    SettingsScreen(viewModel = vm)
                 }
 
                 // -- Detail and Edit screens (pushed on top) --

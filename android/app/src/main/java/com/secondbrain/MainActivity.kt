@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeState by settingsViewModel.themeState.collectAsState()
             SecondBrainTheme(themeState = themeState) {
-                AppNavigation()
+                AppNavigation(settingsViewModel = settingsViewModel)
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.secondbrain.ui.settings
 
 import com.secondbrain.data.DarkModeOption
+import com.secondbrain.ui.settings.SettingsViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -33,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.ui.theme.ColorSource
 import com.secondbrain.ui.theme.PaletteStyleOpt
 import com.secondbrain.ui.theme.colorSourceLabel
@@ -42,16 +42,10 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SettingsScreen() {
-    val viewModel: SettingsViewModel = viewModel()
+fun SettingsScreen(
+    viewModel: SettingsViewModel
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-
-    LaunchedEffect(state.saveMessage) {
-        state.saveMessage?.let {
-            kotlinx.coroutines.delay(2000)
-            viewModel.onEvent(SettingsEvent.ClearSaveMessage)
-        }
-    }
 
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 

@@ -1,12 +1,9 @@
 package com.secondbrain.ui.navigation
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -14,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,11 +77,6 @@ private val navPillItems = listOf(
 // ============================================================================
 
 private fun pillSpringSpec() = spring<Float>(
-    dampingRatio = Spring.DampingRatioMediumBouncy,
-    stiffness = Spring.StiffnessLow
-)
-
-private fun pillDpSpringSpec() = spring<androidx.compose.ui.unit.Dp>(
     dampingRatio = Spring.DampingRatioMediumBouncy,
     stiffness = Spring.StiffnessLow
 )
@@ -184,7 +176,7 @@ fun SecondBrainBottomBar(
 }
 
 // ============================================================================
-// Animated nav pill tab item (Remember-style)
+// Nav pill tab item - fixed equal width, no layout shift on selection
 // ============================================================================
 
 @Composable
@@ -193,14 +185,7 @@ private fun NavPillTab(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    // Animate width: selected = icon + label (~88dp), unselected = icon only (48dp)
-    val animatedWidth by animateDpAsState(
-        targetValue = if (selected) 88.dp else 48.dp,
-        animationSpec = pillDpSpringSpec(),
-        label = "pill_tab_width"
-    )
-
-    // Animate container color
+    // Animate container color only - NO width animation to prevent layout shifts
     val containerColor by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.primaryContainer
@@ -222,18 +207,25 @@ private fun NavPillTab(
         label = "pill_tab_content"
     )
 
+    // Animate label opacity - text stays in layout to prevent shifting
+    val labelAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = pillSpringSpec(),
+        label = "pill_label_alpha"
+    )
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = containerColor,
         modifier = Modifier
             .height(48.dp)
-            .width(animatedWidth)
+            .weight(1f)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = if (selected) 12.dp else 0.dp)
+            modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Icon(
                 imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
@@ -242,21 +234,17 @@ private fun NavPillTab(
                 tint = contentColor
             )
 
-            // Animated label: appears only when selected with fade
-            AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn(animationSpec = pillSpringSpec()),
-                exit = fadeOut(animationSpec = pillSpringSpec())
-            ) {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = contentColor,
-                    modifier = Modifier.padding(start = 6.dp),
-                    maxLines = 1
-                )
-            }
+            // Label always in layout, animates opacity only - prevents shifting
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = contentColor,
+                modifier = Modifier
+                    .padding(start = 6.dp)
+                    .alpha(labelAlpha),
+                maxLines = 1
+            )
         }
     }
 }
