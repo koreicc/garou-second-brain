@@ -250,16 +250,67 @@ Branch: `feat/android-p4-link-picker`
 
 ---
 
-## Remaining Phases
+## Phase 5 - Settings Persistence (COMPLETED)
+Branch: `feat/android-p4-link-picker` (included)
 
-### Phase 5 - Settings Persistence (NOT STARTED)
-- Save settings to DataStore
-- Connect ThemeState to saved settings
+### Changes Made
 
-### Phase 7 - CI/CD (NOT STARTED)
-- Release build signing
-- Lint checks in CI
-- APK artifact already works
+1. **SettingsPreferences** (`data/SettingsPreferences.kt`) (NEW)
+   - DataStore Preferences backend for all settings
+   - `loadSettings()`: reads all prefs from DataStore, returns SavedSettings
+   - `saveSettings()`: writes all prefs to DataStore
+   - `SavedSettings` data class with conversion helpers (toDarkModeOption, toColorSource, toPaletteStyle, toThemeState)
+
+2. **SettingsViewModel** - Updated
+   - Changed from `ViewModel()` to `AndroidViewModel(application)` for DataStore access
+   - `loadSettings()`: reads from DataStore on init, updates both _state and _themeState
+   - `saveSettings()`: writes to DataStore, shows success message
+   - `themeState: StateFlow<ThemeState>`: exposed for MainActivity to drive SecondBrainTheme
+   - Every theme toggle event immediately updates themeState (live preview before save)
+
+3. **SettingsScreen** - Updated
+   - Added "Save Settings" button at bottom
+   - Added SnackbarHost for save confirmation message
+   - Added ClearSaveMessage event to dismiss snackbar after 2s
+
+4. **MainActivity** - Updated
+   - Uses `by viewModels<SettingsViewModel>()` for Activity-scoped ViewModel
+   - Collects `settingsViewModel.themeState` and passes to `SecondBrainTheme`
+   - Theme changes are now persisted across app restarts
+
+5. **build.gradle.kts** - Updated
+   - Added `androidx.datastore:datastore-preferences:1.1.1` dependency
+
+### Key Decisions
+- Used AndroidViewModel for DataStore access (needs Context)
+- SettingsViewModel is Activity-scoped via `by viewModels()` in MainActivity
+- ThemeState updates live as user toggles settings (before save)
+- Save button persists to DataStore; changes survive app restart
+- Default values match original ThemeState() defaults
+
+---
+
+## Phase 7 - CI/CD (COMPLETED)
+Branch: `feat/android-p4-link-picker` (included)
+
+### Changes Made
+
+1. **android-build.yml** - Updated
+   - Added `lint` job that runs before build (parallel-ready, currently sequential via `needs`)
+   - Runs `./gradlew lint` with Android's built-in lint
+   - Uploads lint report as artifact (HTML format)
+   - Build job now depends on lint passing
+   - Both jobs use consistent JDK 17 and SDK license acceptance
+
+2. **backend-build.yml** - Unchanged (already solid)
+   - Runs gofmt, go build, go vet, go test -race
+   - Matrix testing with Go 1.22 and 1.23
+
+### Key Decisions
+- Used Android's built-in lint (no external tools needed)
+- Lint is a separate job for fast feedback
+- Release build signing deferred to actual release time (needs signing keys)
+- APK artifact already works from previous phases
 
 ---
 

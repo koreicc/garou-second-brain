@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -23,7 +24,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,7 +45,24 @@ fun SettingsScreen() {
     val viewModel: SettingsViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    LaunchedEffect(state.saveMessage) {
+        state.saveMessage?.let {
+            kotlinx.coroutines.delay(2000)
+            viewModel.onEvent(SettingsEvent.ClearSaveMessage)
+        }
+    }
+
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
+    LaunchedEffect(state.saveMessage) {
+        state.saveMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.onEvent(SettingsEvent.ClearSaveMessage)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
@@ -230,6 +250,15 @@ fun SettingsScreen() {
             SettingsSection(title = "About") {
                 AboutRow(label = "App Name", value = "Second Brain")
                 AboutRow(label = "Version", value = state.appVersion)
+            }
+
+            // Save button
+            FilledTonalButton(
+                onClick = { viewModel.onEvent(SettingsEvent.SaveSettings) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isSaving
+            ) {
+                Text(if (state.isSaving) "Saving..." else "Save Settings")
             }
 
             // Bottom spacing so content isnt clipped by nav bar
