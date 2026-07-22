@@ -25,6 +25,8 @@ data class DashboardUiState(
     val quickTasks: List<QuickTask> = emptyList(),
     /** Quick tasks that are completed and awaiting deletion with countdown */
     val completingQuickTasks: Map<String, Int> = emptyMap(),
+    /** IDs of recently completed tasks to filter out on reload until backend deletes them */
+    val hiddenQuickTaskIds: Set<String> = emptySet(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val quickTaskInput: String = ""
@@ -74,7 +76,7 @@ class DashboardViewModel(
      */
     fun silentReload() {
         viewModelScope.launch {
-            // Don't set isLoading = true to avoid flicker
+            val hidden = _state.value.hiddenQuickTaskIds
             val loads = listOf(
                 launch {
                     noteRepository.getAll().onSuccess { notes ->
@@ -93,7 +95,7 @@ class DashboardViewModel(
                 },
                 launch {
                     quickTaskRepository.getAll().onSuccess { quickTasks ->
-                        _state.update { it.copy(quickTasks = quickTasks) }
+                        _state.update { it.copy(quickTasks = quickTasks.filter { qt -> qt.id !in hidden }) }
                     }
                 }
             )
@@ -105,6 +107,7 @@ class DashboardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
+            val hidden = _state.value.hiddenQuickTaskIds
             val loads = listOf(
                 launch {
                     noteRepository.getAll().onSuccess { notes ->
@@ -129,7 +132,7 @@ class DashboardViewModel(
                 },
                 launch {
                     quickTaskRepository.getAll().onSuccess { quickTasks ->
-                        _state.update { it.copy(quickTasks = quickTasks) }
+                        _state.update { it.copy(quickTasks = quickTasks.filter { qt -> qt.id !in hidden }) }
                     }.onFailure { e ->
                         _state.update { it.copy(error = e.message) }
                     }
@@ -160,7 +163,10 @@ class DashboardViewModel(
         viewModelScope.launch {
             // Show countdown while keeping task visible
             _state.update {
-                it.copy(completingQuickTasks = it.completingQuickTasks + (id to 5))
+                it.copy(
+                    completingQuickTasks = it.completingQuickTasks + (id to 5),
+                    hiddenQuickTaskIds = it.hiddenQuickTaskIds + id
+                )
             }
 
             // Countdown from 5 to 1 (visible on the task card)
@@ -176,21 +182,27 @@ class DashboardViewModel(
 
             // Mark as completed on backend
             quickTaskRepository.complete(id).onSuccess {
-                // Remove from quickTasks list (task stays in backend until auto-delete)
+                // Remove from quickTasks list and keep in hidden set
                 _state.update {
                     it.copy(
                         quickTasks = it.quickTasks.filter { qt -> qt.id != id },
                         completingQuickTasks = it.completingQuickTasks - id
                     )
                 }
-                // Don't reload - backend still has it (auto-deletes after 5s)
             }.onFailure { e ->
                 _state.update {
                     it.copy(
                         error = e.message,
-                        completingQuickTasks = it.completingQuickTasks - id
+                        completingQuickTasks = it.completingQuickTasks - id,
+                        hiddenQuickTaskIds = it.hiddenQuickTaskIds - id
                     )
                 }
+            }
+
+            // Clean up hidden ID after enough time for backend auto-delete
+            delay(8000)
+            _state.update {
+                it.copy(hiddenQuickTaskIds = it.hiddenQuickTaskIds - id)
             }
         }
     }
