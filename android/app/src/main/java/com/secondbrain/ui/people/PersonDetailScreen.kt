@@ -2,27 +2,33 @@ package com.secondbrain.ui.people
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Contact
 import com.secondbrain.domain.model.SocialLink
+import com.secondbrain.ui.theme.pillShape
+import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PersonDetailScreen(
     personId: String,
@@ -56,16 +62,12 @@ fun PersonDetailScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = state.person?.name ?: "Person",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
+                colors = transparentTopAppBarColors(),
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back to people")
@@ -91,42 +93,99 @@ fun PersonDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (person.contacts.isNotEmpty()) {
-                        Text("Contacts", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        person.contacts.forEach { contact ->
-                            ContactCard(contact = contact)
-                            Spacer(modifier = Modifier.height(8.dp))
+                    val initials = person.name.split(" ").let { parts ->
+                        if (parts.size > 1) {
+                            "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
+                        } else {
+                            parts[0].take(2).uppercase()
                         }
                     }
 
-                    if (person.socialLinks.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Social Links", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        person.socialLinks.forEach { link ->
-                            SocialLinkCard(link = link)
-                            Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(80.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = initials,
+                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = person.name,
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                    if (person.tags.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            person.tags.joinToString(", ") { "#$it" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+                        if (person.contacts.isNotEmpty()) {
+                            Text("Contacts", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            person.contacts.forEach { contact ->
+                                ContactCard(contact = contact)
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
-                    if (person.notes.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Notes", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(person.notes, style = MaterialTheme.typography.bodyLarge)
+                        if (person.socialLinks.isNotEmpty()) {
+                            Text("Social Links", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            person.socialLinks.forEach { link ->
+                                SocialLinkCard(link = link)
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        if (person.tags.isNotEmpty()) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                person.tags.forEach { tag ->
+                                    SuggestionChip(
+                                        onClick = { },
+                                        label = { Text("#$tag") },
+                                        shape = pillShape,
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                        )
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+
+                        if (person.notes.isNotEmpty()) {
+                            Surface(
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Notes",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = person.notes,
+                                        style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(32.dp))
+                        }
                     }
                 }
             }
@@ -136,38 +195,45 @@ fun PersonDetailScreen(
 
 @Composable
 private fun ContactCard(contact: Contact) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = when (contact.type) {
-                    "phone" -> Icons.Default.Phone
-                    "email" -> Icons.Default.Email
-                    else -> Icons.Default.Link
-                },
-                contentDescription = when (contact.type) {
-                    "phone" -> "Phone contact"
-                    "email" -> "Email contact"
-                    else -> "Contact"
-                },
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+            FilledTonalIconButton(
+                onClick = { },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = when (contact.type) {
+                        "phone" -> Icons.Default.Phone
+                        "email" -> Icons.Default.Email
+                        else -> Icons.Default.Link
+                    },
+                    contentDescription = when (contact.type) {
+                        "phone" -> "Phone contact"
+                        "email" -> "Email contact"
+                        else -> "Contact"
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = contact.value, style = MaterialTheme.typography.bodyMedium)
                 if (contact.label.isNotEmpty()) {
                     Text(
                         text = contact.label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
+                Text(text = contact.value, style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
@@ -175,25 +241,33 @@ private fun ContactCard(contact: Contact) {
 
 @Composable
 private fun SocialLinkCard(link: SocialLink) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.Link,
-                contentDescription = "${link.platform} link",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
+            FilledTonalIconButton(
+                onClick = { },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    Icons.Default.Link,
+                    contentDescription = "${link.platform} link"
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
                     text = link.platform,
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
                 Text(
                     text = link.url,

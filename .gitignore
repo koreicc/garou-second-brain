@@ -26,3 +26,6 @@ Thumbs.db
 *.tmp
 *.swp
 app-debug/
+
+# Skills (local copy of pi agent skills)
+skills/

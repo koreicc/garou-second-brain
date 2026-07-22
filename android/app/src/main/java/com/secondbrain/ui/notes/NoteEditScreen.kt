@@ -9,11 +9,13 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.TagInput
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +50,7 @@ fun NoteEditScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -70,7 +73,8 @@ fun NoteEditScreen(
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Save note")
                     }
-                }
+                },
+                colors = transparentTopAppBarColors()
             )
         }
     ) { padding ->
@@ -79,33 +83,60 @@ fun NoteEditScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = { viewModel.onEvent(NoteEditEvent.UpdateTitle(it)) },
-                label = { Text("Title") },
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 1.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = state.title,
+                        onValueChange = { viewModel.onEvent(NoteEditEvent.UpdateTitle(it)) },
+                        label = { Text("Title") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
 
-            TagInput(
-                tags = state.tags,
-                onTagsChanged = { viewModel.onEvent(NoteEditEvent.SetTags(it)) },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    TagInput(
+                        tags = state.tags,
+                        onTagsChanged = { viewModel.onEvent(NoteEditEvent.SetTags(it)) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = state.body,
-                onValueChange = { viewModel.onEvent(NoteEditEvent.UpdateBody(it)) },
-                label = { Text("Content") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                minLines = 10
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 1.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = state.body,
+                        onValueChange = { viewModel.onEvent(NoteEditEvent.UpdateBody(it)) },
+                        label = { Text("Content") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 12,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
+            }
         }
     }
 }
+

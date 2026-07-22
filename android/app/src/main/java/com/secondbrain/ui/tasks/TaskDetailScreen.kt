@@ -5,24 +5,33 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Subtask
+import com.secondbrain.ui.theme.pillShape
+import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
+import com.secondbrain.ui.util.StatusBadge
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskDetailScreen(
     taskId: String,
@@ -57,9 +66,11 @@ fun TaskDetailScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                colors = transparentTopAppBarColors(),
                 title = {
                     Text(
                         text = state.task?.title ?: "Task",
@@ -97,52 +108,133 @@ fun TaskDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(16.dp)
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    if (task.location.isNotEmpty()) {
-                        Text("Location: ${task.location}", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Box(modifier = Modifier.padding(bottom = 24.dp)) {
+                        StatusBadge(status = task.status)
                     }
-                    if (task.startDate.isNotEmpty() || task.endDate.isNotEmpty()) {
-                        Text(
-                            "Dates: ${task.startDate.take(10)} - ${task.endDate.take(10)}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    if (task.tags.isNotEmpty()) {
-                        Text(
-                            task.tags.joinToString(", ") { "#$it" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                    if (task.location.isNotEmpty() || task.startDate.isNotEmpty() || task.endDate.isNotEmpty() || task.tags.isNotEmpty()) {
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                if (task.location.isNotEmpty()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(task.location, style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                                if (task.startDate.isNotEmpty() || task.endDate.isNotEmpty()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.CalendarToday,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        val startStr = task.startDate.take(10)
+                                        val endStr = task.endDate.take(10)
+                                        val dateText = if (startStr == endStr || endStr.isEmpty()) startStr else "$startStr - $endStr"
+                                        Text(
+                                            text = dateText,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                                if (task.tags.isNotEmpty()) {
+                                    Row(verticalAlignment = Alignment.Top) {
+                                        Icon(
+                                            Icons.Default.Tag,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp).padding(top = 6.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            task.tags.forEach { tag ->
+                                                SuggestionChip(
+                                                    onClick = { },
+                                                    label = { Text("#$tag") },
+                                                    shape = pillShape,
+                                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
 
                     if (task.subtasks.isNotEmpty()) {
-                        Text("Subtasks", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        task.subtasks.forEach { subtask ->
-                            SubtaskRow(
-                                subtask = subtask,
-                                onCheckedChange = { viewModel.onEvent(TaskDetailEvent.ToggleSubtask(subtask.id)) }
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
+                        val completedCount = task.subtasks.count { it.completed }
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
+                                Text(
+                                    text = "Subtasks ($completedCount/${task.subtasks.size} completed)",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                task.subtasks.forEachIndexed { index, subtask ->
+                                    SubtaskRow(
+                                        subtask = subtask,
+                                        onCheckedChange = { viewModel.onEvent(TaskDetailEvent.ToggleSubtask(subtask.id)) }
+                                    )
+                                    if (index < task.subtasks.lastIndex) {
+                                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                                    }
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
 
                     if (task.body.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        WikilinkText(
-                            text = task.body,
-                            onWikilinkClick = { target ->
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("WikiLink: $target")
-                                }
-                            },
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Description",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                WikilinkText(
+                                    text = task.body,
+                                    onWikilinkClick = { target ->
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("WikiLink: $target")
+                                        }
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -152,16 +244,25 @@ fun TaskDetailScreen(
 
 @Composable
 private fun SubtaskRow(subtask: Subtask, onCheckedChange: ((Boolean) -> Unit)?) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ) {
         Checkbox(
             checked = subtask.completed,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = subtask.title,
             style = MaterialTheme.typography.bodyMedium,
-            textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None
+            textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
+            color = if (subtask.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
         )
     }
 }

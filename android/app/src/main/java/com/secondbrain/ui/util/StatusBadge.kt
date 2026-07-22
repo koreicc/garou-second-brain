@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.secondbrain.ui.theme.pillShape
 
 /**
  * A colored badge that displays the status of a task.
@@ -16,6 +17,8 @@ import androidx.compose.ui.unit.dp
  * - "in-progress" -> "In Progress" (primary)
  * - "completed" -> "Done" (secondary)
  * - anything else -> raw status string (outline)
+ *
+ * Uses pill shape (50% corners) from the Bikram Design DNA system.
  */
 @Composable
 fun StatusBadge(status: String) {
@@ -42,14 +45,14 @@ fun StatusBadge(status: String) {
         )
     }
     Surface(
-        shape = MaterialTheme.shapes.extraSmall,
+        shape = pillShape,
         color = containerColor
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = contentColor,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }
 }
