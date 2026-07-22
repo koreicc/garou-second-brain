@@ -1,17 +1,18 @@
 package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateDpAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,10 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination
@@ -77,7 +79,7 @@ private val navPillItems = listOf(
 // Spring animation spec matching Remember's bouncy style
 // ============================================================================
 
-private fun pillSpringSpec() = spring<Float>(
+private fun pillDpSpringSpec() = spring<androidx.compose.ui.unit.Dp>(
     dampingRatio = Spring.DampingRatioMediumBouncy,
     stiffness = Spring.StiffnessLow
 )
@@ -94,17 +96,9 @@ private fun pillColorSpringSpec() = spring<androidx.compose.ui.graphics.Color>(
 /**
  * Floating pill-shaped bottom navigation inspired by Bikram Agarwal's Remember app.
  *
- * Consists of a rounded pill containing 3 tab icons, with a separate FAB
- * positioned to the right. Both float above the screen content rather than
- * being attached to the bottom edge.
- *
- * Features animated tab selection: the selected tab expands with a bouncy spring
- * animation to reveal its label, while unselected tabs remain compact with icons only.
- *
- * @param currentDestination Current nav destination to determine selection
- * @param onTabSelected Called when a navigation tab is tapped
- * @param onFabClick Called when the FAB is tapped
- * @param modifier Modifier for the container
+ * A compact pill with 3 navigation tabs. The selected tab expands to show its label
+ * with a bouncy spring animation; unselected tabs show only their icon.
+ * A separate FAB is positioned to the right of the pill.
  */
 @Composable
 fun SecondBrainBottomBar(
@@ -116,7 +110,7 @@ fun SecondBrainBottomBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 28.dp), // Higher position above bottom edge
+            .padding(bottom = 24.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Row(
@@ -125,7 +119,7 @@ fun SecondBrainBottomBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Floating pill with 3 animated nav tabs
+            // Floating pill - wraps content width (no fillMaxWidth)
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -133,14 +127,12 @@ fun SecondBrainBottomBar(
                 shadowElevation = 8.dp,
                 modifier = Modifier
                     .shadow(8.dp, RoundedCornerShape(28.dp))
-                    .weight(1f)
             ) {
                 Row(
                     modifier = Modifier
                         .height(56.dp)
-                        .fillMaxWidth()
                         .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     navPillItems.forEach { item ->
@@ -177,16 +169,32 @@ fun SecondBrainBottomBar(
 }
 
 // ============================================================================
-// Nav pill tab item - fixed equal width, no layout shift on selection
+// Nav pill tab item - Remember-style animated width
 // ============================================================================
 
+/**
+ * A single navigation tab inside the floating pill.
+ *
+ * - Selected: icon + label, with a filled background
+ * - Unselected: icon only, transparent background
+ * - The label smoothly expands/shrinks with a spring animation
+ * - No layout shift because each tab has its own natural width (48dp + labelWidth)
+ *   and the parent Row does NOT use SpaceEvenly or weight()
+ */
 @Composable
-private fun RowScope.NavPillTab(
+private fun NavPillTab(
     item: NavPillItem,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    // Animate container color only - NO width animation to prevent layout shifts
+    // Animate label width: 72dp when selected, 0dp when not (Remember-style)
+    val labelWidth by animateDpAsState(
+        targetValue = if (selected) 72.dp else 0.dp,
+        animationSpec = pillDpSpringSpec(),
+        label = "nav_label_width"
+    )
+
+    // Animate container color
     val containerColor by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.primaryContainer
@@ -208,25 +216,19 @@ private fun RowScope.NavPillTab(
         label = "pill_tab_content"
     )
 
-    // Animate label opacity - text stays in layout to prevent shifting
-    val labelAlpha by animateFloatAsState(
-        targetValue = if (selected) 1f else 0f,
-        animationSpec = pillSpringSpec(),
-        label = "pill_label_alpha"
-    )
-
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = containerColor,
         modifier = Modifier
             .height(48.dp)
-            .weight(1f)
+            .width(48.dp + labelWidth)
+            .semantics { contentDescription = item.label }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(horizontal = if (selected) 6.dp else 0.dp)
         ) {
             Icon(
                 imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
@@ -235,17 +237,18 @@ private fun RowScope.NavPillTab(
                 tint = contentColor
             )
 
-            // Label always in layout, animates opacity only - prevents shifting
-            Text(
-                text = item.label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = contentColor,
-                modifier = Modifier
-                    .padding(start = 6.dp)
-                    .alpha(labelAlpha),
-                maxLines = 1
-            )
+            // Label only renders when labelWidth exceeds a small threshold
+            // This prevents layout shifts while allowing smooth width animation
+            if (labelWidth > 4.dp) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = item.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
