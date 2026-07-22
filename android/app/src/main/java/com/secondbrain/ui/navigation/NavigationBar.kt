@@ -79,12 +79,17 @@ private val navPillItems = listOf(
 // Spring animation spec matching Remember's bouncy style
 // ============================================================================
 
-private val pillSpringSpec = spring<Float>(
+private fun pillSpringSpec() = spring<Float>(
     dampingRatio = Spring.DampingRatioMediumBouncy,
     stiffness = Spring.StiffnessLow
 )
 
-private val pillDpSpringSpec = spring<androidx.compose.ui.unit.Dp>(
+private fun pillDpSpringSpec() = spring<androidx.compose.ui.unit.Dp>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessLow
+)
+
+private fun pillColorSpringSpec() = spring<androidx.compose.ui.graphics.Color>(
     dampingRatio = Spring.DampingRatioMediumBouncy,
     stiffness = Spring.StiffnessLow
 )
@@ -191,7 +196,7 @@ private fun NavPillTab(
     // Animate width: selected = icon + label (~88dp), unselected = icon only (48dp)
     val animatedWidth by animateDpAsState(
         targetValue = if (selected) 88.dp else 48.dp,
-        animationSpec = pillDpSpringSpec,
+        animationSpec = pillDpSpringSpec(),
         label = "pill_tab_width"
     )
 
@@ -202,7 +207,7 @@ private fun NavPillTab(
         } else {
             Color.Transparent
         },
-        animationSpec = pillSpringSpec,
+        animationSpec = pillColorSpringSpec(),
         label = "pill_tab_bg"
     )
 
@@ -213,7 +218,7 @@ private fun NavPillTab(
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = pillSpringSpec,
+        animationSpec = pillColorSpringSpec(),
         label = "pill_tab_content"
     )
 
@@ -240,8 +245,8 @@ private fun NavPillTab(
             // Animated label: appears only when selected with fade
             AnimatedVisibility(
                 visible = selected,
-                enter = fadeIn(animationSpec = pillSpringSpec),
-                exit = fadeOut(animationSpec = pillSpringSpec)
+                enter = fadeIn(animationSpec = pillSpringSpec()),
+                exit = fadeOut(animationSpec = pillSpringSpec())
             ) {
                 Text(
                     text = item.label,
