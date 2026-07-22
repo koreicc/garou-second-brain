@@ -81,9 +81,13 @@ fun PersonDetailScreen(
             )
         }
     ) { padding ->
+        Surface(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            color = Color.Transparent
+        ) {
         when {
             state.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
@@ -92,7 +96,6 @@ fun PersonDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
                         .padding(horizontal = 20.dp)
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -122,6 +125,7 @@ fun PersonDetailScreen(
                     Text(
                         text = person.name,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -129,7 +133,7 @@ fun PersonDetailScreen(
 
                     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
                         if (person.contacts.isNotEmpty()) {
-                            Text("Contacts", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                            Text("Contacts", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(12.dp))
                             person.contacts.forEach { contact ->
                                 ContactCard(contact = contact)
@@ -139,7 +143,7 @@ fun PersonDetailScreen(
                         }
 
                         if (person.socialLinks.isNotEmpty()) {
-                            Text("Social Links", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                            Text("Social Links", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(12.dp))
                             person.socialLinks.forEach { link ->
                                 SocialLinkCard(link = link)
@@ -191,6 +195,7 @@ fun PersonDetailScreen(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -233,7 +238,7 @@ private fun ContactCard(contact: Contact) {
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                Text(text = contact.value, style = MaterialTheme.typography.bodyLarge)
+                Text(text = contact.value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

@@ -131,7 +131,7 @@ fun TaskDetailScreen(
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text(task.location, style = MaterialTheme.typography.bodyMedium)
+                                        Text(task.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                 }
@@ -149,7 +149,8 @@ fun TaskDetailScreen(
                                         val dateText = if (startStr == endStr || endStr.isEmpty()) startStr else "$startStr - $endStr"
                                         Text(
                                             text = dateText,
-                                            style = MaterialTheme.typography.bodyMedium
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))

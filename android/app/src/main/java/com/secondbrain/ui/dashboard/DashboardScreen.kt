@@ -319,7 +319,8 @@ private fun SectionHeader(title: String, onSeeAll: (() -> Unit)? = null) {
         Text(
             title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
         if (onSeeAll != null) {
             TextButton(onClick = onSeeAll) {
@@ -479,7 +480,7 @@ private fun NoteCard(note: Note, onClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.tertiary)
             )
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp).weight(1f)) {
-                Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                 if (note.body.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -554,7 +555,7 @@ private fun TaskCard(task: Task, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(task.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(task.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.width(8.dp))
                     StatusBadge(status = task.status)
                 }

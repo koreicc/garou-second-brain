@@ -176,13 +176,14 @@ class DashboardViewModel(
 
             // Mark as completed on backend
             quickTaskRepository.complete(id).onSuccess {
-                // Remove from quickTasks list (after backend confirms)
+                // Remove from quickTasks list (task stays in backend until auto-delete)
                 _state.update {
                     it.copy(
                         quickTasks = it.quickTasks.filter { qt -> qt.id != id },
                         completingQuickTasks = it.completingQuickTasks - id
                     )
                 }
+                // Don't reload - backend still has it (auto-deletes after 5s)
             }.onFailure { e ->
                 _state.update {
                     it.copy(
@@ -190,7 +191,6 @@ class DashboardViewModel(
                         completingQuickTasks = it.completingQuickTasks - id
                     )
                 }
-                silentReload()
             }
         }
     }
