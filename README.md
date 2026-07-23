@@ -5,8 +5,8 @@ Backend runs on Termux (Go), frontend is a Kotlin Jetpack Compose Android app.
 
 ## Quick Install (Termux on Android)
 
-One-line install. Clones the repo, installs Go + git, creates the vault, and
-downloads dependencies:
+One-line install. Installs Go if missing, builds the backend binary, creates the
+vault directory, and adds the binary to PATH:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | bash
@@ -18,8 +18,11 @@ To also start the server automatically after install, set `SECOND_BRAIN_AUTOSTAR
 curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | SECOND_BRAIN_AUTOSTART=1 bash
 ```
 
-The installer script (`install.sh`) is documented at the repo root. It is
-Termux-only -- it verifies it is running inside Termux before doing anything.
+After a fresh shell (or `source ~/.bashrc`) just run:
+
+```bash
+second-brain-server
+```
 
 ## Philosophy
 
