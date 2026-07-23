@@ -3,6 +3,24 @@
 Lightweight, Markdown-first Personal Knowledge Management (PKM) system.
 Backend runs on Termux (Go), frontend is a Kotlin Jetpack Compose Android app.
 
+## Quick Install (Termux on Android)
+
+One-line install. Clones the repo, installs Go + git, creates the vault, and
+downloads dependencies:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | bash
+```
+
+To also start the server automatically after install, set `SECOND_BRAIN_AUTOSTART=1`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | SECOND_BRAIN_AUTOSTART=1 bash
+```
+
+The installer script (`install.sh`) is documented at the repo root. It is
+Termux-only -- it verifies it is running inside Termux before doing anything.
+
 ## Philosophy
 
 Markdown-First. All data is human-readable .md files with YAML frontmatter.
@@ -127,24 +145,6 @@ All endpoints are under `/api/v1` and return JSON in the format:
 - `GET /api/v1/search?q=...` -- Full-text search across all entities
 
 ## Quick Start
-
-### One-line install (Termux on Android)
-
-The fastest way to get the backend running. Clones the repo, installs Go and
-dependencies, and creates the vault directory:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | bash
-```
-
-To also start the server automatically after install, set `SECOND_BRAIN_AUTOSTART=1`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | SECOND_BRAIN_AUTOSTART=1 bash
-```
-
-The installer script (`install.sh`) is documented at the repo root. It is
-Termux-only -- it verifies it is running inside Termux before doing anything.
 
 ### Backend (manual)
 ```bash
