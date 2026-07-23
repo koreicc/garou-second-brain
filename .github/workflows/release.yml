@@ -46,7 +46,6 @@ jobs:
           files: |
             second-brain-server-arm64
             second-brain-server-amd64
-          make_latest: true
           prerelease: true
           fail_on_unmatched_files: false
           token: ${{ secrets.GITHUB_TOKEN }}

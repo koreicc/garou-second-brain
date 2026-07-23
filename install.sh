@@ -39,7 +39,7 @@ fi
 
 # --- Step 1: download the ARM64 binary from GitHub Releases ---
 log "Downloading $BINARY_NAME (ARM64) from GitHub Releases..."
-DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/second-brain-server-arm64"
+DOWNLOAD_URL="https://github.com/$REPO/releases/download/nightly/second-brain-server-arm64"
 
 HTTP_CODE=$(curl -fsSL -w "%{http_code}" -o "$TARGET_DIR/$BINARY_NAME" "$DOWNLOAD_URL" 2>&1) || true
 
