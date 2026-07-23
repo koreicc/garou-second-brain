@@ -1,0 +1,52 @@
+name: Build and Release Backend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: backend/go.sum
+
+      - name: Build for linux/arm64 (Termux)
+        run: |
+          cd backend
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
+            go build -o ../second-brain-server-arm64 ./cmd/server
+
+      - name: Build for linux/amd64 (CI / dev)
+        run: |
+          cd backend
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+            go build -o ../second-brain-server-amd64 ./cmd/server
+
+      - name: Upload binaries as release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          body: |
+            Auto-built binary from the latest `main` branch.
+
+            - `second-brain-server-arm64` -- for Termux (Android / ARM64)
+            - `second-brain-server-amd64` -- for Linux x86_64 (dev / CI)
+          files: |
+            second-brain-server-arm64
+            second-brain-server-amd64
+          make_latest: true
+          prerelease: true
+          fail_on_unmatched_files: false
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -2,15 +2,16 @@
 # install.sh -- Quick setup for Second Brain System backend on Termux
 # Usage: curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | bash
 #
-# Installs the backend binary via go install, creates the vault directory,
-# and adds the binary to PATH in ~/.bashrc.
+# Downloads the pre-built binary from GitHub Releases, installs it to PREFIX/bin,
+# and creates the vault directory.
 
 set -e
 
 BINARY_NAME="second-brain-server"
-GO_MODULE="github.com/koreicc/garou-second-brain/backend/cmd/server@latest"
+REPO="koreicc/garou-second-brain"
 VAULT_PATH="${SECOND_BRAIN_VAULT_PATH:-$HOME/second-brain/vault}"
 PORT="${SECOND_BRAIN_PORT:-8080}"
+TARGET_DIR="$PREFIX/bin"
 
 log() {
     printf "\n[install] %s\n" "$1"
@@ -30,43 +31,36 @@ if [ ! -d "/data/data/com.termux" ]; then
     fail "This script targets Termux on Android. Run it from Termux."
 fi
 
-# --- Step 1: install Go if not present ---
-if ! command -v go &>/dev/null; then
-    log "Go is not installed. Installing golang via pkg..."
+if ! command -v curl &>/dev/null; then
+    log "curl not found, installing..."
     pkg update -y
-    pkg install -y golang
-else
-    log "Go found: $(go version)"
+    pkg install -y curl
 fi
 
-# --- Step 2: install the backend binary ---
-log "Installing $BINARY_NAME via 'go install'..."
-export GO111MODULE=on
-go install "$GO_MODULE"
+# --- Step 1: download the ARM64 binary from GitHub Releases ---
+log "Downloading $BINARY_NAME (ARM64) from GitHub Releases..."
+DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/second-brain-server-arm64"
 
-# Determine GOBIN (where go install placed the binary)
-GOBIN="$(go env GOBIN 2>/dev/null)"
-if [ -z "$GOBIN" ]; then
-    GOBIN="$(go env GOPATH)/bin"
+HTTP_CODE=$(curl -fsSL -w "%{http_code}" -o "$TARGET_DIR/$BINARY_NAME" "$DOWNLOAD_URL" 2>&1) || true
+
+if [ "$HTTP_CODE" != "200" ] || [ ! -f "$TARGET_DIR/$BINARY_NAME" ]; then
+    fail "Failed to download binary from $DOWNLOAD_URL (HTTP $HTTP_CODE).\n  The nightly release may not be built yet. Wait for the GitHub Actions workflow to finish.\n  Retry after a minute: curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | bash"
 fi
 
-if [ ! -f "$GOBIN/$BINARY_NAME" ]; then
-    fail "Binary not found at $GOBIN/$BINARY_NAME after go install."
-fi
+chmod +x "$TARGET_DIR/$BINARY_NAME"
+log "Binary installed: $TARGET_DIR/$BINARY_NAME"
 
-log "Binary installed: $GOBIN/$BINARY_NAME"
-
-# --- Step 3: add GOBIN to PATH if not already ---
+# --- Step 2: ensure TARGET_DIR is in PATH ---
 case ":$PATH:" in
-    *":$GOBIN:"*) ;;
+    *":$TARGET_DIR:"*) ;;
     *)
-        log "Adding $GOBIN to PATH in ~/.bashrc..."
-        printf '\n# Added by second-brain install script\nexport PATH="%s:$PATH"\n' "$GOBIN" >> "$HOME/.bashrc"
-        export PATH="$GOBIN:$PATH"
+        log "Adding $TARGET_DIR to PATH in ~/.bashrc..."
+        printf '\n# Added by second-brain install script\nexport PATH="$PATH:%s"\n' "$TARGET_DIR" >> "$HOME/.bashrc"
+        export PATH="$PATH:$TARGET_DIR"
         ;;
 esac
 
-# --- Step 4: create the vault directory ---
+# --- Step 3: create the vault directory ---
 log "Creating vault directory at $VAULT_PATH..."
 mkdir -p "$VAULT_PATH/notes" \
          "$VAULT_PATH/tasks" \
@@ -74,28 +68,26 @@ mkdir -p "$VAULT_PATH/notes" \
          "$VAULT_PATH/people" \
          "$VAULT_PATH/archive"
 
-# --- Step 5: summary ---
+# --- Step 4: summary ---
 log "Setup complete."
 printf "\n"
-printf "  Binary:  %s\n" "$GOBIN/$BINARY_NAME"
+printf "  Binary:  %s\n" "$TARGET_DIR/$BINARY_NAME"
 printf "  Vault:   %s\n" "$VAULT_PATH"
 printf "  Port:    %s\n" "$PORT"
 printf "\n"
 printf "Start the backend:\n"
 printf "  SECOND_BRAIN_VAULT_PATH=%s SECOND_BRAIN_PORT=%s %s\n" "$VAULT_PATH" "$PORT" "$BINARY_NAME"
 printf "\n"
-printf "Or set the defaults permanently and just run:\n"
+printf "Or set defaults permanently:\n"
 printf "  echo 'export SECOND_BRAIN_VAULT_PATH=%s' >> ~/.bashrc\n" "$VAULT_PATH"
 printf "  echo 'export SECOND_BRAIN_PORT=%s' >> ~/.bashrc\n" "$PORT"
 printf "  source ~/.bashrc && %s\n" "$BINARY_NAME"
 printf "\n"
-printf "Using $BINARY_NAME --help for all options.\n"
-printf "\n"
 
-# --- Step 6 (optional): start the server immediately ---
+# --- Step 5 (optional): start the server immediately ---
 if [ "${SECOND_BRAIN_AUTOSTART:-0}" = "1" ]; then
     log "SECOND_BRAIN_AUTOSTART=1 -- starting server now (Ctrl+C to stop)..."
     export SECOND_BRAIN_VAULT_PATH="$VAULT_PATH"
     export SECOND_BRAIN_PORT="$PORT"
-    exec "$GOBIN/$BINARY_NAME"
+    exec "$BINARY_NAME"
 fi
