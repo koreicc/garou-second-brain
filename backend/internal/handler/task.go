@@ -169,24 +169,15 @@ func (h *TaskHandler) Create(c echo.Context) error {
 	}
 
 	// If this is a template with date range + recurrence, generate occurrences
-	var occurrences []*model.Task
 	if isTemplate && req.Recurrence != nil && req.StartDate != nil && req.EndDate != nil {
-		occurrences = h.generateOccurrences(task, *req.StartDate, *req.EndDate)
+		occurrences := h.generateOccurrences(task, *req.StartDate, *req.EndDate)
 		for _, occ := range occurrences {
 			if err := h.vault.WriteTask(occ); err != nil {
-				// Best-effort: log but don't fail the whole request
 				continue
 			}
 		}
 	}
 
-	// Return appropriate response: template+occurrences for templates, plain task otherwise
-	if isTemplate {
-		return c.JSON(http.StatusCreated, model.DataResponse(map[string]interface{}{
-			"template":    task,
-			"occurrences": occurrences,
-		}))
-	}
 	return c.JSON(http.StatusCreated, model.DataResponse(task))
 }
 

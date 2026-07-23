@@ -188,30 +188,32 @@ class DashboardViewModel(
 
     private suspend fun loadTasksForDate(date: LocalDate) {
         val todayStr = date.toString()
-        // Try to get occurrences by date from API
-        val byDateResult = taskRepository.getByDate(todayStr)
-        if (byDateResult.isSuccess) {
-            val tasks = byDateResult.getOrDefault(emptyList())
-            _state.update { it.copy(selectedDateTasks = tasks) }
-            return
-        }
-
-        // Fallback: filter from all tasks
         val allTasks = taskRepository.getAll().getOrDefault(emptyList())
-        val filtered = allTasks.filter { task ->
-            when {
-                task.isTemplate -> false
-                task.occurrenceDate.isNotEmpty() -> task.occurrenceDate == todayStr
-                task.dateMode == "due_date" -> task.dueDate.take(10) == todayStr
-                task.dateMode == "range" -> {
-                    val s = task.startDate.take(10)
-                    val e = task.endDate.take(10)
-                    s.isNotEmpty() && e.isNotEmpty() && s <= todayStr && e >= todayStr
-                }
-                else -> false
-            }
-        }
-        _state.update { it.copy(selectedDateTasks = filtered) }
+
+        // Get occurrences from API
+        val byDateResult = taskRepository.getByDate(todayStr)
+        val occurrences = byDateResult.getOrDefault(emptyList())
+
+        // Also find templates whose date range includes this date
+        val matchingTemplates = allTasks.filter { task ->
+            task.isTemplate &&
+                task.dateMode == "range" &&
+                task.startDate.take(10).isNotEmpty() &&
+                task.endDate.take(10).isNotEmpty() &&
+                task.startDate.take(10) <= todayStr &&
+                task.endDate.take(10) >= todayStr
+        }.map { task ->
+            // Create a display copy: show as occurrence if not already in occurrences list
+            val existingIds = occurrences.map { it.id }.toSet()
+            if (task.id !in existingIds) task else null
+        }.filterNotNull()
+
+        // Merge: occurrences first, then matching templates not already in occurrences
+        val existingIds = occurrences.map { it.id }.toSet()
+        val extraTemplates = matchingTemplates.filter { it.id !in existingIds }
+        val merged = occurrences + extraTemplates
+
+        _state.update { it.copy(selectedDateTasks = merged) }
     }
 
     fun silentReloadDateTasks() {

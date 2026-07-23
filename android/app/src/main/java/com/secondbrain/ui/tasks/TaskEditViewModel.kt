@@ -216,11 +216,11 @@ class TaskEditViewModel(
             is TaskEditEvent.SetEndDate -> _state.update { it.copy(endDate = event.date, showEndDatePicker = false) }
             // Time mode
             is TaskEditEvent.SetTimeMode -> _state.update { it.copy(timeMode = event.mode) }
-            // Time values
-            is TaskEditEvent.SetStartTime -> _state.update { it.copy(startTime = event.time) }
-            is TaskEditEvent.SetEndTime -> _state.update { it.copy(endTime = event.time) }
+            // Time values (also dismiss the picker)
+            is TaskEditEvent.SetStartTime -> _state.update { it.copy(startTime = event.time, showStartTimePicker = false) }
+            is TaskEditEvent.SetEndTime -> _state.update { it.copy(endTime = event.time, showEndTimePicker = false) }
             is TaskEditEvent.SetDurationMinutes -> _state.update { it.copy(durationMinutes = event.minutes) }
-            is TaskEditEvent.SetDueTime -> _state.update { it.copy(dueTime = event.time) }
+            is TaskEditEvent.SetDueTime -> _state.update { it.copy(dueTime = event.time, showDueTimePicker = false) }
             // Time picker show/dismiss
             is TaskEditEvent.ShowDueTimePicker -> _state.update { it.copy(showDueTimePicker = true) }
             is TaskEditEvent.DismissDueTimePicker -> _state.update { it.copy(showDueTimePicker = false) }
@@ -347,6 +347,7 @@ class TaskEditViewModel(
                     status = s.status,
                     icon = s.icon,
                     location = s.location,
+                    isTemplate = s.dateMode == "range" && s.recurrenceType != null,
                     tags = s.tags,
                     body = s.body,
                     links = s.links,
