@@ -180,11 +180,14 @@ func (h *TaskHandler) Create(c echo.Context) error {
 		}
 	}
 
-	// Return the template + its occurrences
-	return c.JSON(http.StatusCreated, model.DataResponse(map[string]interface{}{
-		"template":    task,
-		"occurrences": occurrences,
-	}))
+	// Return appropriate response: template+occurrences for templates, plain task otherwise
+	if isTemplate {
+		return c.JSON(http.StatusCreated, model.DataResponse(map[string]interface{}{
+			"template":    task,
+			"occurrences": occurrences,
+		}))
+	}
+	return c.JSON(http.StatusCreated, model.DataResponse(task))
 }
 
 // generateOccurrences creates occurrence tasks for a template within the given date range.
