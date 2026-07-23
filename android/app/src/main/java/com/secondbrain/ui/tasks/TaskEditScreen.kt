@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -39,6 +40,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -172,6 +176,29 @@ fun TaskEditScreen(
         )
     }
 
+    // Time picker dialogs
+    if (state.showDueTimePicker) {
+        TimePickerDialogContent(
+            initialTime = state.dueTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetDueTime(time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissDueTimePicker) }
+        )
+    }
+    if (state.showStartTimePicker) {
+        TimePickerDialogContent(
+            initialTime = state.startTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetStartTime(time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissStartTimePicker) }
+        )
+    }
+    if (state.showEndTimePicker) {
+        TimePickerDialogContent(
+            initialTime = state.endTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetEndTime(time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndTimePicker) }
+        )
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -282,6 +309,29 @@ fun TaskEditScreen(
                             singleLine = true,
                             shape = MaterialTheme.shapes.medium
                         )
+
+                        // -- Status --
+                        Text("Status", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatusChip(
+                                label = "Pending",
+                                value = "pending",
+                                selectedValue = state.status,
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("pending")) }
+                            )
+                            StatusChip(
+                                label = "In Progress",
+                                value = "in-progress",
+                                selectedValue = state.status,
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("in-progress")) }
+                            )
+                            StatusChip(
+                                label = "Completed",
+                                value = "completed",
+                                selectedValue = state.status,
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("completed")) }
+                            )
+                        }
                     }
                 }
 
@@ -469,40 +519,83 @@ fun TaskEditScreen(
 
                         // Conditional time inputs
                         if (state.timeMode == "due_time") {
-                            OutlinedTextField(
-                                value = state.dueTime,
-                                onValueChange = { viewModel.onEvent(TaskEditEvent.SetDueTime(it)) },
-                                label = { Text("Due Time") },
-                                placeholder = { Text("HH:mm") },
-                                modifier = Modifier.width(160.dp),
-                                singleLine = true,
-                                shape = MaterialTheme.shapes.medium
-                            )
+                            OutlinedButton(
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDueTimePicker) },
+                                modifier = Modifier.width(160.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (state.dueTime.isNotBlank()) state.dueTime else "Select time",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            if (state.dueTime.isNotBlank()) {
+                                IconButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.SetDueTime("")) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear time", modifier = Modifier.size(18.dp))
+                                }
+                            }
                         }
 
                         if (state.timeMode == "start_end") {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                OutlinedTextField(
-                                    value = state.startTime,
-                                    onValueChange = { viewModel.onEvent(TaskEditEvent.SetStartTime(it)) },
-                                    label = { Text("Start") },
-                                    placeholder = { Text("HH:mm") },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    shape = MaterialTheme.shapes.medium
-                                )
-                                OutlinedTextField(
-                                    value = state.endTime,
-                                    onValueChange = { viewModel.onEvent(TaskEditEvent.SetEndTime(it)) },
-                                    label = { Text("End") },
-                                    placeholder = { Text("HH:mm") },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    shape = MaterialTheme.shapes.medium
-                                )
+                                OutlinedButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartTimePicker) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.startTime.isNotBlank()) state.startTime else "Start",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (state.startTime.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetStartTime("")) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear start time", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowEndTimePicker) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.endTime.isNotBlank()) state.endTime else "End",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (state.endTime.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetEndTime("")) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear end time", modifier = Modifier.size(18.dp))
+                                    }
+                                }
                             }
                         }
 
@@ -512,21 +605,35 @@ fun TaskEditScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                OutlinedTextField(
-                                    value = state.startTime,
-                                    onValueChange = { viewModel.onEvent(TaskEditEvent.SetStartTime(it)) },
-                                    label = { Text("Start") },
-                                    placeholder = { Text("HH:mm") },
-                                    modifier = Modifier.width(120.dp),
-                                    singleLine = true,
-                                    shape = MaterialTheme.shapes.medium
-                                )
+                                OutlinedButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartTimePicker) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.startTime.isNotBlank()) state.startTime else "Start",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (state.startTime.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetStartTime("")) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear start time", modifier = Modifier.size(18.dp))
+                                    }
+                                }
                                 OutlinedTextField(
                                     value = state.durationMinutes,
                                     onValueChange = { viewModel.onEvent(TaskEditEvent.SetDurationMinutes(it)) },
                                     label = { Text("Duration (min)") },
                                     placeholder = { Text("30") },
-                                    modifier = Modifier.width(160.dp),
+                                    modifier = Modifier.width(140.dp),
                                     singleLine = true,
                                     shape = MaterialTheme.shapes.medium,
                                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
@@ -814,6 +921,36 @@ private fun RecurrenceChip(
     )
 }
 
+@Composable
+private fun StatusChip(
+    label: String,
+    value: String,
+    selectedValue: String,
+    onClick: () -> Unit
+) {
+    val chipColors = when (value) {
+        "pending" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.tertiary
+        )
+        "in-progress" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.primary
+        )
+        "completed" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.secondary
+        )
+        else -> FilterChipDefaults.filterChipColors()
+    }
+    FilterChip(
+        selected = selectedValue == value,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        colors = chipColors
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerDialogContent(
@@ -845,4 +982,54 @@ private fun DatePickerDialogContent(
     ) {
         DatePicker(state = datePickerState)
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialogContent(
+    initialTime: String,
+    onTimeSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // Parse initial time or default to current time
+    val initialHour = initialTime.split(":").getOrNull(0)?.toIntOrNull() ?: java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val initialMinute = initialTime.split(":").getOrNull(1)?.toIntOrNull() ?: 0
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialHour.coerceIn(0, 23),
+        initialMinute = initialMinute.coerceIn(0, 59),
+        is24Hour = true
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Time") },
+        text = {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TimePicker(
+                    state = timePickerState
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val hour = timePickerState.hour
+                    val minute = timePickerState.minute
+                    val formatted = "%02d:%02d".format(hour, minute)
+                    onTimeSelected(formatted)
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

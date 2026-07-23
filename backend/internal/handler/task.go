@@ -45,6 +45,7 @@ func (h *TaskHandler) Get(c echo.Context) error {
 
 type CreateTaskRequest struct {
 	Title           string            `json:"title"`
+	Status          string            `json:"status"`
 	Icon            string            `json:"icon"`
 	Location        string            `json:"location"`
 	Tags            []string          `json:"tags"`
@@ -73,11 +74,19 @@ func (h *TaskHandler) Create(c echo.Context) error {
 	}
 
 	now := time.Now().UTC()
+	taskStatus := model.TaskStatusPending
+	if req.Status != "" {
+		switch req.Status {
+		case model.TaskStatusPending, model.TaskStatusInProgress, model.TaskStatusCompleted:
+			taskStatus = req.Status
+		}
+	}
+
 	task := &model.Task{
 		BaseEntity: model.BaseEntity{
 			ID:        uuid.New().String(),
 			Type:      model.TypeTask,
-			Status:    model.TaskStatusPending,
+			Status:    model.EntityStatus(taskStatus),
 			Tags:      req.Tags,
 			Links:     req.Links,
 			CreatedAt: now,

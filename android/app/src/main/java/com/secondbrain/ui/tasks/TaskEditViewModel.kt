@@ -18,6 +18,7 @@ import java.util.UUID
 
 data class TaskEditUiState(
     val title: String = "",
+    val status: String = "pending",
     val icon: String = "",
     val location: String = "",
     val tags: List<String> = emptyList(),
@@ -41,6 +42,9 @@ data class TaskEditUiState(
     val endTime: String = "",
     val durationMinutes: String = "",    // stored as string for text field
     val dueTime: String = "",
+    val showDueTimePicker: Boolean = false,
+    val showStartTimePicker: Boolean = false,
+    val showEndTimePicker: Boolean = false,
     // Recurrence
     val recurrenceType: String? = null,
     val recurrenceInterval: Int = 1,
@@ -62,6 +66,7 @@ data class SubtaskEditItem(
 
 sealed interface TaskEditEvent {
     data class UpdateTitle(val title: String) : TaskEditEvent
+    data class SetStatus(val status: String) : TaskEditEvent
     data class UpdateIcon(val icon: String) : TaskEditEvent
     data class UpdateLocation(val location: String) : TaskEditEvent
     data class SetTags(val tags: List<String>) : TaskEditEvent
@@ -89,6 +94,13 @@ sealed interface TaskEditEvent {
     data class SetEndTime(val time: String) : TaskEditEvent
     data class SetDurationMinutes(val minutes: String) : TaskEditEvent
     data class SetDueTime(val time: String) : TaskEditEvent
+    // Time picker show/dismiss
+    data object ShowDueTimePicker : TaskEditEvent
+    data object DismissDueTimePicker : TaskEditEvent
+    data object ShowStartTimePicker : TaskEditEvent
+    data object DismissStartTimePicker : TaskEditEvent
+    data object ShowEndTimePicker : TaskEditEvent
+    data object DismissEndTimePicker : TaskEditEvent
     // Recurrence events
     data class SetRecurrenceType(val type: String?) : TaskEditEvent
     data class SetRecurrenceInterval(val interval: Int) : TaskEditEvent
@@ -129,6 +141,7 @@ class TaskEditViewModel(
                     _state.update {
                         it.copy(
                             title = task.title,
+                            status = task.status,
                             icon = task.icon,
                             location = task.location,
                             tags = task.tags,
@@ -160,6 +173,7 @@ class TaskEditViewModel(
     fun onEvent(event: TaskEditEvent) {
         when (event) {
             is TaskEditEvent.UpdateTitle -> _state.update { it.copy(title = event.title) }
+            is TaskEditEvent.SetStatus -> _state.update { it.copy(status = event.status) }
             is TaskEditEvent.UpdateIcon -> _state.update { it.copy(icon = event.icon) }
             is TaskEditEvent.UpdateLocation -> _state.update { it.copy(location = event.location) }
             is TaskEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
@@ -189,6 +203,13 @@ class TaskEditViewModel(
             is TaskEditEvent.SetEndTime -> _state.update { it.copy(endTime = event.time) }
             is TaskEditEvent.SetDurationMinutes -> _state.update { it.copy(durationMinutes = event.minutes) }
             is TaskEditEvent.SetDueTime -> _state.update { it.copy(dueTime = event.time) }
+            // Time picker show/dismiss
+            is TaskEditEvent.ShowDueTimePicker -> _state.update { it.copy(showDueTimePicker = true) }
+            is TaskEditEvent.DismissDueTimePicker -> _state.update { it.copy(showDueTimePicker = false) }
+            is TaskEditEvent.ShowStartTimePicker -> _state.update { it.copy(showStartTimePicker = true) }
+            is TaskEditEvent.DismissStartTimePicker -> _state.update { it.copy(showStartTimePicker = false) }
+            is TaskEditEvent.ShowEndTimePicker -> _state.update { it.copy(showEndTimePicker = true) }
+            is TaskEditEvent.DismissEndTimePicker -> _state.update { it.copy(showEndTimePicker = false) }
             // Recurrence
             is TaskEditEvent.SetRecurrenceType -> _state.update { it.copy(recurrenceType = event.type, recurrenceDaysOfWeek = emptyList()) }
             is TaskEditEvent.SetRecurrenceInterval -> _state.update { it.copy(recurrenceInterval = event.interval) }
@@ -283,6 +304,7 @@ class TaskEditViewModel(
             val result = if (taskId != null) {
                 taskRepository.update(taskId, UpdateTaskRequest(
                     title = s.title,
+                    status = s.status,
                     icon = s.icon,
                     location = s.location,
                     tags = if (s.tags.isNotEmpty()) s.tags else null,
@@ -303,6 +325,7 @@ class TaskEditViewModel(
             } else {
                 taskRepository.create(CreateTaskRequest(
                     title = s.title,
+                    status = s.status,
                     icon = s.icon,
                     location = s.location,
                     tags = s.tags,

@@ -61,6 +61,7 @@ data class SubtaskDto(
 @Serializable
 data class CreateTaskRequest(
     val title: String,
+    val status: String = "pending",
     val icon: String = "",
     val location: String = "",
     val tags: List<String> = emptyList(),
