@@ -44,23 +44,23 @@ func (h *TaskHandler) Get(c echo.Context) error {
 }
 
 type CreateTaskRequest struct {
-	Title      string            `json:"title"`
-	Icon       string            `json:"icon"`
-	Location   string            `json:"location"`
-	Tags       []string          `json:"tags"`
-	Links      []string          `json:"links"`
-	DateMode   string            `json:"date_mode"`
-	DueDate    *time.Time        `json:"due_date"`
-	StartDate  *time.Time        `json:"start_date"`
-	EndDate    *time.Time        `json:"end_date"`
-	TimeMode   string            `json:"time_mode"`
-	StartTime  string            `json:"start_time"`
-	EndTime    string            `json:"end_time"`
-	DurationMinutes int          `json:"duration_minutes"`
-	DueTime    string            `json:"due_time"`
-	Recurrence *model.Recurrence `json:"recurrence"`
-	Subtasks   []model.Subtask   `json:"subtasks"`
-	Body       string            `json:"body"`
+	Title           string            `json:"title"`
+	Icon            string            `json:"icon"`
+	Location        string            `json:"location"`
+	Tags            []string          `json:"tags"`
+	Links           []string          `json:"links"`
+	DateMode        string            `json:"date_mode"`
+	DueDate         *time.Time        `json:"due_date"`
+	StartDate       *time.Time        `json:"start_date"`
+	EndDate         *time.Time        `json:"end_date"`
+	TimeMode        string            `json:"time_mode"`
+	StartTime       string            `json:"start_time"`
+	EndTime         string            `json:"end_time"`
+	DurationMinutes int               `json:"duration_minutes"`
+	DueTime         string            `json:"due_time"`
+	Recurrence      *model.Recurrence `json:"recurrence"`
+	Subtasks        []model.Subtask   `json:"subtasks"`
+	Body            string            `json:"body"`
 }
 
 func (h *TaskHandler) Create(c echo.Context) error {
@@ -117,24 +117,24 @@ func (h *TaskHandler) Create(c echo.Context) error {
 }
 
 type UpdateTaskRequest struct {
-	Title      string            `json:"title"`
-	Status     string            `json:"status"`
-	Icon       string            `json:"icon"`
-	Location   string            `json:"location"`
-	Tags       []string          `json:"tags"`
-	Links      []string          `json:"links"`
-	DateMode   string            `json:"date_mode"`
-	DueDate    *time.Time        `json:"due_date"`
-	StartDate  *time.Time        `json:"start_date"`
-	EndDate    *time.Time        `json:"end_date"`
-	TimeMode   string            `json:"time_mode"`
-	StartTime  string            `json:"start_time"`
-	EndTime    string            `json:"end_time"`
-	DurationMinutes int          `json:"duration_minutes"`
-	DueTime    string            `json:"due_time"`
-	Recurrence *model.Recurrence `json:"recurrence"`
-	Subtasks   []model.Subtask   `json:"subtasks"`
-	Body       string            `json:"body"`
+	Title           string            `json:"title"`
+	Status          string            `json:"status"`
+	Icon            string            `json:"icon"`
+	Location        string            `json:"location"`
+	Tags            []string          `json:"tags"`
+	Links           []string          `json:"links"`
+	DateMode        string            `json:"date_mode"`
+	DueDate         *time.Time        `json:"due_date"`
+	StartDate       *time.Time        `json:"start_date"`
+	EndDate         *time.Time        `json:"end_date"`
+	TimeMode        string            `json:"time_mode"`
+	StartTime       string            `json:"start_time"`
+	EndTime         string            `json:"end_time"`
+	DurationMinutes int               `json:"duration_minutes"`
+	DueTime         string            `json:"due_time"`
+	Recurrence      *model.Recurrence `json:"recurrence"`
+	Subtasks        []model.Subtask   `json:"subtasks"`
+	Body            string            `json:"body"`
 }
 
 func (h *TaskHandler) Update(c echo.Context) error {

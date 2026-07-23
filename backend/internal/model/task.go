@@ -4,9 +4,9 @@ import "time"
 
 type Task struct {
 	BaseEntity `yaml:",inline" json:",inline"`
-	Title      string      `yaml:"title" json:"title"`
-	Icon       string      `yaml:"icon,omitempty" json:"icon,omitempty"`
-	Location   string      `yaml:"location,omitempty" json:"location,omitempty"`
+	Title      string `yaml:"title" json:"title"`
+	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`
+	Location   string `yaml:"location,omitempty" json:"location,omitempty"`
 
 	// Date mode: "due_date" (single) or "range" (start_date + end_date)
 	// "range" is required when recurrence is set
@@ -51,8 +51,8 @@ const (
 )
 
 const (
-	TimeModeDueTime      = "due_time"
-	TimeModeStartEnd     = "start_end"
+	TimeModeDueTime       = "due_time"
+	TimeModeStartEnd      = "start_end"
 	TimeModeStartDuration = "start_duration"
 )
 
