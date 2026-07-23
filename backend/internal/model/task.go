@@ -8,6 +8,11 @@ type Task struct {
 	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`
 	Location   string `yaml:"location,omitempty" json:"location,omitempty"`
 
+	// Template / occurrence fields
+	ParentID       string `yaml:"parent_id,omitempty" json:"parent_id,omitempty"`
+	IsTemplate     bool   `yaml:"is_template,omitempty" json:"is_template,omitempty"`
+	OccurrenceDate string `yaml:"occurrence_date,omitempty" json:"occurrence_date,omitempty"`
+
 	// Date mode: "due_date" (single) or "range" (start_date + end_date)
 	// "range" is required when recurrence is set
 	DateMode  string     `yaml:"date_mode,omitempty" json:"date_mode,omitempty"`
@@ -39,10 +44,18 @@ func NewTask(id, title string) *Task {
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
-		Title:    title,
-		Subtasks: []Subtask{},
-		Body:     "",
+		Title:          title,
+		Subtasks:       []Subtask{},
+		Body:           "",
+		IsTemplate:     false,
+		OccurrenceDate: "",
 	}
+}
+
+// OccurrenceID generates a deterministic ID for an occurrence of a template
+// on a given date. Format: "<parent-id>_<date>".
+func OccurrenceID(parentID, date string) string {
+	return parentID + "_" + date
 }
 
 const (

@@ -13,6 +13,7 @@ interface ApiService {
     // Tasks
     suspend fun getAllTasks(): ApiResponse<List<TaskDto>>
     suspend fun getTask(id: String): ApiResponse<TaskDto>
+    suspend fun getTasksByDate(date: String): ApiResponse<List<TaskDto>>
     suspend fun createTask(request: CreateTaskRequest): ApiResponse<TaskDto>
     suspend fun updateTask(id: String, request: UpdateTaskRequest): ApiResponse<TaskDto>
     suspend fun deleteTask(id: String): ApiResponse<Unit>

@@ -13,6 +13,12 @@ data class TaskDto(
     val location: String = "",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
+    @SerialName("parent_id")
+    val parentId: String = "",
+    @SerialName("is_template")
+    val isTemplate: Boolean = false,
+    @SerialName("occurrence_date")
+    val occurrenceDate: String = "",
     // Date fields
     @SerialName("date_mode")
     val dateMode: String = "",
@@ -66,6 +72,12 @@ data class CreateTaskRequest(
     val location: String = "",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
+    @SerialName("parent_id")
+    val parentId: String = "",
+    @SerialName("is_template")
+    val isTemplate: Boolean = false,
+    @SerialName("occurrence_date")
+    val occurrenceDate: String = "",
     // Date fields
     @SerialName("date_mode")
     val dateMode: String = "",
@@ -100,6 +112,10 @@ data class UpdateTaskRequest(
     val location: String? = null,
     val tags: List<String>? = null,
     val links: List<String>? = null,
+    @SerialName("propagate_to_occurrences")
+    val propagateToOccurrences: Boolean = false,
+    // Query params for by-date endpoint are handled via URL, not body
+
     // Date fields
     @SerialName("date_mode")
     val dateMode: String? = null,
@@ -134,6 +150,9 @@ fun TaskDto.toDomain(): Task = Task(
     location = location,
     tags = tags,
     links = links,
+    parentId = parentId,
+    isTemplate = isTemplate,
+    occurrenceDate = occurrenceDate,
     dateMode = dateMode,
     dueDate = dueDate,
     startDate = startDate,

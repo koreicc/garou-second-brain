@@ -49,6 +49,12 @@ class KtorApiService(
         return client.get("$baseUrl/tasks/$id").body()
     }
 
+    override suspend fun getTasksByDate(date: String): ApiResponse<List<TaskDto>> {
+        return client.get("$baseUrl/tasks/by-date") {
+            parameter("date", date)
+        }.body()
+    }
+
     override suspend fun createTask(request: CreateTaskRequest): ApiResponse<TaskDto> {
         return client.post("$baseUrl/tasks") {
             contentType(ContentType.Application.Json)

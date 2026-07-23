@@ -79,6 +79,7 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.IconPickerDialog
 import com.secondbrain.ui.util.TagInput
 import com.secondbrain.ui.util.resolveIcon
+import com.secondbrain.domain.model.Task
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -174,6 +175,16 @@ fun TaskEditScreen(
         DatePickerDialogContent(
             onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetEndDate(date)) },
             onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndDatePicker) }
+        )
+    }
+
+    // Edit mode dialog: show when editing an occurrence
+    if (state.showEditModeDialog) {
+        OccurrenceEditModeDialog(
+            taskTitle = state.title,
+            onEditThisOnly = { viewModel.onEvent(TaskEditEvent.SetOccurrenceEdit(true)) },
+            onEditTemplate = { viewModel.onEvent(TaskEditEvent.SetOccurrenceEdit(false)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEditModeDialog) }
         )
     }
 
@@ -983,6 +994,42 @@ private fun DatePickerDialogContent(
     ) {
         DatePicker(state = datePickerState)
     }
+}
+
+@Composable
+private fun OccurrenceEditModeDialog(
+    taskTitle: String,
+    onEditThisOnly: () -> Unit,
+    onEditTemplate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit occurrence") },
+        text = {
+            Column {
+                Text(
+                    text = "\"$taskTitle\" is a recurring task occurrence.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "How would you like to edit?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEditThisOnly) {
+                Text("Edit this occurrence only")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onEditTemplate) {
+                Text("Edit template (all occurrences)")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

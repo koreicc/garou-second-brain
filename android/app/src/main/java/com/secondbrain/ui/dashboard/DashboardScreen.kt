@@ -16,6 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.FlashOn
@@ -23,6 +26,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -38,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,9 +68,14 @@ import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
 import com.secondbrain.ui.util.resolveIcon
+import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 // ---------------------------------------------------------------------------
-// Top-level screen composable -- signature must remain unchanged
+// Top-level screen composable
 // ---------------------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,6 +102,7 @@ fun DashboardScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.error) {
         state.error?.let { error ->
@@ -100,6 +112,39 @@ fun DashboardScreen(
 
     RefreshOnResume {
         viewModel.silentReload()
+    }
+
+    // Date picker dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = java.time.ZoneId.systemDefault()
+                .let { zone ->
+                    state.selectedDate.atStartOfDay(zone)
+                        .toInstant()
+                        .toEpochMilli()
+                }
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val ld = java.time.Instant.ofEpochMilli(millis)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                            viewModel.onEvent(DashboardEvent.SelectDate(ld))
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
 
     Scaffold(
@@ -131,10 +176,7 @@ fun DashboardScreen(
                         onClick = { viewModel.onEvent(DashboardEvent.LoadData) },
                         enabled = !state.isLoading
                     ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh dashboard"
-                        )
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh dashboard")
                     }
                 }
             )
@@ -147,6 +189,15 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // ---- Date selector ----
+            item(key = "date-selector") {
+                DateSelectorCard(
+                    selectedDate = state.selectedDate,
+                    onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
+                    onOpenDatePicker = { showDatePicker = true }
+                )
+            }
+
             // ---- Routine section ----
             state.routine?.let { routine ->
                 item(key = "routine") {
@@ -163,12 +214,12 @@ fun DashboardScreen(
                 }
             }
 
-            // ---- Today's tasks section ----
-            item(key = "today-tasks") {
-                TodaysTasksSection(
-                    tasks = state.todayTasks,
-                    onTaskClick = { taskId -> onNavigateToTaskDetail(taskId) },
-                    onSeeAll = onNavigateToTasks
+            // ---- Selected date's tasks (occurrences) ----
+            item(key = "date-tasks") {
+                DateTasksSection(
+                    date = state.selectedDate,
+                    tasks = state.selectedDateTasks,
+                    onTaskClick = onNavigateToTaskDetail
                 )
             }
 
@@ -226,6 +277,193 @@ fun DashboardScreen(
 }
 
 // ---------------------------------------------------------------------------
+// Date selector card
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DateSelectorCard(
+    selectedDate: LocalDate,
+    onChangeDate: (LocalDate) -> Unit,
+    onOpenDatePicker: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = { onChangeDate(selectedDate.minusDays(1)) }) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous day")
+            }
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onOpenDatePicker),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    val today = LocalDate.now()
+                    val label = when {
+                        selectedDate == today -> "Today"
+                        selectedDate == today.minusDays(1) -> "Yesterday"
+                        selectedDate == today.plusDays(1) -> "Tomorrow"
+                        else -> ""
+                    }
+                    if (label.isNotEmpty()) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            IconButton(onClick = { onChangeDate(selectedDate.plusDays(1)) }) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next day")
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Selected date tasks section
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DateTasksSection(
+    date: LocalDate,
+    tasks: List<Task>,
+    onTaskClick: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Tasks for this day (${tasks.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            if (tasks.isEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "No tasks for this day",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
+                tasks.forEach { task ->
+                    DateTaskItem(
+                        task = task,
+                        onClick = { onTaskClick(task.id) }
+                    )
+                    if (task != tasks.last()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateTaskItem(
+    task: Task,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val iconVector = resolveIcon(task.icon)
+            if (iconVector != null) {
+                Icon(
+                    imageVector = iconVector,
+                    contentDescription = task.icon,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else if (task.icon.isNotEmpty()) {
+                Text(
+                    text = task.icon,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (task.icon.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(10.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (task.parentId.isNotEmpty()) {
+                    Text(
+                        text = "Occurrence",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            StatusBadge(status = task.status)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Routine section
 // ---------------------------------------------------------------------------
 
@@ -250,7 +488,6 @@ private fun RoutineSection(
         shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // Header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -274,7 +511,6 @@ private fun RoutineSection(
                 }
             }
 
-            // Progress bar
             if (routine.totalCount > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
@@ -285,7 +521,6 @@ private fun RoutineSection(
                 )
             }
 
-            // Subtask list
             Spacer(modifier = Modifier.height(8.dp))
             routine.task.subtasks.forEach { subtask ->
                 SubtaskRow(
@@ -294,7 +529,6 @@ private fun RoutineSection(
                 )
             }
 
-            // Complete Routine button
             if (!routine.isComplete && routine.totalCount > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
                 FilledTonalButton(
@@ -334,126 +568,6 @@ private fun SubtaskRow(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Today's tasks section
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun TodaysTasksSection(
-    tasks: List<Task>,
-    onTaskClick: (String) -> Unit,
-    onSeeAll: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Today's Tasks (${tasks.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            if (tasks.isEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "No tasks scheduled for today",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Spacer(modifier = Modifier.height(8.dp))
-                tasks.forEach { task ->
-                    TodaysTaskItem(
-                        task = task,
-                        onClick = { onTaskClick(task.id) }
-                    )
-                    if (task != tasks.last()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-
-            // "See all" link
-            Spacer(modifier = Modifier.height(4.dp))
-            TextButton(
-                onClick = onSeeAll,
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("See all")
-            }
-        }
-    }
-}
-
-@Composable
-private fun TodaysTaskItem(
-    task: Task,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Icon
-            val iconVector = resolveIcon(task.icon)
-            if (iconVector != null) {
-                Icon(
-                    imageVector = iconVector,
-                    contentDescription = task.icon,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            } else if (task.icon.isNotEmpty()) {
-                Text(
-                    text = task.icon,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            if (task.icon.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(10.dp))
-            }
-
-            // Title
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Status badge
-            StatusBadge(status = task.status)
-        }
     }
 }
 

@@ -20,6 +20,12 @@ class TaskRepository(private val api: ApiService) {
         (response.data ?: throw Exception("Task not found")).toDomain()
     }
 
+    suspend fun getByDate(date: String): Result<List<Task>> = runCatching {
+        val response = api.getTasksByDate(date)
+        if (response.error.isNotBlank()) throw Exception(response.error)
+        (response.data ?: emptyList()).map { it.toDomain() }
+    }
+
     suspend fun create(request: CreateTaskRequest): Result<Task> = runCatching {
         val response = api.createTask(request)
         if (response.error.isNotBlank()) throw Exception(response.error)

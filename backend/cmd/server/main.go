@@ -53,6 +53,8 @@ func main() {
 
 	taskHandler := handler.NewTaskHandler(v)
 	api.GET("/tasks", taskHandler.List)
+	api.GET("/tasks/templates", taskHandler.ListTemplates)
+	api.GET("/tasks/by-date", taskHandler.ListByDate)
 	api.GET("/tasks/:id", taskHandler.Get)
 	api.POST("/tasks", taskHandler.Create)
 	api.PUT("/tasks/:id", taskHandler.Update)

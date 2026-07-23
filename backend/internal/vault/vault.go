@@ -460,6 +460,52 @@ func (v *Vault) ListTasks() ([]*model.Task, error) {
 	return tasks, nil
 }
 
+// ListTemplates returns only template tasks (tasks with is_template=true).
+func (v *Vault) ListTemplates() ([]*model.Task, error) {
+	all, err := v.ListTasks()
+	if err != nil {
+		return nil, err
+	}
+	var templates []*model.Task
+	for _, t := range all {
+		if t.IsTemplate {
+			templates = append(templates, t)
+		}
+	}
+	return templates, nil
+}
+
+// ListTasksByDate returns all non-template tasks that occur on the given date.
+// date should be in "YYYY-MM-DD" format.
+func (v *Vault) ListTasksByDate(date string) ([]*model.Task, error) {
+	all, err := v.ListTasks()
+	if err != nil {
+		return nil, err
+	}
+	var matches []*model.Task
+	for _, t := range all {
+		if !t.IsTemplate && t.OccurrenceDate == date {
+			matches = append(matches, t)
+		}
+	}
+	return matches, nil
+}
+
+// ListTasksByParent returns all occurrences of a given template task.
+func (v *Vault) ListTasksByParent(parentID string) ([]*model.Task, error) {
+	all, err := v.ListTasks()
+	if err != nil {
+		return nil, err
+	}
+	var matches []*model.Task
+	for _, t := range all {
+		if t.ParentID == parentID {
+			matches = append(matches, t)
+		}
+	}
+	return matches, nil
+}
+
 func (v *Vault) ListQuickTasks() ([]*model.QuickTask, error) {
 	files, err := v.listFiles(DirQuickTasks)
 	if err != nil {

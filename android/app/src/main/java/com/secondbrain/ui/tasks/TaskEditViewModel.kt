@@ -24,6 +24,13 @@ data class TaskEditUiState(
     val tags: List<String> = emptyList(),
     val body: String = "",
     val links: List<String> = emptyList(),
+    // Template / occurrence fields
+    val parentId: String = "",
+    val isTemplate: Boolean = false,
+    val occurrenceDate: String = "",
+    val showEditModeDialog: Boolean = false,
+    val isOccurrenceEdit: Boolean = false,
+    val propagateToOccurrences: Boolean = false,
     val showLinkPicker: Boolean = false,
     val linkPickerLoading: Boolean = false,
     // Icon picker
@@ -71,6 +78,9 @@ sealed interface TaskEditEvent {
     data class UpdateLocation(val location: String) : TaskEditEvent
     data class SetTags(val tags: List<String>) : TaskEditEvent
     data class UpdateBody(val body: String) : TaskEditEvent
+    // Occurrence vs template edit mode
+    data class SetOccurrenceEdit(val editThisOnly: Boolean) : TaskEditEvent
+    data object DismissEditModeDialog : TaskEditEvent
     // Icon events
     data object ShowIconPicker : TaskEditEvent
     data object DismissIconPicker : TaskEditEvent
@@ -162,7 +172,12 @@ class TaskEditViewModel(
                             subtasks = task.subtasks.map { s ->
                                 SubtaskEditItem(id = s.id, title = s.title, completed = s.completed)
                             },
-                            isLoading = false
+                            parentId = task.parentId,
+                            isTemplate = task.isTemplate,
+                            occurrenceDate = task.occurrenceDate,
+                            isLoading = false,
+                            // Show edit mode dialog if this is an occurrence
+                            showEditModeDialog = task.parentId.isNotEmpty()
                         )
                     }
                 }
@@ -178,6 +193,9 @@ class TaskEditViewModel(
             is TaskEditEvent.UpdateLocation -> _state.update { it.copy(location = event.location) }
             is TaskEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
             is TaskEditEvent.UpdateBody -> _state.update { it.copy(body = event.body) }
+            // Occurrence vs template edit mode
+            is TaskEditEvent.SetOccurrenceEdit -> _state.update { it.copy(isOccurrenceEdit = event.editThisOnly, showEditModeDialog = false) }
+            is TaskEditEvent.DismissEditModeDialog -> _state.update { it.copy(showEditModeDialog = false) }
             // Icon events
             is TaskEditEvent.ShowIconPicker -> _state.update { it.copy(showIconPicker = true) }
             is TaskEditEvent.DismissIconPicker -> _state.update { it.copy(showIconPicker = false) }
@@ -307,6 +325,7 @@ class TaskEditViewModel(
                     status = s.status,
                     icon = s.icon,
                     location = s.location,
+                    propagateToOccurrences = s.isTemplate && !s.isOccurrenceEdit,
                     tags = if (s.tags.isNotEmpty()) s.tags else null,
                     body = s.body,
                     links = if (s.links.isNotEmpty()) s.links else null,

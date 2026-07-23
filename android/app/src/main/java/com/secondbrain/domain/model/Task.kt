@@ -8,6 +8,9 @@ data class Task(
     val location: String = "",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
+    val parentId: String = "",
+    val isTemplate: Boolean = false,
+    val occurrenceDate: String = "",
     // Date fields
     val dateMode: String = "",           // "due_date" | "range" | ""
     val dueDate: String = "",            // ISO date for due_date mode
