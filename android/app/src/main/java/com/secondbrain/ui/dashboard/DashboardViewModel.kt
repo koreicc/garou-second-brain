@@ -139,7 +139,8 @@ class DashboardViewModel(
                 allTasks
                     .filter { task ->
                         task.tags.any { tag -> tag == "routine" } &&
-                            task.tags.any { tag -> tag == timeTag }
+                            task.tags.any { tag -> tag == timeTag } &&
+                            task.status != "expired"
                     }
                     .maxByOrNull { task -> task.updatedAt }
                     ?.let { task ->
@@ -155,21 +156,40 @@ class DashboardViewModel(
             }
 
             val today = LocalDate.now()
+            val todayStr = today.toString()
             val todayTasks = allTasks
                 .filter { task ->
                     task.status == "pending" || task.status == "in-progress"
                 }
                 .filter { task ->
-                    val start = task.startDate.take(10)
-                    val end = task.endDate.take(10)
-                    val todayStr = today.toString()
-                    start.isEmpty() && end.isEmpty() ||
-                        start.isNotEmpty() && end.isEmpty() && start <= todayStr ||
-                        start.isEmpty() && end.isNotEmpty() && end >= todayStr ||
-                        start.isNotEmpty() && end.isNotEmpty() && start <= todayStr && end >= todayStr
+                    when (task.dateMode) {
+                        "due_date" -> {
+                            // Show if due date is today or overdue (not yet completed)
+                            val due = task.dueDate.take(10)
+                            due.isNotEmpty() && due <= todayStr
+                        }
+                        "range" -> {
+                            val start = task.startDate.take(10)
+                            val end = task.endDate.take(10)
+                            start.isNotEmpty() && end.isNotEmpty() && start <= todayStr && end >= todayStr ||
+                                start.isNotEmpty() && end.isEmpty() && start <= todayStr ||
+                                start.isEmpty() && end.isNotEmpty() && end >= todayStr
+                        }
+                        else -> {
+                            // No date mode - still show in today's tasks
+                            true
+                        }
+                    }
                 }
                 .filter { task -> !task.tags.contains("routine") }
-                .sortedWith(compareBy<Task> { it.endDate.take(10) }.thenBy { it.title })
+                .sortedWith(compareBy<Task> { 
+                    // Tasks with due dates/end dates first, sorted by date
+                    when (it.dateMode) {
+                        "due_date" -> it.dueDate.take(10)
+                        "range" -> it.endDate.take(10)
+                        else -> ""
+                    }
+                }.thenBy { it.title })
                 .take(5)
 
             val quickTasks = quickTasksDeferred.await().filter { qt -> qt.id !in hidden }
@@ -214,7 +234,10 @@ class DashboardViewModel(
 
         viewModelScope.launch {
             val subtaskDtos = updatedSubtasks.map { it.toDto() }
-            taskRepository.update(task.id, UpdateTaskRequest(subtasks = subtaskDtos))
+            taskRepository.update(task.id, UpdateTaskRequest(
+                subtasks = subtaskDtos,
+                status = "completed"
+            ))
                 .onSuccess {
                     silentReload()
                 }

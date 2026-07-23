@@ -49,8 +49,15 @@ type CreateTaskRequest struct {
 	Location   string            `json:"location"`
 	Tags       []string          `json:"tags"`
 	Links      []string          `json:"links"`
+	DateMode   string            `json:"date_mode"`
+	DueDate    *time.Time        `json:"due_date"`
 	StartDate  *time.Time        `json:"start_date"`
 	EndDate    *time.Time        `json:"end_date"`
+	TimeMode   string            `json:"time_mode"`
+	StartTime  string            `json:"start_time"`
+	EndTime    string            `json:"end_time"`
+	DurationMinutes int          `json:"duration_minutes"`
+	DueTime    string            `json:"due_time"`
 	Recurrence *model.Recurrence `json:"recurrence"`
 	Subtasks   []model.Subtask   `json:"subtasks"`
 	Body       string            `json:"body"`
@@ -76,14 +83,21 @@ func (h *TaskHandler) Create(c echo.Context) error {
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
-		Title:      req.Title,
-		Icon:       req.Icon,
-		Location:   req.Location,
-		StartDate:  req.StartDate,
-		EndDate:    req.EndDate,
-		Recurrence: req.Recurrence,
-		Subtasks:   req.Subtasks,
-		Body:       req.Body,
+		Title:           req.Title,
+		Icon:            req.Icon,
+		Location:        req.Location,
+		DateMode:        req.DateMode,
+		DueDate:         req.DueDate,
+		StartDate:       req.StartDate,
+		EndDate:         req.EndDate,
+		TimeMode:        req.TimeMode,
+		StartTime:       req.StartTime,
+		EndTime:         req.EndTime,
+		DurationMinutes: req.DurationMinutes,
+		DueTime:         req.DueTime,
+		Recurrence:      req.Recurrence,
+		Subtasks:        req.Subtasks,
+		Body:            req.Body,
 	}
 	if task.Tags == nil {
 		task.Tags = []string{}
@@ -109,8 +123,15 @@ type UpdateTaskRequest struct {
 	Location   string            `json:"location"`
 	Tags       []string          `json:"tags"`
 	Links      []string          `json:"links"`
+	DateMode   string            `json:"date_mode"`
+	DueDate    *time.Time        `json:"due_date"`
 	StartDate  *time.Time        `json:"start_date"`
 	EndDate    *time.Time        `json:"end_date"`
+	TimeMode   string            `json:"time_mode"`
+	StartTime  string            `json:"start_time"`
+	EndTime    string            `json:"end_time"`
+	DurationMinutes int          `json:"duration_minutes"`
+	DueTime    string            `json:"due_time"`
 	Recurrence *model.Recurrence `json:"recurrence"`
 	Subtasks   []model.Subtask   `json:"subtasks"`
 	Body       string            `json:"body"`
@@ -149,11 +170,32 @@ func (h *TaskHandler) Update(c echo.Context) error {
 	if req.Links != nil {
 		task.Links = req.Links
 	}
+	if req.DateMode != "" {
+		task.DateMode = req.DateMode
+	}
+	if req.DueDate != nil {
+		task.DueDate = req.DueDate
+	}
 	if req.StartDate != nil {
 		task.StartDate = req.StartDate
 	}
 	if req.EndDate != nil {
 		task.EndDate = req.EndDate
+	}
+	if req.TimeMode != "" {
+		task.TimeMode = req.TimeMode
+	}
+	if req.StartTime != "" {
+		task.StartTime = req.StartTime
+	}
+	if req.EndTime != "" {
+		task.EndTime = req.EndTime
+	}
+	if req.DurationMinutes != 0 {
+		task.DurationMinutes = req.DurationMinutes
+	}
+	if req.DueTime != "" {
+		task.DueTime = req.DueTime
 	}
 	if req.Recurrence != nil || c.Request().Method == http.MethodPut {
 		task.Recurrence = req.Recurrence
@@ -195,12 +237,18 @@ func (h *TaskHandler) spawnRecurringTask(oldTask *model.Task) *model.Task {
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
-		Title:      oldTask.Title,
-		Icon:       oldTask.Icon,
-		Location:   oldTask.Location,
-		Recurrence: oldTask.Recurrence,
-		Subtasks:   resetSubtasks(oldTask.Subtasks),
-		Body:       oldTask.Body,
+		Title:           oldTask.Title,
+		Icon:            oldTask.Icon,
+		Location:        oldTask.Location,
+		DateMode:        oldTask.DateMode,
+		TimeMode:        oldTask.TimeMode,
+		StartTime:       oldTask.StartTime,
+		EndTime:         oldTask.EndTime,
+		DurationMinutes: oldTask.DurationMinutes,
+		DueTime:         oldTask.DueTime,
+		Recurrence:      oldTask.Recurrence,
+		Subtasks:        resetSubtasks(oldTask.Subtasks),
+		Body:            oldTask.Body,
 	}
 
 	if oldTask.EndDate != nil {

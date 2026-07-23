@@ -27,11 +27,20 @@ data class TaskEditUiState(
     val linkPickerLoading: Boolean = false,
     // Icon picker
     val showIconPicker: Boolean = false,
-    // Date fields as ISO date strings (YYYY-MM-DD)
+    // Date mode: "", "due_date", "range"
+    val dateMode: String = "",
+    val dueDate: String = "",
     val startDate: String = "",
     val endDate: String = "",
+    val showDueDatePicker: Boolean = false,
     val showStartDatePicker: Boolean = false,
     val showEndDatePicker: Boolean = false,
+    // Time mode: "", "due_time", "start_end", "start_duration"
+    val timeMode: String = "",
+    val startTime: String = "",
+    val endTime: String = "",
+    val durationMinutes: String = "",    // stored as string for text field
+    val dueTime: String = "",
     // Recurrence
     val recurrenceType: String? = null,
     val recurrenceInterval: Int = 1,
@@ -60,13 +69,26 @@ sealed interface TaskEditEvent {
     // Icon events
     data object ShowIconPicker : TaskEditEvent
     data object DismissIconPicker : TaskEditEvent
-    // Date events
+    // Date mode events
+    data class SetDateMode(val mode: String) : TaskEditEvent
+    // Due date events
+    data object ShowDueDatePicker : TaskEditEvent
+    data object DismissDueDatePicker : TaskEditEvent
+    data class SetDueDate(val date: String) : TaskEditEvent
+    // Range date events
     data object ShowStartDatePicker : TaskEditEvent
     data object DismissStartDatePicker : TaskEditEvent
     data class SetStartDate(val date: String) : TaskEditEvent
     data object ShowEndDatePicker : TaskEditEvent
     data object DismissEndDatePicker : TaskEditEvent
     data class SetEndDate(val date: String) : TaskEditEvent
+    // Time mode events
+    data class SetTimeMode(val mode: String) : TaskEditEvent
+    // Time value events
+    data class SetStartTime(val time: String) : TaskEditEvent
+    data class SetEndTime(val time: String) : TaskEditEvent
+    data class SetDurationMinutes(val minutes: String) : TaskEditEvent
+    data class SetDueTime(val time: String) : TaskEditEvent
     // Recurrence events
     data class SetRecurrenceType(val type: String?) : TaskEditEvent
     data class SetRecurrenceInterval(val interval: Int) : TaskEditEvent
@@ -112,8 +134,15 @@ class TaskEditViewModel(
                             tags = task.tags,
                             body = task.body,
                             links = task.links,
+                            dateMode = task.dateMode,
+                            dueDate = task.dueDate.take(10),
                             startDate = task.startDate.take(10),
                             endDate = task.endDate.take(10),
+                            timeMode = task.timeMode,
+                            startTime = task.startTime,
+                            endTime = task.endTime,
+                            durationMinutes = if (task.durationMinutes > 0) task.durationMinutes.toString() else "",
+                            dueTime = task.dueTime,
                             recurrenceType = task.recurrence?.type,
                             recurrenceInterval = task.recurrence?.interval ?: 1,
                             recurrenceDaysOfWeek = task.recurrence?.daysOfWeek ?: emptyList(),
@@ -138,13 +167,28 @@ class TaskEditViewModel(
             // Icon events
             is TaskEditEvent.ShowIconPicker -> _state.update { it.copy(showIconPicker = true) }
             is TaskEditEvent.DismissIconPicker -> _state.update { it.copy(showIconPicker = false) }
-            // Date events
+            // Date mode
+            is TaskEditEvent.SetDateMode -> _state.update {
+                it.copy(dateMode = event.mode, recurrenceType = if (event.mode != "range") null else it.recurrenceType)
+            }
+            // Due date
+            is TaskEditEvent.ShowDueDatePicker -> _state.update { it.copy(showDueDatePicker = true) }
+            is TaskEditEvent.DismissDueDatePicker -> _state.update { it.copy(showDueDatePicker = false) }
+            is TaskEditEvent.SetDueDate -> _state.update { it.copy(dueDate = event.date, showDueDatePicker = false) }
+            // Range dates
             is TaskEditEvent.ShowStartDatePicker -> _state.update { it.copy(showStartDatePicker = true) }
             is TaskEditEvent.DismissStartDatePicker -> _state.update { it.copy(showStartDatePicker = false) }
             is TaskEditEvent.SetStartDate -> _state.update { it.copy(startDate = event.date, showStartDatePicker = false) }
             is TaskEditEvent.ShowEndDatePicker -> _state.update { it.copy(showEndDatePicker = true) }
             is TaskEditEvent.DismissEndDatePicker -> _state.update { it.copy(showEndDatePicker = false) }
             is TaskEditEvent.SetEndDate -> _state.update { it.copy(endDate = event.date, showEndDatePicker = false) }
+            // Time mode
+            is TaskEditEvent.SetTimeMode -> _state.update { it.copy(timeMode = event.mode) }
+            // Time values
+            is TaskEditEvent.SetStartTime -> _state.update { it.copy(startTime = event.time) }
+            is TaskEditEvent.SetEndTime -> _state.update { it.copy(endTime = event.time) }
+            is TaskEditEvent.SetDurationMinutes -> _state.update { it.copy(durationMinutes = event.minutes) }
+            is TaskEditEvent.SetDueTime -> _state.update { it.copy(dueTime = event.time) }
             // Recurrence
             is TaskEditEvent.SetRecurrenceType -> _state.update { it.copy(recurrenceType = event.type, recurrenceDaysOfWeek = emptyList()) }
             is TaskEditEvent.SetRecurrenceInterval -> _state.update { it.copy(recurrenceInterval = event.interval) }
@@ -212,16 +256,25 @@ class TaskEditViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            val startDateISO = if (s.startDate.isNotBlank()) "${s.startDate}T00:00:00Z" else null
-            val endDateISO = if (s.endDate.isNotBlank()) "${s.endDate}T23:59:59Z" else null
 
-            val recurrence = s.recurrenceType?.let { type ->
-                RecurrenceDto(
-                    type = type,
-                    interval = s.recurrenceInterval,
-                    daysOfWeek = if (type == "weekly") s.recurrenceDaysOfWeek else emptyList()
-                )
+            // Build date/time ISO strings
+            val dueDateISO = if (s.dateMode == "due_date" && s.dueDate.isNotBlank()) "${s.dueDate}T00:00:00Z" else null
+            val startDateISO = if (s.dateMode == "range" && s.startDate.isNotBlank()) "${s.startDate}T00:00:00Z" else null
+            val endDateISO = if (s.dateMode == "range" && s.endDate.isNotBlank()) "${s.endDate}T23:59:59Z" else null
+
+            val recurrence = if (s.dateMode == "range") {
+                s.recurrenceType?.let { type ->
+                    RecurrenceDto(
+                        type = type,
+                        interval = s.recurrenceInterval,
+                        daysOfWeek = if (type == "weekly") s.recurrenceDaysOfWeek else emptyList()
+                    )
+                }
+            } else {
+                null
             }
+
+            val durationMin = s.durationMinutes.toIntOrNull() ?: 0
 
             val subtaskDtos = s.subtasks.map { sub ->
                 SubtaskDto(id = sub.id, title = sub.title, completed = sub.completed)
@@ -235,8 +288,15 @@ class TaskEditViewModel(
                     tags = if (s.tags.isNotEmpty()) s.tags else null,
                     body = s.body,
                     links = if (s.links.isNotEmpty()) s.links else null,
+                    dateMode = s.dateMode.ifBlank { null },
+                    dueDate = dueDateISO,
                     startDate = startDateISO,
                     endDate = endDateISO,
+                    timeMode = s.timeMode.ifBlank { null },
+                    startTime = s.startTime.ifBlank { null },
+                    endTime = s.endTime.ifBlank { null },
+                    durationMinutes = if (durationMin > 0) durationMin else null,
+                    dueTime = s.dueTime.ifBlank { null },
                     recurrence = recurrence,
                     subtasks = if (subtaskDtos.isNotEmpty()) subtaskDtos else null
                 ))
@@ -248,8 +308,15 @@ class TaskEditViewModel(
                     tags = s.tags,
                     body = s.body,
                     links = s.links,
+                    dateMode = s.dateMode,
+                    dueDate = dueDateISO,
                     startDate = startDateISO,
                     endDate = endDateISO,
+                    timeMode = s.timeMode,
+                    startTime = s.startTime,
+                    endTime = s.endTime,
+                    durationMinutes = durationMin,
+                    dueTime = s.dueTime,
                     recurrence = recurrence,
                     subtasks = subtaskDtos
                 ))

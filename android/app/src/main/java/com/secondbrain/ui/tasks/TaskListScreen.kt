@@ -55,7 +55,6 @@ import com.secondbrain.domain.model.Task
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.StatusBadge
-import com.secondbrain.ui.util.formatRelativeTime
 import com.secondbrain.ui.util.resolveIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -270,11 +269,21 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (task.updatedAt.isNotEmpty()) {
+                    // Show date info
+                    val dateInfo = when (task.dateMode) {
+                        "due_date" -> if (task.dueDate.isNotEmpty()) "Due: ${task.dueDate.take(10)}" else ""
+                        "range" -> {
+                            val s = task.startDate.take(10)
+                            val e = task.endDate.take(10)
+                            if (s.isNotEmpty() && e.isNotEmpty()) "$s - $e" else if (s.isNotEmpty()) s else e
+                        }
+                        else -> ""
+                    }
+                    if (dateInfo.isNotEmpty()) {
                         Text(
-                            text = formatRelativeTime(task.updatedAt),
+                            text = dateInfo,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
