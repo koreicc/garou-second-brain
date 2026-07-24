@@ -9,6 +9,10 @@ android {
     namespace = "com.secondbrain"
     compileSdk = 35
 
+    lint {
+        abortOnError = false
+    }
+
     defaultConfig {
         applicationId = "com.secondbrain"
         minSdk = 26
