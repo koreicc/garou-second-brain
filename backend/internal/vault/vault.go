@@ -13,8 +13,8 @@ import (
 )
 
 type Vault struct {
-	root       string
-	locks      sync.Map
+	root        string
+	locks       sync.Map
 	lockCleanup chan string
 }
 
