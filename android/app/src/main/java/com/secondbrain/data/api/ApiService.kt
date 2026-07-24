@@ -36,4 +36,7 @@ interface ApiService {
 
     // WikiLink
     suspend fun resolveWikilink(query: String): ApiResponse<WikilinkResponse>
+
+    // Entities (batch)
+    suspend fun getEntitiesByIds(ids: List<String>): ApiResponse<List<EntityInfoDto>>
 }

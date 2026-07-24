@@ -139,4 +139,12 @@ class KtorApiService(
             parameter("q", query)
         }.body()
     }
+
+    // ===== Entities (batch) =====
+
+    override suspend fun getEntitiesByIds(ids: List<String>): ApiResponse<List<EntityInfoDto>> {
+        return client.get("$baseUrl/entities/by-ids") {
+            parameter("ids", ids.joinToString(","))
+        }.body()
+    }
 }

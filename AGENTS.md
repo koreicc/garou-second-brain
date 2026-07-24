@@ -51,6 +51,7 @@ After pushing a branch, test the backend on Termux:
 ## Coding Standards
 
 ### Go
+- This project uses Go 1.26.5. Do not downgrade or question this version.
 - Use standard library where possible.
 - Handle file locking to prevent vault corruption.
 - Use `err` for error variable names (idiomatic Go).

@@ -544,13 +544,9 @@ func (v *Vault) ListTasksByDate(date string) ([]*model.Task, error) {
 		}
 	}
 
-	// 2. Templates - compute dynamic occurrences
-	templates, err := v.ListTemplates()
-	if err != nil {
-		return nil, err
-	}
-	for _, t := range templates {
-		if DateMatchesRecurrence(parsedDate, t) {
+	// 2. Templates - compute dynamic occurrences (filter from same all slice)
+	for _, t := range all {
+		if t.IsTemplate && DateMatchesRecurrence(parsedDate, t) {
 			occ := ComputeDynamicOccurrence(t, date)
 			if occ != nil {
 				matches = append(matches, occ)
@@ -761,12 +757,19 @@ func DateMatchesRecurrence(date time.Time, template *model.Task) bool {
 		}
 		if len(rec.DaysOfWeek) > 0 {
 			wd := int(date.Weekday())
+			matched := false
 			for _, d := range rec.DaysOfWeek {
 				if wd == d {
-					return true
+					matched = true
+					break
 				}
 			}
-			return false
+			if !matched {
+				return false
+			}
+			// Check interval: only match every Nth week
+			daysSince := int(dateStart.Sub(startDate).Hours() / 24)
+			return daysSince >= 0 && daysSince%(7*interval) == 0
 		}
 		daysSince := int(dateStart.Sub(startDate).Hours() / 24)
 		return daysSince >= 0 && daysSince%(7*interval) == 0

@@ -6,7 +6,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: backend/go.sum
+      - run: cd backend && go mod tidy
+      - run: cd backend && test -z "$(gofmt -l .)"
+      - run: cd backend && go build ./...
+      - run: cd backend && go vet ./...
+      - run: cd backend && go test -race -count=1 ./...
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write

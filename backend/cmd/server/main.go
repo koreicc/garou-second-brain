@@ -84,6 +84,9 @@ func main() {
 	api.GET("/archive", archiveHandler.List)
 	api.POST("/archive/:type/:id/restore", archiveHandler.Restore)
 
+	entityHandler := handler.NewEntityHandler(v)
+	api.GET("/entities/by-ids", entityHandler.GetByIDs)
+
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})

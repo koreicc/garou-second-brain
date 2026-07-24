@@ -63,6 +63,6 @@ object AppModule {
     }
 
     val linkingRepository: LinkingRepository by lazy {
-        LinkingRepository(noteRepository, taskRepository, personRepository)
+        LinkingRepository(apiService)
     }
 }
