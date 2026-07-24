@@ -58,27 +58,27 @@ else
     DOWNLOAD_URL="https://github.com/$REPO/releases/download/nightly/second-brain-server-arm64"
     log "Downloading $BINARY_NAME from GitHub Releases..."
 
-    curl -fSL --connect-timeout 10 --max-time 120 \
-        -o "$TARGET_DIR/$BINARY_NAME" "$DOWNLOAD_URL"
+    # Download to temp file, then check result
+    TEMP_FILE=$(mktemp)
+    HTTP_CODE=$(curl -L --connect-timeout 10 --max-time 120 \
+        -w "%{http_code}" -o "$TEMP_FILE" "$DOWNLOAD_URL" 2>/dev/null) || true
 
-    if [ ! -s "$TARGET_DIR/$BINARY_NAME" ]; then
-        rm -f "$TARGET_DIR/$BINARY_NAME"
-        warn "Download failed. The binary may not exist yet."
+    if [ "$HTTP_CODE" = "200" ] && [ -s "$TEMP_FILE" ]; then
+        mv "$TEMP_FILE" "$TARGET_DIR/$BINARY_NAME"
+        chmod +x "$TARGET_DIR/$BINARY_NAME"
+        log "Binary installed: $TARGET_DIR/$BINARY_NAME"
+    else
+        rm -f "$TEMP_FILE"
+        warn "Download failed (HTTP $HTTP_CODE)."
         warn ""
         warn "Options:"
-        warn "  1. Check if the nightly build exists:"
-        warn "     https://github.com/$REPO/actions"
-        warn ""
-        warn "  2. Build from source:"
+        warn "  1. Build from source:"
         warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 sh"
         warn ""
-        warn "  3. Build a specific branch:"
+        warn "  2. Build a specific branch:"
         warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 SECOND_BRAIN_BRANCH=feat/my-branch sh"
         fail "Aborting."
     fi
-
-    chmod +x "$TARGET_DIR/$BINARY_NAME"
-    log "Binary installed: $TARGET_DIR/$BINARY_NAME"
 fi
 
 # --- Add to PATH ---
