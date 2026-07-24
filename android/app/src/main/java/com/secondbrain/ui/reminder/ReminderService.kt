@@ -48,8 +48,8 @@ fun showTaskReminderNotification(
     taskTitle: String,
     taskDate: String
 ) {
-    val intent = context.packageManager.getLaunchIntentForActivity(
-        context.packageManager.getLaunchIntentForPackage(context.packageName)?.component ?: return
+    val intent = context.packageManager.getLaunchIntentForPackage(
+        context.packageName ?: return
     ) ?: return
 
     intent.putExtra("navigate_to_task", taskId)
