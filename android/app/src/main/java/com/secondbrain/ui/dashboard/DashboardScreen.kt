@@ -370,7 +370,7 @@ private fun DateTasksSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Recurring Tasks (${tasks.size})",
+                    text = "Tasks for this day (${tasks.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -380,7 +380,7 @@ private fun DateTasksSection(
             if (tasks.isEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "No recurring tasks for this day",
+                    text = "No tasks for this day",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -447,6 +447,13 @@ private fun DateTaskItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (task.parentId.isNotEmpty()) {
+                    Text(
+                        text = "Occurrence",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(8.dp))
             StatusBadge(status = task.status)
