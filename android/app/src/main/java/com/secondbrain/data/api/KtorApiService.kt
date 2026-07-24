@@ -11,6 +11,17 @@ class KtorApiService(
     private val baseUrl: String
 ) : ApiService {
 
+    // Returns the device's timezone offset from UTC in minutes.
+    private fun tzOffsetMinutes(): String {
+        val offset = java.util.TimeZone.getDefault().rawOffset / 60000
+        return offset.toString()
+    }
+
+    // Adds the timezone offset header to a request builder.
+    private fun HttpRequestBuilder.withTimezone() {
+        header("X-Timezone-Offset", tzOffsetMinutes())
+    }
+
     // ===== Notes =====
 
     override suspend fun getAllNotes(): ApiResponse<List<NoteDto>> {
@@ -42,21 +53,27 @@ class KtorApiService(
     // ===== Tasks =====
 
     override suspend fun getAllTasks(): ApiResponse<List<TaskDto>> {
-        return client.get("$baseUrl/tasks").body()
+        return client.get("$baseUrl/tasks") {
+            withTimezone()
+        }.body()
     }
 
     override suspend fun getTask(id: String): ApiResponse<TaskDto> {
-        return client.get("$baseUrl/tasks/$id").body()
+        return client.get("$baseUrl/tasks/$id") {
+            withTimezone()
+        }.body()
     }
 
     override suspend fun getTasksByDate(date: String): ApiResponse<List<TaskDto>> {
         return client.get("$baseUrl/tasks/by-date") {
+            withTimezone()
             parameter("date", date)
         }.body()
     }
 
     override suspend fun createTask(request: CreateTaskRequest): ApiResponse<TaskDto> {
         return client.post("$baseUrl/tasks") {
+            withTimezone()
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
@@ -64,13 +81,16 @@ class KtorApiService(
 
     override suspend fun updateTask(id: String, request: UpdateTaskRequest): ApiResponse<TaskDto> {
         return client.put("$baseUrl/tasks/$id") {
+            withTimezone()
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
     override suspend fun deleteTask(id: String): ApiResponse<Unit> {
-        return client.delete("$baseUrl/tasks/$id").body()
+        return client.delete("$baseUrl/tasks/$id") {
+            withTimezone()
+        }.body()
     }
 
     // ===== Quick Tasks =====
@@ -152,6 +172,7 @@ class KtorApiService(
 
     override suspend fun updateOccurrence(parentId: String, date: String, request: UpdateOccurrenceRequest): ApiResponse<TaskDto> {
         return client.put("$baseUrl/tasks/occurrence/$parentId/$date") {
+            withTimezone()
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()

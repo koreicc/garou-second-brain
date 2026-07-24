@@ -140,11 +140,8 @@ func combineDateAndTime(date time.Time, timeStr string) time.Time {
 }
 
 // ComputeEffectiveStatus calculates the task's status based on date/time
-// configuration and the current time. It respects manual overrides:
-//   - If date_mode is empty (none), the stored status is returned as-is.
-//   - If the stored status is "completed" or "expired", that value is
-//     preserved (manual override).
-//   - Otherwise, the date/time fields determine the effective status.
+// configuration and the current time. It respects manual overrides.
+// now is the current time in the user's timezone.
 func ComputeEffectiveStatus(t *Task, now time.Time) EntityStatus {
 	// No date mode -> fully manual
 	if t.DateMode == "" {

@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,8 +22,17 @@ func NewTaskHandler(v *vault.Vault) *TaskHandler {
 }
 
 // enrichTasks sets the EffectiveStatus field on one or more tasks.
-func enrichTasks(tasks ...*model.Task) {
+// The current time is adjusted by the optional X-Timezone-Offset header (minutes)
+// so that status transitions happen at the user's local midnight.
+func enrichTasks(c echo.Context, tasks ...*model.Task) {
 	now := time.Now().UTC()
+	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
+	if tzOffsetStr != "" {
+		offset, err := strconv.Atoi(tzOffsetStr)
+		if err == nil {
+			now = now.Add(time.Duration(offset) * time.Minute)
+		}
+	}
 	for _, t := range tasks {
 		if t != nil {
 			t.EffectiveStatus = model.ComputeEffectiveStatus(t, now)
@@ -40,7 +50,7 @@ func (h *TaskHandler) List(c echo.Context) error {
 		tasks = []*model.Task{}
 	}
 	tasks = paginate(tasks, c)
-	enrichTasks(tasks...)
+	enrichTasks(c, tasks...)
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
 }
 
@@ -53,7 +63,7 @@ func (h *TaskHandler) ListTemplates(c echo.Context) error {
 	if tasks == nil {
 		tasks = []*model.Task{}
 	}
-	enrichTasks(tasks...)
+	enrichTasks(c, tasks...)
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
 }
 
@@ -71,7 +81,7 @@ func (h *TaskHandler) ListByDate(c echo.Context) error {
 	if tasks == nil {
 		tasks = []*model.Task{}
 	}
-	enrichTasks(tasks...)
+	enrichTasks(c, tasks...)
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
 }
 
@@ -99,7 +109,7 @@ func (h *TaskHandler) Get(c echo.Context) error {
 								if override, _ := h.vault.ReadOccurrenceOverride(parentID, date); override != nil {
 									vault.ApplyOccurrenceOverride(occ, override)
 								}
-								enrichTasks(occ)
+								enrichTasks(c, occ)
 								return c.JSON(http.StatusOK, model.DataResponse(occ))
 							}
 						}
@@ -110,7 +120,7 @@ func (h *TaskHandler) Get(c echo.Context) error {
 		}
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("read task: %v", err)))
 	}
-	enrichTasks(task)
+	enrichTasks(c, task)
 	return c.JSON(http.StatusOK, model.DataResponse(task))
 }
 
@@ -208,7 +218,7 @@ func (h *TaskHandler) Create(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save task: %v", err)))
 	}
 
-	enrichTasks(task)
+	enrichTasks(c, task)
 	return c.JSON(http.StatusCreated, model.DataResponse(task))
 }
 
@@ -322,7 +332,7 @@ func (h *TaskHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save task: %v", err)))
 	}
 
-	enrichTasks(task)
+	enrichTasks(c, task)
 	return c.JSON(http.StatusOK, model.DataResponse(task))
 }
 
@@ -389,6 +399,6 @@ func (h *TaskHandler) UpdateOccurrence(c echo.Context) error {
 	}
 	vault.ApplyOccurrenceOverride(occ, override)
 
-	enrichTasks(occ)
+	enrichTasks(c, occ)
 	return c.JSON(http.StatusOK, model.DataResponse(occ))
 }
