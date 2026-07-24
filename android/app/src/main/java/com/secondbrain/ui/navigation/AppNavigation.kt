@@ -23,6 +23,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.secondbrain.di.AppModule
+import com.secondbrain.ui.calendar.CalendarScreen
+import com.secondbrain.ui.calendar.CalendarViewModel
 import com.secondbrain.ui.dashboard.DashboardScreen
 import com.secondbrain.ui.notes.NoteDetailScreen
 import com.secondbrain.ui.notes.NoteEditScreen
@@ -144,6 +147,9 @@ fun AppNavigation(
                         },
                         onNavigateToTaskDetail = { taskId ->
                             navController.navigate(Screen.TaskDetail(taskId))
+                        },
+                        onNavigateToCalendar = {
+                            navController.navigate(Screen.Calendar)
                         }
                     )
                 }
@@ -259,6 +265,21 @@ fun AppNavigation(
                     PersonEditScreen(
                         personId = screen.personId,
                         onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // -- Calendar screen --
+
+                composable<Screen.Calendar> {
+                    val calendarViewModel = CalendarViewModel(
+                        taskRepository = AppModule.taskRepository
+                    )
+                    CalendarScreen(
+                        viewModel = calendarViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onTaskClick = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        }
                     )
                 }
             }

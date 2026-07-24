@@ -88,6 +88,9 @@ dependencies {
     // DataStore Preferences
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
+    // Calendar library (kotlinx-datetime compatible)
+    implementation("com.kizitonwose.calendar:compose:2.6.2")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

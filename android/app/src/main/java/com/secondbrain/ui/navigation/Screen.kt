@@ -30,4 +30,7 @@ sealed interface Screen {
 
     @Serializable
     data class PersonEdit(val personId: String? = null) : Screen
+
+    @Serializable
+    data object Calendar : Screen
 }

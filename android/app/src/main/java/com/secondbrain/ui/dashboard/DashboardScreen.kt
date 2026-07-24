@@ -84,7 +84,8 @@ fun DashboardScreen(
     onNavigateToTasks: () -> Unit,
     onNavigateToPeople: () -> Unit,
     onNavigateToNoteDetail: (String) -> Unit,
-    onNavigateToTaskDetail: (String) -> Unit
+    onNavigateToTaskDetail: (String) -> Unit,
+    onNavigateToCalendar: () -> Unit
 ) {
     val viewModel: DashboardViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -171,6 +172,14 @@ fun DashboardScreen(
                 },
                 colors = transparentTopAppBarColors(),
                 actions = {
+                    IconButton(
+                        onClick = { onNavigateToCalendar() }
+                    ) {
+                        Icon(
+                            Icons.Default.DateRange,
+                            contentDescription = "Calendar view"
+                        )
+                    }
                     IconButton(
                         onClick = { viewModel.onEvent(DashboardEvent.LoadData) },
                         enabled = !state.isLoading
