@@ -2,12 +2,15 @@ package vault
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/koreicc/garou-second-brain/backend/internal/model"
 	"gopkg.in/yaml.v3"
 )
@@ -478,6 +481,10 @@ func (v *Vault) ListTasks() ([]*model.Task, error) {
 		if err != nil {
 			continue
 		}
+		// Filter out old occurrence .md files (non-template tasks with a parent)
+		if !t.IsTemplate && t.ParentID != "" {
+			continue
+		}
 		tasks = append(tasks, t)
 	}
 	return tasks, nil
@@ -498,35 +505,92 @@ func (v *Vault) ListTemplates() ([]*model.Task, error) {
 	return templates, nil
 }
 
-// ListTasksByDate returns all non-template tasks that occur on the given date.
+// ListTasksByDate returns tasks that occur on the given date.
+// This includes standalone tasks matching by due/range date AND dynamically
+// computed occurrences from templates whose recurrence pattern covers the date.
 // date should be in "YYYY-MM-DD" format.
 func (v *Vault) ListTasksByDate(date string) ([]*model.Task, error) {
 	all, err := v.ListTasks()
 	if err != nil {
 		return nil, err
 	}
+
+	parsedDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format %q: %w", date, err)
+	}
+	parsedDate = parsedDate.Truncate(24 * time.Hour)
+
 	var matches []*model.Task
+
+	// 1. Standalone tasks (non-template, no parent) whose due date or range covers the date
 	for _, t := range all {
-		if !t.IsTemplate && t.OccurrenceDate == date {
-			matches = append(matches, t)
+		if !t.IsTemplate && t.ParentID == "" {
+			if t.DueDate != nil {
+				dueDate := t.DueDate.Truncate(24 * time.Hour)
+				if dueDate.Equal(parsedDate) {
+					matches = append(matches, t)
+					continue
+				}
+			}
+			if t.DateMode == "range" && t.StartDate != nil && t.EndDate != nil {
+				start := t.StartDate.Truncate(24 * time.Hour)
+				end := t.EndDate.Truncate(24 * time.Hour)
+				if (parsedDate.Equal(start) || parsedDate.After(start)) &&
+					(parsedDate.Equal(end) || parsedDate.Before(end)) {
+					matches = append(matches, t)
+				}
+			}
 		}
 	}
-	return matches, nil
-}
 
-// ListTasksByParent returns all occurrences of a given template task.
-func (v *Vault) ListTasksByParent(parentID string) ([]*model.Task, error) {
-	all, err := v.ListTasks()
+	// 2. Templates - compute dynamic occurrences
+	templates, err := v.ListTemplates()
 	if err != nil {
 		return nil, err
 	}
-	var matches []*model.Task
-	for _, t := range all {
-		if t.ParentID == parentID {
-			matches = append(matches, t)
+	for _, t := range templates {
+		if DateMatchesRecurrence(parsedDate, t) {
+			occ := ComputeDynamicOccurrence(t, date)
+			if occ != nil {
+				matches = append(matches, occ)
+			}
 		}
 	}
+
 	return matches, nil
+}
+
+// ListTasksByParent dynamically computes occurrences for a template task
+// from its recurrence pattern and date range, if defined.
+func (v *Vault) ListTasksByParent(parentID string) ([]*model.Task, error) {
+	parent, err := v.ReadTask(parentID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return []*model.Task{}, nil
+		}
+		return nil, err
+	}
+
+	if !parent.IsTemplate || parent.Recurrence == nil || parent.StartDate == nil {
+		return []*model.Task{}, nil
+	}
+
+	// For indefinite recurrence (no end date), return empty to avoid infinite generation
+	if parent.EndDate == nil {
+		return []*model.Task{}, nil
+	}
+
+	dates := GenerateDatesInRange(*parent.StartDate, *parent.EndDate, parent.Recurrence)
+	var occurrences []*model.Task
+	for _, dateStr := range dates {
+		occ := ComputeDynamicOccurrence(parent, dateStr)
+		if occ != nil {
+			occurrences = append(occurrences, occ)
+		}
+	}
+
+	return occurrences, nil
 }
 
 func (v *Vault) ListQuickTasks() ([]*model.QuickTask, error) {
@@ -656,4 +720,207 @@ func (v *Vault) Exists(entityType, id string) (bool, error) {
 		return false, nil
 	}
 	return false, fmt.Errorf("stat %s: %w", path, err)
+}
+
+// --------------------------------------------------------------------------
+// Dynamic occurrence computation helpers
+// --------------------------------------------------------------------------
+
+// DateMatchesRecurrence checks whether a given date falls within a template's
+// recurrence pattern (daily/weekly/monthly/yearly with interval and days_of_week).
+func DateMatchesRecurrence(date time.Time, template *model.Task) bool {
+	if template.Recurrence == nil || template.StartDate == nil {
+		return false
+	}
+
+	dateStart := date.Truncate(24 * time.Hour)
+	startDate := template.StartDate.Truncate(24 * time.Hour)
+
+	// Check date is within template's date range
+	if dateStart.Before(startDate) {
+		return false
+	}
+	if template.EndDate != nil && dateStart.After(template.EndDate.Truncate(24*time.Hour)) {
+		return false
+	}
+
+	rec := template.Recurrence
+	switch rec.Type {
+	case "daily":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		daysSince := int(dateStart.Sub(startDate).Hours() / 24)
+		return daysSince >= 0 && daysSince%interval == 0
+
+	case "weekly":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		if len(rec.DaysOfWeek) > 0 {
+			wd := int(date.Weekday())
+			for _, d := range rec.DaysOfWeek {
+				if wd == d {
+					return true
+				}
+			}
+			return false
+		}
+		daysSince := int(dateStart.Sub(startDate).Hours() / 24)
+		return daysSince >= 0 && daysSince%(7*interval) == 0
+
+	case "monthly":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		monthsSince := (date.Year()-template.StartDate.Year())*12 +
+			int(date.Month()) - int(template.StartDate.Month())
+		return monthsSince >= 0 && monthsSince%interval == 0
+
+	case "yearly":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		yearsSince := date.Year() - template.StartDate.Year()
+		return yearsSince >= 0 && yearsSince%interval == 0
+	}
+
+	return false
+}
+
+// ComputeDynamicOccurrence creates a virtual Task object from a template for a specific date.
+// No file is written to disk; the occurrence is computed on-the-fly.
+func ComputeDynamicOccurrence(template *model.Task, date string) *model.Task {
+	occDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return nil
+	}
+
+	now := time.Now().UTC()
+
+	occ := &model.Task{
+		BaseEntity: model.BaseEntity{
+			ID:        model.OccurrenceID(template.ID, date),
+			Type:      model.TypeTask,
+			Status:    model.StatusPending,
+			Tags:      copySlice(template.Tags),
+			Links:     copySlice(template.Links),
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Title:           template.Title,
+		Icon:            template.Icon,
+		Location:        template.Location,
+		ParentID:        template.ID,
+		IsTemplate:      false,
+		OccurrenceDate:  date,
+		DateMode:        "due_date",
+		DueDate:         &occDate,
+		TimeMode:        template.TimeMode,
+		StartTime:       template.StartTime,
+		EndTime:         template.EndTime,
+		DurationMinutes: template.DurationMinutes,
+		DueTime:         template.DueTime,
+		Recurrence:      nil,
+		Subtasks:        resetSubtasks(template.Subtasks),
+		Body:            template.Body,
+	}
+	if occ.Tags == nil {
+		occ.Tags = []string{}
+	}
+	if occ.Links == nil {
+		occ.Links = []string{}
+	}
+	if occ.Subtasks == nil {
+		occ.Subtasks = []model.Subtask{}
+	}
+	return occ
+}
+
+// GenerateDatesInRange returns all date strings from start to end (inclusive)
+// matching the recurrence pattern.
+func GenerateDatesInRange(start, end time.Time, rec *model.Recurrence) []string {
+	var dates []string
+
+	start = start.Truncate(24 * time.Hour)
+	end = end.Truncate(24 * time.Hour)
+
+	switch rec.Type {
+	case "daily":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		for d := start; !d.After(end); d = d.AddDate(0, 0, interval) {
+			dates = append(dates, d.Format("2006-01-02"))
+		}
+
+	case "weekly":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		if len(rec.DaysOfWeek) > 0 {
+			dayMap := make(map[int]bool)
+			for _, d := range rec.DaysOfWeek {
+				dayMap[d] = true
+			}
+			for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+				wd := int(d.Weekday())
+				if dayMap[wd] {
+					dates = append(dates, d.Format("2006-01-02"))
+				}
+			}
+		} else {
+			for d := start; !d.After(end); d = d.AddDate(0, 0, 7*interval) {
+				dates = append(dates, d.Format("2006-01-02"))
+			}
+		}
+
+	case "monthly":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		for d := start; !d.After(end); d = d.AddDate(0, interval, 0) {
+			dates = append(dates, d.Format("2006-01-02"))
+		}
+
+	case "yearly":
+		interval := rec.Interval
+		if interval < 1 {
+			interval = 1
+		}
+		for d := start; !d.After(end); d = d.AddDate(interval, 0, 0) {
+			dates = append(dates, d.Format("2006-01-02"))
+		}
+	}
+
+	return dates
+}
+
+// resetSubtasks creates a new subtask slice with fresh IDs from a template's subtasks.
+func resetSubtasks(subtasks []model.Subtask) []model.Subtask {
+	result := make([]model.Subtask, len(subtasks))
+	for i, s := range subtasks {
+		result[i] = model.Subtask{
+			ID:        uuid.New().String(),
+			Title:     s.Title,
+			Completed: false,
+		}
+	}
+	return result
+}
+
+func copySlice(s []string) []string {
+	if s == nil {
+		return nil
+	}
+	result := make([]string, len(s))
+	copy(result, s)
+	return result
 }
