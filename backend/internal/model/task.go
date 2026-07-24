@@ -6,11 +6,21 @@ import (
 	"time"
 )
 
+// Task priority levels.
+const (
+	PriorityNone    = ""
+	PriorityLow     = "low"
+	PriorityMedium  = "medium"
+	PriorityHigh    = "high"
+	PriorityUrgent  = "urgent"
+)
+
 type Task struct {
 	BaseEntity `yaml:",inline" json:",inline"`
 	Title      string `yaml:"title" json:"title"`
 	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`
 	Location   string `yaml:"location,omitempty" json:"location,omitempty"`
+	Priority   string `yaml:"priority,omitempty" json:"priority,omitempty"`
 
 	// EffectiveStatus is computed by the server and NOT persisted to YAML.
 	EffectiveStatus EntityStatus `yaml:"-" json:"effective_status,omitempty"`
@@ -91,6 +101,15 @@ func (t *Task) Validate() error {
 		return NewValidationError("task.status is required")
 	default:
 		return NewValidationError("task.status must be one of: pending, in-progress, completed, expired")
+	}
+	// Validate priority if set
+	if t.Priority != "" {
+		switch t.Priority {
+		case PriorityLow, PriorityMedium, PriorityHigh, PriorityUrgent:
+			// valid
+		default:
+			return NewValidationError("task.priority must be one of: low, medium, high, urgent")
+		}
 	}
 	// Validate recurrence if present
 	if t.Recurrence != nil {

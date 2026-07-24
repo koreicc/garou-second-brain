@@ -8,6 +8,7 @@ data class Task(
     val effectiveStatus: String = "",
     val icon: String = "",
     val location: String = "",
+    val priority: String = "",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
     val parentId: String = "",

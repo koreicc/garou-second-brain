@@ -324,6 +324,41 @@ fun TaskEditScreen(
                                 onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("completed")) }
                             )
                         }
+
+                        // -- Priority --
+                        Text("Priority", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PriorityChip(
+                                label = "None",
+                                value = "",
+                                selectedValue = state.priority,
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("")) }
+                            )
+                            PriorityChip(
+                                label = "Low",
+                                value = "low",
+                                selectedValue = state.priority,
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("low")) }
+                            )
+                            PriorityChip(
+                                label = "Medium",
+                                value = "medium",
+                                selectedValue = state.priority,
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("medium")) }
+                            )
+                            PriorityChip(
+                                label = "High",
+                                value = "high",
+                                selectedValue = state.priority,
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("high")) }
+                            )
+                            PriorityChip(
+                                label = "Urgent",
+                                value = "urgent",
+                                selectedValue = state.priority,
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("urgent")) }
+                            )
+                        }
                     }
                 }
 
@@ -935,6 +970,40 @@ private fun StatusChip(
         "completed" -> FilterChipDefaults.filterChipColors(
             selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
             selectedLabelColor = MaterialTheme.colorScheme.secondary
+        )
+        else -> FilterChipDefaults.filterChipColors()
+    }
+    FilterChip(
+        selected = selectedValue == value,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        colors = chipColors
+    )
+}
+
+@Composable
+private fun PriorityChip(
+    label: String,
+    value: String,
+    selectedValue: String,
+    onClick: () -> Unit
+) {
+    val chipColors = when (value) {
+        "low" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.tertiary
+        )
+        "medium" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.secondary
+        )
+        "high" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.error
+        )
+        "urgent" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.3f),
+            selectedLabelColor = MaterialTheme.colorScheme.error
         )
         else -> FilterChipDefaults.filterChipColors()
     }

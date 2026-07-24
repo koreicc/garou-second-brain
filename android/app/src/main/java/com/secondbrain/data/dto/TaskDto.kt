@@ -14,6 +14,8 @@ data class TaskDto(
     val effectiveStatus: String = "",
     val icon: String = "",
     val location: String = "",
+    @SerialName("priority")
+    val priority: String = "",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
     @SerialName("parent_id")
@@ -73,6 +75,8 @@ data class CreateTaskRequest(
     val status: String = "pending",
     val icon: String = "",
     val location: String = "",
+    @SerialName("priority")
+    val priority: String = "",
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
     @SerialName("parent_id")
@@ -113,6 +117,8 @@ data class UpdateTaskRequest(
     val status: String? = null,
     val icon: String? = null,
     val location: String? = null,
+    @SerialName("priority")
+    val priority: String? = null,
     val tags: List<String>? = null,
     val links: List<String>? = null,
     @SerialName("parent_id")

@@ -25,6 +25,7 @@ data class TaskEditUiState(
     val status: String = "pending",
     val icon: String = "",
     val location: String = "",
+    val priority: String = "",
     val tags: List<String> = emptyList(),
     val body: String = "",
     val links: List<String> = emptyList(),
@@ -75,6 +76,7 @@ sealed interface TaskEditEvent {
     data class UpdateStatus(val status: String) : TaskEditEvent
     data class UpdateIcon(val icon: String) : TaskEditEvent
     data class UpdateLocation(val location: String) : TaskEditEvent
+    data class UpdatePriority(val priority: String) : TaskEditEvent
     data class UpdateBody(val body: String) : TaskEditEvent
     data class SetTags(val tags: List<String>) : TaskEditEvent
     data class SetLinks(val links: List<String>) : TaskEditEvent
@@ -137,6 +139,7 @@ class TaskEditViewModel(
                             status = task.status,
                             icon = task.icon,
                             location = task.location,
+                            priority = task.priority,
                             tags = task.tags,
                             body = task.body,
                             links = task.links,
@@ -176,6 +179,7 @@ class TaskEditViewModel(
             is TaskEditEvent.UpdateStatus -> _state.update { it.copy(status = event.status) }
             is TaskEditEvent.UpdateIcon -> _state.update { it.copy(icon = event.icon, showIconPicker = false) }
             is TaskEditEvent.UpdateLocation -> _state.update { it.copy(location = event.location) }
+            is TaskEditEvent.UpdatePriority -> _state.update { it.copy(priority = event.priority) }
             is TaskEditEvent.UpdateBody -> _state.update { it.copy(body = event.body) }
             is TaskEditEvent.SetTags -> _state.update { it.copy(tags = event.tags) }
             is TaskEditEvent.SetLinks -> _state.update { it.copy(links = event.links, showLinkPicker = false) }
@@ -355,6 +359,7 @@ class TaskEditViewModel(
                         status = s.status,
                         icon = s.icon,
                         location = s.location,
+                        priority = s.priority,
                         tags = if (s.tags.isNotEmpty()) s.tags else null,
                         body = s.body,
                         links = if (s.links.isNotEmpty()) s.links else null,
@@ -377,6 +382,7 @@ class TaskEditViewModel(
                     status = s.status,
                     icon = s.icon,
                     location = s.location,
+                    priority = s.priority,
                     isTemplate = s.dateMode == "range" && s.recurrenceType != null,
                     tags = s.tags,
                     body = s.body,

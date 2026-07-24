@@ -129,6 +129,7 @@ type CreateTaskRequest struct {
 	Status          string            `json:"status"`
 	Icon            string            `json:"icon"`
 	Location        string            `json:"location"`
+	Priority        string            `json:"priority"`
 	Tags            []string          `json:"tags"`
 	Links           []string          `json:"links"`
 	ParentID        string            `json:"parent_id"`
@@ -187,6 +188,7 @@ func (h *TaskHandler) Create(c echo.Context) error {
 		Title:           req.Title,
 		Icon:            req.Icon,
 		Location:        req.Location,
+		Priority:        req.Priority,
 		ParentID:        req.ParentID,
 		IsTemplate:      isTemplate,
 		OccurrenceDate:  req.OccurrenceDate,
@@ -227,6 +229,7 @@ type UpdateTaskRequest struct {
 	Status          string            `json:"status"`
 	Icon            string            `json:"icon"`
 	Location        string            `json:"location"`
+	Priority        string            `json:"priority"`
 	Tags            []string          `json:"tags"`
 	Links           []string          `json:"links"`
 	DateMode        string            `json:"date_mode"`
@@ -283,6 +286,9 @@ func (h *TaskHandler) Update(c echo.Context) error {
 	}
 	if req.Location != "" {
 		task.Location = req.Location
+	}
+	if req.Priority != "" {
+		task.Priority = req.Priority
 	}
 	if req.Tags != nil {
 		task.Tags = req.Tags

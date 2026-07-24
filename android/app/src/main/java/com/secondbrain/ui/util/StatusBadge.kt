@@ -56,3 +56,57 @@ fun StatusBadge(status: String) {
         )
     }
 }
+
+/**
+ * A small colored badge that displays priority level.
+ * Shown before the status badge on task cards.
+ */
+@Composable
+fun PriorityBadge(priority: String) {
+    if (priority.isBlank()) return
+
+    val (label, containerColor, contentColor) = when (priority) {
+        "low" -> Quatro(
+            "Low",
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+            MaterialTheme.colorScheme.tertiary
+        )
+        "medium" -> Quatro(
+            "Med",
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f),
+            MaterialTheme.colorScheme.secondary
+        )
+        "high" -> Quatro(
+            "High",
+            MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+            MaterialTheme.colorScheme.error
+        )
+        "urgent" -> Quatro(
+            "Urg",
+            MaterialTheme.colorScheme.error.copy(alpha = 0.25f),
+            MaterialTheme.colorScheme.error
+        )
+        else -> Quatro(
+            priority,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+            MaterialTheme.colorScheme.outline
+        )
+    }
+    Surface(
+        shape = pillShape,
+        color = containerColor
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
+private data class Quatro(
+    val first: String,
+    val second: androidx.compose.ui.graphics.Color,
+    val third: androidx.compose.ui.graphics.Color
+)
