@@ -1,11 +1,10 @@
-#!/data/data/com.termux/files/usr/bin/bash
-# install.sh -- Quick setup for Second Brain System backend on Termux
-# Usage: curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | bash
+#!/bin/sh
+# install.sh -- Quick setup for Second Brain System backend
+# Usage: curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | sh
 #
 # Downloads the pre-built binary from GitHub Releases, installs it to
 # ~/.local/bin, and creates the vault directory.
-# If the download fails, set SECOND_BRAIN_BUILD_FROM_SOURCE=1 to build
-# from source instead (requires git + golang).
+# Set SECOND_BRAIN_BUILD_FROM_SOURCE=1 to build from source instead.
 
 set -e
 
@@ -15,106 +14,101 @@ VAULT_PATH="${SECOND_BRAIN_VAULT_PATH:-$HOME/second-brain/vault}"
 PORT="${SECOND_BRAIN_PORT:-8080}"
 TARGET_DIR="${HOME}/.local/bin"
 
-log() {
-    printf "\n[install] %s\n" "$1"
-}
+log() { printf "\n[install] %s\n" "$1"; }
+warn() { printf "\n[install][warn] %s\n" "$1" >&2; }
+fail() { printf "\n[install][error] %s\n" "$1" >&2; exit 1; }
 
-warn() {
-    printf "\n[install][warn] %s\n" "$1" >&2
-}
+# --- Detect Termux ---
+IS_TERMUX=0
+[ -d "/data/data/com.termux" ] && IS_TERMUX=1
 
-fail() {
-    printf "\n[install][error] %s\n" "$1" >&2
-    exit 1
-}
-
-# --- Preflight ---
-if [ ! -d "/data/data/com.termux" ]; then
-    fail "This script targets Termux on Android. Run it from Termux."
+if [ "$IS_TERMUX" = "1" ]; then
+    pkg update -y 2>/dev/null || true
+    command -v curl >/dev/null 2>&1 || pkg install -y curl
 fi
 
-# Refresh package index before any install
-pkg update -y
-
-if ! command -v curl &>/dev/null; then
-    log "curl not found, installing..."
-    pkg install -y curl
-fi
-
-# --- Create target directory ---
 mkdir -p "$TARGET_DIR"
 
 # --- Download or build ---
 if [ "${SECOND_BRAIN_BUILD_FROM_SOURCE:-0}" = "1" ]; then
-    # --- Build from source ---
-    log "SECOND_BRAIN_BUILD_FROM_SOURCE=1 -- building from source..."
+    log "Building from source..."
 
-    if ! command -v git &>/dev/null; then
-        log "git not found, installing..."
-        pkg install -y git
-    fi
-    if ! command -v go &>/dev/null; then
-        log "go not found, installing..."
-        pkg install -y golang
+    if [ "$IS_TERMUX" = "1" ]; then
+        command -v git >/dev/null 2>&1 || pkg install -y git
+        command -v go >/dev/null 2>&1 || pkg install -y golang
+    else
+        command -v git >/dev/null 2>&1 || fail "git not found. Install git first."
+        command -v go >/dev/null 2>&1 || fail "go not found. Install Go first."
     fi
 
+    BRANCH="${SECOND_BRAIN_BRANCH:-main}"
     BUILD_DIR=$(mktemp -d)
-    log "Cloning repository (shallow)..."
-    git clone --depth 1 "https://github.com/$REPO.git" "$BUILD_DIR"
-    cd "$BUILD_DIR/backend"
+    log "Cloning $BRANCH (shallow)..."
+    git clone --depth 1 -b "$BRANCH" "https://github.com/$REPO.git" "$BUILD_DIR"
+
     log "Building binary..."
-    go build -o "$TARGET_DIR/$BINARY_NAME" ./cmd/server
+    cd "$BUILD_DIR/backend"
+    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o "$TARGET_DIR/$BINARY_NAME" ./cmd/server
+    cd /
     rm -rf "$BUILD_DIR"
+
+    chmod +x "$TARGET_DIR/$BINARY_NAME"
     log "Binary built: $TARGET_DIR/$BINARY_NAME"
 else
-    # --- Download pre-built binary ---
     DOWNLOAD_URL="https://github.com/$REPO/releases/download/nightly/second-brain-server-arm64"
-    log "Downloading $BINARY_NAME (ARM64) from GitHub Releases..."
-    log "URL: $DOWNLOAD_URL"
+    log "Downloading $BINARY_NAME from GitHub Releases..."
 
     set +e
     HTTP_CODE=$(curl -fSL --connect-timeout 10 --max-time 60 \
-        -w "%{http_code}" \
-        -o "$TARGET_DIR/$BINARY_NAME" \
-        "$DOWNLOAD_URL" 2>&1)
+        -w "%{http_code}" -o "$TARGET_DIR/$BINARY_NAME" "$DOWNLOAD_URL" 2>&1)
     CURL_EXIT=$?
     set -e
 
     if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then
-        warn "Download failed (HTTP $HTTP_CODE, curl exit $CURL_EXIT)."
-        warn "Either the nightly release hasn't built yet, or there's a network issue."
+        warn "Download failed (HTTP $HTTP_CODE)."
         warn ""
-        warn "Try these:"
-        warn "  1. Wait for the GitHub Actions workflow to finish, then retry."
+        warn "Options:"
+        warn "  1. Wait for GitHub Actions to finish, then retry."
         warn "     Check: https://github.com/$REPO/actions"
         warn ""
-        warn "  2. Build from source instead:"
-        warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 bash"
+        warn "  2. Build from source (works for any branch):"
+        warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 sh"
         warn ""
-        warn "  3. Or manually download and install:"
-        warn "     mkdir -p $TARGET_DIR"
-        warn "     curl -fSL -o $TARGET_DIR/$BINARY_NAME $DOWNLOAD_URL"
-        warn "     chmod +x $TARGET_DIR/$BINARY_NAME"
+        warn "  3. Build a specific branch from source:"
+        warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 SECOND_BRAIN_BRANCH=feat/my-branch sh"
         fail "Aborting."
     fi
 
     chmod +x "$TARGET_DIR/$BINARY_NAME"
-    log "Binary installed: $TARGET_DIR/$BINARY_NAME ($(du -h "$TARGET_DIR/$BINARY_NAME" | cut -f1))"
+    log "Binary installed: $TARGET_DIR/$BINARY_NAME"
 fi
 
-# --- Add TARGET_DIR to PATH ---
+# --- Add to PATH ---
+add_to_path() {
+    target_file="$1"
+    if [ -f "$target_file" ] && grep -q "$TARGET_DIR" "$target_file" 2>/dev/null; then
+        return
+    fi
+    log "Adding $TARGET_DIR to PATH in $target_file..."
+    printf '\n# Added by second-brain install script\nexport PATH="%s:$PATH"\n' "$TARGET_DIR" >> "$target_file"
+}
+
 case ":$PATH:" in
     *":$TARGET_DIR:"*) ;;
     *)
-        log "Adding $TARGET_DIR to PATH in ~/.bashrc..."
-        printf '\n# Added by second-brain install script\nexport PATH="$PATH:%s"\n' "$TARGET_DIR" >> "$HOME/.bashrc"
-        export PATH="$PATH:$TARGET_DIR"
-        log "Run 'source ~/.bashrc' or open a new shell to use the binary directly."
+        if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then
+            add_to_path "$HOME/.zshrc"
+        fi
+        if [ -f "$HOME/.bashrc" ]; then
+            add_to_path "$HOME/.bashrc"
+        fi
+        export PATH="$TARGET_DIR:$PATH"
+        log "Run 'source ~/.bashrc' (or ~/.zshrc) or open a new shell."
         ;;
 esac
 
 # --- Create vault directory ---
-log "Creating vault directory at $VAULT_PATH..."
+log "Creating vault at $VAULT_PATH..."
 mkdir -p "$VAULT_PATH/notes" \
          "$VAULT_PATH/tasks" \
          "$VAULT_PATH/quick-tasks" \
@@ -123,23 +117,14 @@ mkdir -p "$VAULT_PATH/notes" \
 
 # --- Summary ---
 log "Setup complete."
-printf "\n"
-printf "  Binary:  %s\n" "$TARGET_DIR/$BINARY_NAME"
+printf "\n  Binary:  %s\n" "$TARGET_DIR/$BINARY_NAME"
 printf "  Vault:   %s\n" "$VAULT_PATH"
 printf "  Port:    %s\n" "$PORT"
-printf "\n"
-printf "Start the backend:\n"
-printf "  SECOND_BRAIN_VAULT_PATH=%s SECOND_BRAIN_PORT=%s %s\n" "$VAULT_PATH" "$PORT" "$BINARY_NAME"
-printf "\n"
-printf "Or set defaults permanently:\n"
-printf "  echo 'export SECOND_BRAIN_VAULT_PATH=%s' >> ~/.bashrc\n" "$VAULT_PATH"
-printf "  echo 'export SECOND_BRAIN_PORT=%s' >> ~/.bashrc\n" "$PORT"
-printf "  source ~/.bashrc && %s\n" "$BINARY_NAME"
-printf "\n"
+printf "\nStart: %s\n\n" "$BINARY_NAME"
 
 # --- Optional: start server ---
 if [ "${SECOND_BRAIN_AUTOSTART:-0}" = "1" ]; then
-    log "SECOND_BRAIN_AUTOSTART=1 -- starting server now (Ctrl+C to stop)..."
+    log "Starting server (Ctrl+C to stop)..."
     export SECOND_BRAIN_VAULT_PATH="$VAULT_PATH"
     export SECOND_BRAIN_PORT="$PORT"
     exec "$BINARY_NAME"

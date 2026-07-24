@@ -3,40 +3,43 @@
 Lightweight, Markdown-first Personal Knowledge Management (PKM) system.
 Backend runs on Termux (Go), frontend is a Kotlin Jetpack Compose Android app.
 
-## Quick Install (Termux on Android)
+## Quick Install
 
-Downloads the pre-built ARM64 binary from GitHub Releases, installs it to
-`~/.local/bin`, and creates the vault directory:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | bash
+```sh
+curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | sh
 ```
 
-To also start the server automatically after install, set `SECOND_BRAIN_AUTOSTART=1`:
+With autostart: `... | SECOND_BRAIN_AUTOSTART=1 sh`
+Build from source: `... | SECOND_BRAIN_BUILD_FROM_SOURCE=1 sh`
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | SECOND_BRAIN_AUTOSTART=1 bash
+After install, run `source ~/.bashrc` (or `~/.zshrc`) then `second-brain-server`.
+
+## Update Backend
+
+Download the latest nightly binary and restart:
+
+```sh
+curl -fSL -o ~/.local/bin/second-brain-server \
+  https://github.com/koreicc/garou-second-brain/releases/download/nightly/second-brain-server-arm64 \
+  && chmod +x ~/.local/bin/second-brain-server \
+  && pkill second-brain-server 2>/dev/null; \
+  nohup second-brain-server > /dev/null 2>&1 &
 ```
 
-If the pre-built binary download fails (e.g. nightly release not yet ready),
-build from source instead:
+## Build from Source (any branch)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 bash
+For testing a feature branch on your device:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/koreicc/garou-second-brain/main/install.sh | \
+  SECOND_BRAIN_BUILD_FROM_SOURCE=1 SECOND_BRAIN_BRANCH=feat/my-branch sh
 ```
 
-After install, run `source ~/.bashrc` then:
+Or manually from a local clone:
 
-```bash
-second-brain-server
-```
-
-## Updating the Backend (Termux)
-
-Downloads the latest Nightly ARM64 binary and restarts the server:
-
-```bash
-curl -L https://github.com/koreicc/garou-second-brain/releases/download/nightly/second-brain-server-arm64 -o ~/.local/bin/second-brain-server && chmod +x ~/.local/bin/second-brain-server && pkill second-brain-server 2>/dev/null && second-brain-server &
+```sh
+cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o ~/.local/bin/second-brain-server ./cmd/server
+pkill second-brain-server 2>/dev/null; nohup second-brain-server > /dev/null 2>&1 &
 ```
 
 ## Philosophy
@@ -109,15 +112,18 @@ The app uses **Material You (Material Design 3)** with:
 │       └── vault/            # File operations, atomic writes, per-file mutex locking
 ├── android/                  # Kotlin Jetpack Compose app
 │   └── app/src/main/java/com/secondbrain/
-│       ├── data/             # Ktor client, DTOs, repositories
-│       ├── di/               # Manual dependency injection
+│       ├── data/             # Ktor client, DTOs, repositories, settings persistence
+│       ├── di/               # Manual dependency injection (AppModule)
 │       ├── domain/model/     # Domain models
 │       └── ui/               # Compose screens with MVI architecture
-│           ├── dashboard/    # Dashboard with quick stats, recent items, quick task creation
-│           ├── navigation/   # Sealed Screen routes, NavHost, bottom nav bar
+│           ├── common/       # Shared components (LinkPickerSheet, LinkedEntitiesView)
+│           ├── dashboard/    # Daily planner, routines, today's tasks
+│           ├── navigation/   # Floating pill bar, FAB menu, NavHost
 │           ├── notes/        # Note list, detail, edit screens
 │           ├── tasks/        # Task list, detail, edit screens (with subtask toggle)
 │           ├── people/       # Person list, detail, edit screens
+│           ├── settings/     # Theme, server config, persistence
+│           ├── workspace/    # Unified entity management (Notes/Tasks/People tabs)
 │           ├── theme/        # Material You theming (Color.kt, Theme.kt, Type.kt, Shape.kt)
 │           └── util/         # Shared utilities (StatusBadge, TimeFormatUtil, LifecycleUtil)
 └── docs/
@@ -164,8 +170,8 @@ All endpoints are under `/api/v1` and return JSON in the format:
 
 ## Quick Start
 
-### Backend (manual)
-```bash
+### Backend
+```sh
 cd backend
 export SECOND_BRAIN_VAULT_PATH=~/second-brain/vault
 export SECOND_BRAIN_PORT=8080
@@ -174,9 +180,18 @@ go run ./cmd/server
 ```
 
 ### Frontend
-```bash
+```sh
 cd android
 ./gradlew assembleDebug
+```
+
+### Run Tests
+```sh
+# Backend
+cd backend && go test -race ./...
+
+# Frontend
+cd android && ./gradlew test
 ```
 
 ## Environment Variables
@@ -209,21 +224,14 @@ When a Task with recurrence is marked completed, the backend:
 
 Recurrence is evaluated on API request (no cron needed).
 
-## Testing (Backend)
-
-```bash
-cd backend && go test ./... -race
-```
-
 ## Screens
 
 | Screen | Features |
 |---|---|
-| **Dashboard** | Quick stats (notes/tasks count with icons), quick task creation, recent notes, active tasks, pull-to-refresh |
-| **Notes** | List with relative timestamps, detail view with markdown body, edit/create screen, delete with confirmation |
-| **Tasks** | List with status badges and relative timestamps, detail with interactive subtask toggles, edit with date pickers and recurrence settings |
-| **People** | List with contact preview and relative timestamps, detail with contact/social link cards, edit with dynamic form fields |
-| **Search** | Cross-entity full-text search with type-based result icons |
+| **Dashboard** | Daily planner with greeting, routine checklist, today's tasks, quick task/note creation |
+| **Workspace** | Unified entity management (Notes/Tasks/People tabs) with global search |
+| **Settings** | Theme config (Material You, dark mode, palette), server URL, persistence |
+| **Detail/Edit** | Full CRUD for all entities with linked entity support and wikilink navigation |
 
 ## License
 

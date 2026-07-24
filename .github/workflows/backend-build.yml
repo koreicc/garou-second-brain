@@ -4,48 +4,49 @@ on:
   push:
     branches: [main, feat/**, fix/**]
   pull_request:
-    branches: [main, feat/**, fix/**]
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      build_binary:
+        description: "Build ARM64 binary for Termux"
+        type: boolean
+        default: false
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         go-version: ["1.22", "1.23"]
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
           cache-dependency-path: backend/go.sum
+      - run: cd backend && go mod tidy
+      - run: cd backend && gofmt -l .
+      - run: cd backend && go build ./...
+      - run: cd backend && go vet ./...
+      - run: cd backend && go test -race -count=1 ./...
 
-      - name: Tidy dependencies
+  binary:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_binary
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: backend/go.sum
+      - name: Build ARM64 binary
         run: |
           cd backend
-          go mod tidy
-
-      - name: Check formatting
-        run: |
-          cd backend
-          gofmt -l . 2>&1 | head -20
-          test -z "$(gofmt -l .)"
-
-      - name: Build
-        run: |
-          cd backend
-          go build ./...
-
-      - name: Vet
-        run: |
-          cd backend
-          go vet ./...
-
-      - name: Run tests with race detector
-        run: |
-          cd backend
-          go test -race -count=1 ./...
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
+            go build -o ../second-brain-server-arm64 ./cmd/server
+      - uses: actions/upload-artifact@v4
+        with:
+          name: second-brain-server-arm64
+          path: second-brain-server-arm64
+          compression-level: 0

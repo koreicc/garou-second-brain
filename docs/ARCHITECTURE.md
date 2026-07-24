@@ -233,7 +233,8 @@ HttpClient, ApiService, and Repository instances.
 | `LifecycleUtil.kt` | `RefreshOnResume()` composable for reloading data on screen resume |
 
 **ui/navigation/** -- Sealed class Screen routes, NavHost composable,
-and a bottom navigation bar with tabs: Dashboard, Notes, Tasks, People.
+floating pill bottom bar with FAB (Dashboard, Workspace, Settings tabs),
+and FabMenu overlay for quick entity creation.
 
 **ui/dashboard/** -- Dashboard screen showing quick stats (entity counts
 with Material icons), quick task creation card, recent notes and active tasks.
@@ -271,7 +272,6 @@ MVP search is a simple case-insensitive substring match:
 
 - File watching with fsnotify for hot-reload of vault changes
 - Full-text index with bleve for relevance scoring
-- WikiLink resolution ([[title]] -> entity lookup)
 - Archived entity restoration from archive folder
 - Offline mode with local vault copy
 - GitHub/WebDAV sync
