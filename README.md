@@ -31,6 +31,14 @@ After install, run `source ~/.bashrc` then:
 second-brain-server
 ```
 
+## Updating the Backend (Termux)
+
+Downloads the latest Nightly ARM64 binary and restarts the server:
+
+```bash
+curl -L https://github.com/koreicc/garou-second-brain/releases/download/nightly/second-brain-server-arm64 -o ~/.local/bin/second-brain-server && chmod +x ~/.local/bin/second-brain-server && pkill second-brain-server 2>/dev/null && second-brain-server &
+```
+
 ## Philosophy
 
 Markdown-First. All data is human-readable .md files with YAML frontmatter.
