@@ -70,7 +70,10 @@ class TaskListViewModel(
         viewModelScope.launch {
             taskRepository.getAll()
                 .onSuccess { tasks ->
-                    _state.update { it.copy(tasks = filterStandalone(tasks)) }
+                    _state.update { it.copy(tasks = filterStandalone(tasks), error = null) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message) }
                 }
         }
     }

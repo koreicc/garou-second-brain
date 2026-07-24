@@ -2,6 +2,7 @@ package com.secondbrain.domain.model
 
 data class Task(
     val id: String,
+    val type: String = "task",
     val title: String,
     val status: String = "pending",
     val icon: String = "",

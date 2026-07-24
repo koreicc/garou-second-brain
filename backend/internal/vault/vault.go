@@ -13,8 +13,9 @@ import (
 )
 
 type Vault struct {
-	root  string
-	locks sync.Map
+	root       string
+	locks      sync.Map
+	lockCleanup chan string
 }
 
 const (
@@ -26,7 +27,19 @@ const (
 )
 
 func New(root string) *Vault {
-	return &Vault{root: root}
+	v := &Vault{
+		root:        root,
+		lockCleanup: make(chan string, 100),
+	}
+	go v.cleanupLocks()
+	return v
+}
+
+// cleanupLocks removes unused locks from memory to prevent memory leaks
+func (v *Vault) cleanupLocks() {
+	for path := range v.lockCleanup {
+		v.locks.Delete(path)
+	}
 }
 
 func (v *Vault) Init() error {
@@ -104,6 +117,9 @@ func splitFrontmatter(data []byte) (frontmatter, body []byte, err error) {
 		return nil, nil, fmt.Errorf("invalid frontmatter opening delimiter")
 	}
 
+	// Handle closing delimiter with either \n--- (Unix/Mac) or \r\n--- (Windows).
+	// Search for \n--- first; this also matches \r\n--- since the \n is the second byte.
+	// Then strip a trailing \r from frontmatter if present (from Windows line endings).
 	closingIdx := bytes.Index(rest, []byte("\n---"))
 	if closingIdx == -1 {
 		closingIdx = bytes.Index(rest, []byte("---"))
@@ -115,6 +131,13 @@ func splitFrontmatter(data []byte) (frontmatter, body []byte, err error) {
 	} else {
 		frontmatter = rest[:closingIdx]
 		body = rest[closingIdx+4:]
+	}
+
+	// Strip trailing \r from frontmatter (Windows \r\n line endings).
+	// This only removes a trailing carriage return from the entire frontmatter slice,
+	// not from each line — so multiline YAML is not collapsed.
+	if len(frontmatter) > 0 && frontmatter[len(frontmatter)-1] == '\r' {
+		frontmatter = frontmatter[:len(frontmatter)-1]
 	}
 
 	body = bytes.TrimLeft(body, " \t\r\n")
@@ -564,7 +587,7 @@ func (v *Vault) Delete(entityType, id string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	// Read the file content before deleting
+	// Read the file content
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -573,29 +596,48 @@ func (v *Vault) Delete(entityType, id string) error {
 		return fmt.Errorf("read %s: %w", path, err)
 	}
 
-	// Remove original
+	// Archive FIRST (before deleting original) to prevent data loss on crash.
+	// If archiving fails, the original file is preserved.
+	dir, archiveErr := entityDir(entityType)
+	if archiveErr == nil {
+		archiveDir := filepath.Join(v.root, DirArchive, dir)
+		if err := os.MkdirAll(archiveDir, 0755); err != nil {
+			archiveErr = fmt.Errorf("create archive dir: %w", err)
+		} else {
+			archivePath := filepath.Join(archiveDir, id+".md")
+			tmpPath := archivePath + ".tmp"
+			if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+				os.Remove(tmpPath)
+				archiveErr = fmt.Errorf("write archive temp: %w", err)
+			} else if err := os.Rename(tmpPath, archivePath); err != nil {
+				os.Remove(tmpPath)
+				archiveErr = fmt.Errorf("rename archive: %w", err)
+			}
+		}
+	}
+
+	// If archiving failed, return error without deleting the original file.
+	if archiveErr != nil {
+		select {
+		case v.lockCleanup <- path:
+		default:
+		}
+		return fmt.Errorf("archive before delete %s: %w", id, archiveErr)
+	}
+
+	// Archive succeeded, now delete original.
 	if err := os.Remove(path); err != nil {
+		select {
+		case v.lockCleanup <- path:
+		default:
+		}
 		return fmt.Errorf("delete %s: %w", path, err)
 	}
 
-	// Archive the content (best-effort, atomic write)
-	dir, err := entityDir(entityType)
-	if err != nil {
-		return nil
-	}
-	archiveDir := filepath.Join(v.root, DirArchive, dir)
-	if err := os.MkdirAll(archiveDir, 0755); err != nil {
-		return nil
-	}
-	archivePath := filepath.Join(archiveDir, id+".md")
-	tmpPath := archivePath + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
-		os.Remove(tmpPath)
-		return nil
-	}
-	if err := os.Rename(tmpPath, archivePath); err != nil {
-		os.Remove(tmpPath)
-		return nil
+	// Clean up lock entry for deleted file.
+	select {
+	case v.lockCleanup <- path:
+	default:
 	}
 
 	return nil

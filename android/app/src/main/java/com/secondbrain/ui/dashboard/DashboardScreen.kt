@@ -68,10 +68,8 @@ import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
 import com.secondbrain.ui.util.resolveIcon
-import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import java.util.Locale
 
 // ---------------------------------------------------------------------------

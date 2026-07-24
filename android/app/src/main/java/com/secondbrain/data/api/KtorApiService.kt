@@ -8,7 +8,7 @@ import io.ktor.http.*
 
 class KtorApiService(
     private val client: HttpClient,
-    private val baseUrl: String = "http://localhost:8080/api/v1"
+    private val baseUrl: String
 ) : ApiService {
 
     // ===== Notes =====

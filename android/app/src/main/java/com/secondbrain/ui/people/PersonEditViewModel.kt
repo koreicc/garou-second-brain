@@ -16,6 +16,7 @@ data class PersonEditUiState(
     val email: String = "",
     val tags: List<String> = emptyList(),
     val notes: String = "",
+    val body: String = "",
     val links: List<String> = emptyList(),
     val showLinkPicker: Boolean = false,
     val linkPickerLoading: Boolean = false,
@@ -77,6 +78,7 @@ class PersonEditViewModel(
                             email = email,
                             tags = person.tags,
                             notes = person.notes,
+                            body = person.body,
                             links = person.links,
                             socialLinks = person.socialLinks.map { SocialLinkItem(platform = it.platform, url = it.url) },
                             isLoading = false
@@ -144,6 +146,7 @@ class PersonEditViewModel(
                     contacts = if (contacts.isNotEmpty()) contacts else null,
                     socialLinks = if (socialLinkDtos.isNotEmpty()) socialLinkDtos else null,
                     notes = s.notes,
+                    body = s.body.ifBlank { null },
                     links = if (s.links.isNotEmpty()) s.links else null
                 ))
             } else {
@@ -153,6 +156,7 @@ class PersonEditViewModel(
                     contacts = contacts,
                     socialLinks = socialLinkDtos,
                     notes = s.notes,
+                    body = s.body,
                     links = s.links
                 ))
             }

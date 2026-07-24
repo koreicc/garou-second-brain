@@ -7,6 +7,7 @@ import com.secondbrain.domain.model.*
 @Serializable
 data class PersonDto(
     val id: String,
+    val type: String = "person",
     val name: String,
     val status: String = "active",
     val contacts: List<ContactDto> = emptyList(),
@@ -15,6 +16,7 @@ data class PersonDto(
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
     val notes: String = "",
+    val body: String = "",
     @SerialName("created_at")
     val createdAt: String = "",
     @SerialName("updated_at")
@@ -42,7 +44,8 @@ data class CreatePersonRequest(
     val socialLinks: List<SocialLinkDto> = emptyList(),
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
-    val notes: String = ""
+    val notes: String = "",
+    val body: String = ""
 )
 
 @Serializable
@@ -54,11 +57,13 @@ data class UpdatePersonRequest(
     val socialLinks: List<SocialLinkDto>? = null,
     val tags: List<String>? = null,
     val links: List<String>? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    val body: String? = null
 )
 
 fun PersonDto.toDomain(): Person = Person(
     id = id,
+    type = type,
     name = name,
     status = status,
     contacts = contacts.map { it.toDomain() },
@@ -66,6 +71,7 @@ fun PersonDto.toDomain(): Person = Person(
     tags = tags,
     links = links,
     notes = notes,
+    body = body,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

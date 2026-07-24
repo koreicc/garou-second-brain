@@ -7,6 +7,7 @@ import com.secondbrain.domain.model.*
 @Serializable
 data class TaskDto(
     val id: String,
+    val type: String = "task",
     val title: String,
     val status: String = "pending",
     val icon: String = "",
@@ -23,11 +24,11 @@ data class TaskDto(
     @SerialName("date_mode")
     val dateMode: String = "",
     @SerialName("due_date")
-    val dueDate: String = "",
+    val dueDate: String? = null,
     @SerialName("start_date")
-    val startDate: String = "",
+    val startDate: String? = null,
     @SerialName("end_date")
-    val endDate: String = "",
+    val endDate: String? = null,
     // Time fields
     @SerialName("time_mode")
     val timeMode: String = "",
@@ -112,10 +113,14 @@ data class UpdateTaskRequest(
     val location: String? = null,
     val tags: List<String>? = null,
     val links: List<String>? = null,
+    @SerialName("parent_id")
+    val parentId: String? = null,
+    @SerialName("is_template")
+    val isTemplate: Boolean? = null,
+    @SerialName("occurrence_date")
+    val occurrenceDate: String? = null,
     @SerialName("propagate_to_occurrences")
     val propagateToOccurrences: Boolean = false,
-    // Query params for by-date endpoint are handled via URL, not body
-
     // Date fields
     @SerialName("date_mode")
     val dateMode: String? = null,
@@ -144,6 +149,7 @@ data class UpdateTaskRequest(
 
 fun TaskDto.toDomain(): Task = Task(
     id = id,
+    type = type,
     title = title,
     status = status,
     icon = icon,
@@ -154,9 +160,9 @@ fun TaskDto.toDomain(): Task = Task(
     isTemplate = isTemplate,
     occurrenceDate = occurrenceDate,
     dateMode = dateMode,
-    dueDate = dueDate,
-    startDate = startDate,
-    endDate = endDate,
+    dueDate = dueDate ?: "",
+    startDate = startDate ?: "",
+    endDate = endDate ?: "",
     timeMode = timeMode,
     startTime = startTime,
     endTime = endTime,

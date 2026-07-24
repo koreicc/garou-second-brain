@@ -2,6 +2,7 @@ package com.secondbrain.domain.model
 
 data class Person(
     val id: String,
+    val type: String = "person",
     val name: String,
     val status: String = "active",
     val contacts: List<Contact> = emptyList(),
@@ -9,6 +10,7 @@ data class Person(
     val tags: List<String> = emptyList(),
     val links: List<String> = emptyList(),
     val notes: String = "",
+    val body: String = "",
     val createdAt: String = "",
     val updatedAt: String = ""
 )

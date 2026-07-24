@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -173,7 +174,7 @@ func (h *TaskHandler) Create(c echo.Context) error {
 		occurrences := h.generateOccurrences(task, *req.StartDate, *req.EndDate)
 		for _, occ := range occurrences {
 			if err := h.vault.WriteTask(occ); err != nil {
-				continue
+				log.Printf("write occurrence %s for template %s: %v", occ.ID, task.ID, err)
 			}
 		}
 	}
@@ -391,7 +392,7 @@ func (h *TaskHandler) Update(c echo.Context) error {
 	if req.DueTime != "" {
 		task.DueTime = req.DueTime
 	}
-	if req.Recurrence != nil || c.Request().Method == http.MethodPut {
+	if req.Recurrence != nil {
 		task.Recurrence = req.Recurrence
 		changedFields["recurrence"] = true
 	}
@@ -399,7 +400,7 @@ func (h *TaskHandler) Update(c echo.Context) error {
 		task.Subtasks = req.Subtasks
 		changedFields["subtasks"] = true
 	}
-	if req.Body != "" || c.Request().Method == http.MethodPut {
+	if req.Body != "" {
 		task.Body = req.Body
 		changedFields["body"] = true
 	}
