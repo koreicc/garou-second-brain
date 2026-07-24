@@ -62,6 +62,7 @@ func main() {
 	api.POST("/tasks", taskHandler.Create)
 	api.PUT("/tasks/:id", taskHandler.Update)
 	api.DELETE("/tasks/:id", taskHandler.Delete)
+	api.PUT("/tasks/occurrence/:parentId/:date", taskHandler.UpdateOccurrence)
 
 	qtHandler := handler.NewQuickTaskHandler(v)
 	api.GET("/quick-tasks", qtHandler.List)

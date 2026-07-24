@@ -2,6 +2,7 @@ package vault
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -27,6 +28,7 @@ const (
 	DirQuickTasks = "quick-tasks"
 	DirPeople     = "people"
 	DirArchive    = "archive"
+	DirOverrides  = "overrides"
 )
 
 func New(root string) *Vault {
@@ -46,7 +48,7 @@ func (v *Vault) cleanupLocks() {
 }
 
 func (v *Vault) Init() error {
-	dirs := []string{DirNotes, DirTasks, DirQuickTasks, DirPeople, DirArchive}
+	dirs := []string{DirNotes, DirTasks, DirQuickTasks, DirPeople, DirArchive, DirOverrides}
 	for _, d := range dirs {
 		path := filepath.Join(v.root, d)
 		if err := os.MkdirAll(path, 0755); err != nil {
@@ -549,6 +551,10 @@ func (v *Vault) ListTasksByDate(date string) ([]*model.Task, error) {
 		if t.IsTemplate && DateMatchesRecurrence(parsedDate, t) {
 			occ := ComputeDynamicOccurrence(t, date)
 			if occ != nil {
+				// Apply any per-occurrence overrides
+				if override, _ := v.ReadOccurrenceOverride(t.ID, date); override != nil {
+					ApplyOccurrenceOverride(occ, override)
+				}
 				matches = append(matches, occ)
 			}
 		}
@@ -926,4 +932,64 @@ func copySlice(s []string) []string {
 	result := make([]string, len(s))
 	copy(result, s)
 	return result
+}
+
+// OccurrenceOverride stores per-occurrence field overrides.
+type OccurrenceOverride struct {
+	Status  string           `json:"status,omitempty"`
+	Title   string           `json:"title,omitempty"`
+	Body    string           `json:"body,omitempty"`
+	Subtasks []model.Subtask `json:"subtasks,omitempty"`
+}
+
+// occurrenceOverridePath returns the file path for an occurrence override.
+func (v *Vault) occurrenceOverridePath(parentID, date string) string {
+	return filepath.Join(v.root, DirOverrides, parentID+"_"+date+".json")
+}
+
+// WriteOccurrenceOverride saves field overrides for a specific occurrence.
+func (v *Vault) WriteOccurrenceOverride(parentID, date string, override *OccurrenceOverride) error {
+	path := v.occurrenceOverridePath(parentID, date)
+	data, err := json.MarshalIndent(override, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal override: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// ReadOccurrenceOverride reads field overrides for a specific occurrence.
+// Returns nil, nil if no override exists.
+func (v *Vault) ReadOccurrenceOverride(parentID, date string) (*OccurrenceOverride, error) {
+	path := v.occurrenceOverridePath(parentID, date)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read override: %w", err)
+	}
+	var override OccurrenceOverride
+	if err := json.Unmarshal(data, &override); err != nil {
+		return nil, fmt.Errorf("unmarshal override: %w", err)
+	}
+	return &override, nil
+}
+
+// ApplyOccurrenceOverride applies stored overrides to a computed occurrence.
+func ApplyOccurrenceOverride(occ *model.Task, override *OccurrenceOverride) {
+	if override == nil {
+		return
+	}
+	if override.Status != "" {
+		occ.Status = model.EntityStatus(override.Status)
+	}
+	if override.Title != "" {
+		occ.Title = override.Title
+	}
+	if override.Body != "" {
+		occ.Body = override.Body
+	}
+	if override.Subtasks != nil {
+		occ.Subtasks = override.Subtasks
+	}
 }

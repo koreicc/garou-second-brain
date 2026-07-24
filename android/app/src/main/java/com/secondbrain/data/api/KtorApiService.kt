@@ -147,4 +147,13 @@ class KtorApiService(
             parameter("ids", ids.joinToString(","))
         }.body()
     }
+
+    // ===== Occurrence override =====
+
+    override suspend fun updateOccurrence(parentId: String, date: String, request: UpdateOccurrenceRequest): ApiResponse<TaskDto> {
+        return client.put("$baseUrl/tasks/occurrence/$parentId/$date") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
 }

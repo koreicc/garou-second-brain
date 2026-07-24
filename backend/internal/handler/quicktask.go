@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -19,11 +18,6 @@ type QuickTaskHandler struct {
 }
 
 func NewQuickTaskHandler(v *vault.Vault) *QuickTaskHandler {
-	return &QuickTaskHandler{vault: v}
-}
-
-// Deprecated: use NewQuickTaskHandler instead. Context is no longer stored on the struct.
-func NewQuickTaskHandlerWithContext(v *vault.Vault, _ context.Context) *QuickTaskHandler {
 	return &QuickTaskHandler{vault: v}
 }
 

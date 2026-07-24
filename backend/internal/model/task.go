@@ -76,5 +76,33 @@ func (t *Task) Validate() error {
 	if t.Title == "" {
 		return NewValidationError("task.title is required")
 	}
+	// Validate status
+	switch t.Status {
+	case StatusPending, StatusInProgress, StatusCompleted, StatusExpired:
+		// valid
+	case "":
+		return NewValidationError("task.status is required")
+	default:
+		return NewValidationError("task.status must be one of: pending, in-progress, completed, expired")
+	}
+	// Validate recurrence if present
+	if t.Recurrence != nil {
+		switch t.Recurrence.Type {
+		case "daily", "weekly", "monthly", "yearly":
+			// valid
+		case "":
+			return NewValidationError("task.recurrence.type is required when recurrence is set")
+		default:
+			return NewValidationError("task.recurrence.type must be one of: daily, weekly, monthly, yearly")
+		}
+		if t.Recurrence.Interval < 1 {
+			return NewValidationError("task.recurrence.interval must be >= 1")
+		}
+		for _, d := range t.Recurrence.DaysOfWeek {
+			if d < 0 || d > 6 {
+				return NewValidationError("task.recurrence.days_of_week values must be 0-6 (Sun-Sat)")
+			}
+		}
+	}
 	return nil
 }

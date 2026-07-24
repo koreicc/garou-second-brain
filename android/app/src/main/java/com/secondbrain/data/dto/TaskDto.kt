@@ -198,3 +198,11 @@ fun Recurrence.toDto(): RecurrenceDto = RecurrenceDto(
     interval = interval,
     daysOfWeek = daysOfWeek
 )
+
+@Serializable
+data class UpdateOccurrenceRequest(
+    val status: String? = null,
+    val title: String? = null,
+    val body: String? = null,
+    val subtasks: List<SubtaskDto>? = null
+)

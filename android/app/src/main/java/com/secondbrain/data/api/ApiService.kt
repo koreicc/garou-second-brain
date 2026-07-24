@@ -39,4 +39,7 @@ interface ApiService {
 
     // Entities (batch)
     suspend fun getEntitiesByIds(ids: List<String>): ApiResponse<List<EntityInfoDto>>
+
+    // Occurrence override
+    suspend fun updateOccurrence(parentId: String, date: String, request: UpdateOccurrenceRequest): ApiResponse<TaskDto>
 }

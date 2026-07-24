@@ -82,6 +82,10 @@ func (h *TaskHandler) Get(c echo.Context) error {
 						if vault.DateMatchesRecurrence(parsedDate, parent) {
 							occ := vault.ComputeDynamicOccurrence(parent, date)
 							if occ != nil {
+								// Apply any per-occurrence overrides
+								if override, _ := h.vault.ReadOccurrenceOverride(parentID, date); override != nil {
+									vault.ApplyOccurrenceOverride(occ, override)
+								}
 								return c.JSON(http.StatusOK, model.DataResponse(occ))
 							}
 						}
@@ -211,8 +215,15 @@ type UpdateTaskRequest struct {
 	Recurrence      *model.Recurrence `json:"recurrence"`
 	Subtasks        []model.Subtask   `json:"subtasks"`
 	Body            string            `json:"body"`
-	// Template propagation flag: when true and task is a template, update all occurrences
-	PropagateToOccurrences bool `json:"propagate_to_occurrences"`
+}
+
+// UpdateOccurrenceRequest is for updating a single dynamic occurrence.
+// Only mutable fields are allowed: status, title, body, subtasks.
+type UpdateOccurrenceRequest struct {
+	Status   string           `json:"status"`
+	Title    string           `json:"title"`
+	Body     string           `json:"body"`
+	Subtasks []model.Subtask  `json:"subtasks"`
 }
 
 func (h *TaskHandler) Update(c echo.Context) error {
@@ -230,14 +241,16 @@ func (h *TaskHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse("invalid request body"))
 	}
 
-	// Track changes for propagation (reserved for future dynamic occurrence propagation)
-	_ = make(map[string]bool)
-
 	if req.Title != "" {
 		task.Title = req.Title
 	}
 	if req.Status != "" {
-		task.Status = model.EntityStatus(req.Status)
+		switch req.Status {
+		case model.TaskStatusPending, model.TaskStatusInProgress, model.TaskStatusCompleted, model.TaskStatusExpired:
+			task.Status = model.EntityStatus(req.Status)
+		default:
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse("status must be one of: pending, in-progress, completed, expired"))
+		}
 	}
 	if req.Icon != "" {
 		task.Icon = req.Icon
@@ -306,4 +319,58 @@ func (h *TaskHandler) Delete(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("delete task: %v", err)))
 	}
 	return c.JSON(http.StatusOK, model.DataResponse(nil))
+}
+
+// UpdateOccurrence updates a single dynamic occurrence (not the template).
+// Only status, title, body, and subtasks can be overridden.
+func (h *TaskHandler) UpdateOccurrence(c echo.Context) error {
+	parentID := c.Param("parentId")
+	date := c.Param("date")
+
+	// Verify parent template exists
+	parent, err := h.vault.ReadTask(parentID)
+	if err != nil {
+		if isNotFound(err) {
+			return c.JSON(http.StatusNotFound, model.ErrorResponse("template not found"))
+		}
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("read template: %v", err)))
+	}
+	if !parent.IsTemplate {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("parent is not a template"))
+	}
+
+	var req UpdateOccurrenceRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("invalid request body"))
+	}
+
+	// Validate status if provided
+	if req.Status != "" {
+		switch req.Status {
+		case model.TaskStatusPending, model.TaskStatusInProgress, model.TaskStatusCompleted:
+			// valid
+		default:
+			return c.JSON(http.StatusBadRequest, model.ErrorResponse("status must be one of: pending, in-progress, completed"))
+		}
+	}
+
+	override := &vault.OccurrenceOverride{
+		Status:   req.Status,
+		Title:    req.Title,
+		Body:     req.Body,
+		Subtasks: req.Subtasks,
+	}
+
+	if err := h.vault.WriteOccurrenceOverride(parentID, date, override); err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save override: %v", err)))
+	}
+
+	// Return the updated occurrence
+	occ := vault.ComputeDynamicOccurrence(parent, date)
+	if occ == nil {
+		return c.JSON(http.StatusNotFound, model.ErrorResponse("occurrence not found for this date"))
+	}
+	vault.ApplyOccurrenceOverride(occ, override)
+
+	return c.JSON(http.StatusOK, model.DataResponse(occ))
 }

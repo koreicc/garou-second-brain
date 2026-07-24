@@ -116,6 +116,7 @@ fun TaskEditScreen(
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+            viewModel.onEvent(TaskEditEvent.DismissError)
         }
     }
 
@@ -142,19 +143,11 @@ fun TaskEditScreen(
         )
     }
 
-    // Due date picker dialog
-    if (state.showDueDatePicker) {
+    // Date picker dialog
+    if (state.activeDatePicker != null) {
         DatePickerDialogContent(
-            onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetDueDate(date)) },
-            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissDueDatePicker) }
-        )
-    }
-
-    // Start date picker dialog
-    if (state.showStartDatePicker) {
-        DatePickerDialogContent(
-            onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetStartDate(date)) },
-            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissStartDatePicker) }
+            onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetDate(state.activeDatePicker!!, date)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissDatePicker) }
         )
     }
 
@@ -170,14 +163,6 @@ fun TaskEditScreen(
         )
     }
 
-    // End date picker dialog
-    if (state.showEndDatePicker) {
-        DatePickerDialogContent(
-            onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetEndDate(date)) },
-            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndDatePicker) }
-        )
-    }
-
     // Edit mode dialog: show when editing an occurrence
     if (state.showEditModeDialog) {
         OccurrenceEditModeDialog(
@@ -188,26 +173,17 @@ fun TaskEditScreen(
         )
     }
 
-    // Time picker dialogs
-    if (state.showDueTimePicker) {
+    // Time picker dialog
+    if (state.activeTimePicker != null) {
+        val initialTime = when (state.activeTimePicker!!) {
+            TimePickerType.Due -> state.dueTime
+            TimePickerType.Start -> state.startTime
+            TimePickerType.End -> state.endTime
+        }
         TimePickerDialogContent(
-            initialTime = state.dueTime,
-            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetDueTime(time)) },
-            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissDueTimePicker) }
-        )
-    }
-    if (state.showStartTimePicker) {
-        TimePickerDialogContent(
-            initialTime = state.startTime,
-            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetStartTime(time)) },
-            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissStartTimePicker) }
-        )
-    }
-    if (state.showEndTimePicker) {
-        TimePickerDialogContent(
-            initialTime = state.endTime,
-            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetEndTime(time)) },
-            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndTimePicker) }
+            initialTime = initialTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetTime(state.activeTimePicker!!, time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissTimePicker) }
         )
     }
 
@@ -231,9 +207,13 @@ fun TaskEditScreen(
                 actions = {
                     IconButton(
                         onClick = { viewModel.onEvent(TaskEditEvent.Save) },
-                        enabled = state.title.isNotBlank()
+                        enabled = state.title.isNotBlank() && !state.isSaving
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = "Save task")
+                        if (state.isSaving) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Save, contentDescription = "Save task")
+                        }
                     }
                 },
                 colors = transparentTopAppBarColors()
@@ -329,25 +309,26 @@ fun TaskEditScreen(
                                 label = "Pending",
                                 value = "pending",
                                 selectedValue = state.status,
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("pending")) }
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("pending")) }
                             )
                             StatusChip(
                                 label = "In Progress",
                                 value = "in-progress",
                                 selectedValue = state.status,
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("in-progress")) }
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("in-progress")) }
                             )
                             StatusChip(
                                 label = "Completed",
                                 value = "completed",
                                 selectedValue = state.status,
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("completed")) }
+                                onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("completed")) }
                             )
                         }
                     }
                 }
 
-                // Section 2: Dates & Recurrence
+                // Section 2: Dates & Recurrence (recurrence hidden for occurrences)
+                val showRecurrence = state.isTemplate || (taskId == null && state.dateMode == "range")
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -389,8 +370,8 @@ fun TaskEditScreen(
                             DateField(
                                 label = "Due Date",
                                 date = state.dueDate,
-                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDueDatePicker) },
-                                onClear = { viewModel.onEvent(TaskEditEvent.SetDueDate("")) }
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.Due)) },
+                                onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.Due, "")) }
                             )
                         }
 
@@ -398,17 +379,18 @@ fun TaskEditScreen(
                             DateField(
                                 label = "Start Date",
                                 date = state.startDate,
-                                onClick = { viewModel.onEvent(TaskEditEvent.ShowStartDatePicker) },
-                                onClear = { viewModel.onEvent(TaskEditEvent.SetStartDate("")) }
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.Start)) },
+                                onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.Start, "")) }
                             )
                             DateField(
                                 label = "End Date",
                                 date = state.endDate,
-                                onClick = { viewModel.onEvent(TaskEditEvent.ShowEndDatePicker) },
-                                onClear = { viewModel.onEvent(TaskEditEvent.SetEndDate("")) }
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.End)) },
+                                onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.End, "")) }
                             )
 
-                            // Recurrence (only for range mode)
+                            // Recurrence (only for templates and new tasks with range mode)
+                            if (showRecurrence) {
                             Text("Recurrence", style = MaterialTheme.typography.titleSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 RecurrenceChip("None", null, state.recurrenceType) {
@@ -463,7 +445,7 @@ fun TaskEditScreen(
                                                     } else {
                                                         state.recurrenceDaysOfWeek + (index + 1)
                                                     }
-                                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceDaysOfWeek(newDays))
+                                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceDays(newDays))
                                                 },
                                             shape = MaterialTheme.shapes.small,
                                             color = if (selected) MaterialTheme.colorScheme.primary
@@ -480,6 +462,7 @@ fun TaskEditScreen(
                                     }
                                 }
                             }
+                            } // end showRecurrence
                         }
                     }
                 }
@@ -532,7 +515,7 @@ fun TaskEditScreen(
                         // Conditional time inputs
                         if (state.timeMode == "due_time") {
                             OutlinedButton(
-                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDueTimePicker) },
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowTimePicker(TimePickerType.Due)) },
                                 modifier = Modifier.width(160.dp)
                             ) {
                                 Icon(
@@ -548,7 +531,7 @@ fun TaskEditScreen(
                             }
                             if (state.dueTime.isNotBlank()) {
                                 IconButton(
-                                    onClick = { viewModel.onEvent(TaskEditEvent.SetDueTime("")) },
+                                    onClick = { viewModel.onEvent(TaskEditEvent.SetTime(TimePickerType.Due, "")) },
                                     modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(Icons.Default.Close, contentDescription = "Clear time", modifier = Modifier.size(18.dp))
@@ -563,7 +546,7 @@ fun TaskEditScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 OutlinedButton(
-                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartTimePicker) },
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowTimePicker(TimePickerType.Start)) },
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
@@ -579,14 +562,14 @@ fun TaskEditScreen(
                                 }
                                 if (state.startTime.isNotBlank()) {
                                     IconButton(
-                                        onClick = { viewModel.onEvent(TaskEditEvent.SetStartTime("")) },
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetTime(TimePickerType.Start, "")) },
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(Icons.Default.Close, contentDescription = "Clear start time", modifier = Modifier.size(18.dp))
                                     }
                                 }
                                 OutlinedButton(
-                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowEndTimePicker) },
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowTimePicker(TimePickerType.End)) },
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
@@ -602,7 +585,7 @@ fun TaskEditScreen(
                                 }
                                 if (state.endTime.isNotBlank()) {
                                     IconButton(
-                                        onClick = { viewModel.onEvent(TaskEditEvent.SetEndTime("")) },
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetTime(TimePickerType.End, "")) },
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(Icons.Default.Close, contentDescription = "Clear end time", modifier = Modifier.size(18.dp))
@@ -618,7 +601,7 @@ fun TaskEditScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 OutlinedButton(
-                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartTimePicker) },
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowTimePicker(TimePickerType.Start)) },
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
@@ -634,7 +617,7 @@ fun TaskEditScreen(
                                 }
                                 if (state.startTime.isNotBlank()) {
                                     IconButton(
-                                        onClick = { viewModel.onEvent(TaskEditEvent.SetStartTime("")) },
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetTime(TimePickerType.Start, "")) },
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(Icons.Default.Close, contentDescription = "Clear start time", modifier = Modifier.size(18.dp))
@@ -642,7 +625,7 @@ fun TaskEditScreen(
                                 }
                                 OutlinedTextField(
                                     value = state.durationMinutes,
-                                    onValueChange = { viewModel.onEvent(TaskEditEvent.SetDurationMinutes(it)) },
+                                    onValueChange = { viewModel.onEvent(TaskEditEvent.SetDuration(it)) },
                                     label = { Text("Duration (min)") },
                                     placeholder = { Text("30") },
                                     modifier = Modifier.width(140.dp),
