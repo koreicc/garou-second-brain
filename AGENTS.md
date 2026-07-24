@@ -120,3 +120,32 @@ testing, and interface design. Each includes WRONG/RIGHT code examples.
 
 For Jetpack Compose anti-patterns, load the Compose skill reference before
 generating any UI code.
+
+---
+
+## Task System Invariants (mandatory)
+1. Three entity types: standalone task, template (isTemplate=true), virtual occurrence
+   (<parentId>_<YYYY-MM-DD>). Templates never appear in task views; occurrences are
+   never written to tasks/.
+2. Completing/skipping an occurrence writes an override JSON only — the template is
+   never mutated by occurrence actions.
+3. effectiveStatus is computed server-side. Manual completed/expired always wins.
+   Past-due and not completed -> expired. NEVER auto-complete an unfinished task.
+4. dateMode="" tasks are fully manual and never overdue.
+5. Default sort: timeBucket ASC -> priorityWeight DESC -> dueDate ASC -> updatedAt DESC,
+   via server-issued sortKey. Priority never promotes across time buckets.
+6. Recurrence: weekly interval anchored to the start week; monthly day-of-month clamps
+   to the last valid day; yearly Feb 29 -> Feb 28 in non-leap years.
+7. Full semantics: docs/MASTER_SPEC.md (Part A). Deviations require explicit user approval.
+
+## UI Implementation Policy (mandatory)
+1. Reuse before custom. Precedence: Material 3 / M3 Expressive built-ins -> approved
+   libraries (docs/MASTER_SPEC.md C3) -> official samples (Now in Android, Jetlagged,
+   Reply, Jetnews) -> custom, documented in the commit message.
+2. Research first with current (2026) data; prefer sources updated within 12 months
+   (developer.android.com, m3.material.io, active GitHub repos).
+3. Every screen follows docs/MASTER_SPEC.md Part B: progressive disclosure, segmented
+   controls for mode selection, inline subtask quick-add, sheets for secondary
+   settings, sticky save, max one scroll to any core action. No control-panel forms.
+4. Feedback on every interaction: M3 Expressive springs, haptics, edge-to-edge with
+   correct insets, predictive back.
