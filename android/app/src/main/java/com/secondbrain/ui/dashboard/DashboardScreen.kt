@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Refresh
@@ -212,6 +213,16 @@ fun DashboardScreen(
                 }
             }
 
+            // ---- Overdue tasks ----
+            if (state.overdueTasks.isNotEmpty()) {
+                item(key = "overdue-tasks") {
+                    OverdueTasksSection(
+                        tasks = state.overdueTasks,
+                        onTaskClick = onNavigateToTaskDetail
+                    )
+                }
+            }
+
             // ---- Selected date's tasks (occurrences) ----
             item(key = "date-tasks") {
                 DateTasksSection(
@@ -269,6 +280,54 @@ fun DashboardScreen(
             // ---- Bottom spacer ----
             item(key = "bottom-spacer") {
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Overdue tasks section
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun OverdueTasksSection(
+    tasks: List<Task>,
+    onTaskClick: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Overdue (${tasks.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            tasks.forEach { task ->
+                DateTaskItem(
+                    task = task,
+                    onClick = { onTaskClick(task.id) }
+                )
+                if (task != tasks.last()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
             }
         }
     }

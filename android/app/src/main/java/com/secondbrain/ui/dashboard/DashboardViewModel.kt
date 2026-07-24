@@ -40,6 +40,8 @@ data class DashboardUiState(
     // Routine
     val routine: RoutineInfo? = null,
     val routineTimeOfDay: String = "",
+    // Overdue tasks (past deadline, not manually completed)
+    val overdueTasks: List<Task> = emptyList(),
     // Tasks for the selected date (occurrences)
     val selectedDateTasks: List<Task> = emptyList(),
     // Quick tasks
@@ -168,6 +170,13 @@ class DashboardViewModel(
                     }
             }
 
+            // Overdue tasks: past deadline, not manually completed
+            val overdueTasks = allTasks.filter { task ->
+                task.dateMode.isNotEmpty() &&
+                    task.status != "completed" &&
+                    task.displayStatus == "completed"
+            }
+
             // Load tasks for the selected date
             loadTasksForDate(selectedDate)
 
@@ -179,6 +188,7 @@ class DashboardViewModel(
                     dateString = dateStr,
                     routine = routineInfo,
                     routineTimeOfDay = routineTime?.removeSuffix("-routine") ?: "",
+                    overdueTasks = overdueTasks,
                     quickTasks = quickTasks,
                     isLoading = if (!isSilent) false else it.isLoading
                 )
