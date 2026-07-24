@@ -90,15 +90,19 @@ func main() {
 	})
 
 	// Graceful shutdown: when the process receives a termination signal, stop
-	// accepting new requests. Cancelling ctx also stops pending quick-task
-	// auto-delete timers.
+	// accepting new requests. Force-close after 3s if keep-alive connections
+	// are still hanging (common with Ktor HTTP client on Android).
 	go func() {
 		<-ctx.Done()
 		log.Println("Shutting down server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		if err := e.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Server shutdown error: %v", err)
+			log.Printf("Graceful shutdown error: %v", err)
+		}
+		// Force-close any remaining connections (idle keep-alive, etc.)
+		if err := e.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Force close error: %v", err)
 		}
 	}()
 
