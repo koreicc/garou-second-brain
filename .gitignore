@@ -3,6 +3,8 @@ backend/bin/
 backend/tmp/
 backend/second-brain
 backend/second-brain.exe
+backend/server
+backend/server.log
 
 # Android
 android/build/

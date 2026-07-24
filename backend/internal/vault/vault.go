@@ -936,9 +936,9 @@ func copySlice(s []string) []string {
 
 // OccurrenceOverride stores per-occurrence field overrides.
 type OccurrenceOverride struct {
-	Status  string           `json:"status,omitempty"`
-	Title   string           `json:"title,omitempty"`
-	Body    string           `json:"body,omitempty"`
+	Status   string          `json:"status,omitempty"`
+	Title    string          `json:"title,omitempty"`
+	Body     string          `json:"body,omitempty"`
 	Subtasks []model.Subtask `json:"subtasks,omitempty"`
 }
 

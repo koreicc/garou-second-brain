@@ -220,10 +220,10 @@ type UpdateTaskRequest struct {
 // UpdateOccurrenceRequest is for updating a single dynamic occurrence.
 // Only mutable fields are allowed: status, title, body, subtasks.
 type UpdateOccurrenceRequest struct {
-	Status   string           `json:"status"`
-	Title    string           `json:"title"`
-	Body     string           `json:"body"`
-	Subtasks []model.Subtask  `json:"subtasks"`
+	Status   string          `json:"status"`
+	Title    string          `json:"title"`
+	Body     string          `json:"body"`
+	Subtasks []model.Subtask `json:"subtasks"`
 }
 
 func (h *TaskHandler) Update(c echo.Context) error {
