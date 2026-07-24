@@ -58,23 +58,21 @@ else
     DOWNLOAD_URL="https://github.com/$REPO/releases/download/nightly/second-brain-server-arm64"
     log "Downloading $BINARY_NAME from GitHub Releases..."
 
-    set +e
-    HTTP_CODE=$(curl -fSL --connect-timeout 10 --max-time 60 \
-        -w "%{http_code}" -o "$TARGET_DIR/$BINARY_NAME" "$DOWNLOAD_URL" 2>&1)
-    CURL_EXIT=$?
-    set -e
+    curl -fSL --connect-timeout 10 --max-time 120 \
+        -o "$TARGET_DIR/$BINARY_NAME" "$DOWNLOAD_URL"
 
-    if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" != "200" ]; then
-        warn "Download failed (HTTP $HTTP_CODE)."
+    if [ ! -s "$TARGET_DIR/$BINARY_NAME" ]; then
+        rm -f "$TARGET_DIR/$BINARY_NAME"
+        warn "Download failed. The binary may not exist yet."
         warn ""
         warn "Options:"
-        warn "  1. Wait for GitHub Actions to finish, then retry."
-        warn "     Check: https://github.com/$REPO/actions"
+        warn "  1. Check if the nightly build exists:"
+        warn "     https://github.com/$REPO/actions"
         warn ""
-        warn "  2. Build from source (works for any branch):"
+        warn "  2. Build from source:"
         warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 sh"
         warn ""
-        warn "  3. Build a specific branch from source:"
+        warn "  3. Build a specific branch:"
         warn "     curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | SECOND_BRAIN_BUILD_FROM_SOURCE=1 SECOND_BRAIN_BRANCH=feat/my-branch sh"
         fail "Aborting."
     fi
