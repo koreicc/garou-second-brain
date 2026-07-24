@@ -192,7 +192,7 @@ fun DashboardScreen(
                         onClick = { onNavigateToCalendar() }
                     ) {
                         Icon(
-                            Icons.Default.DateRange,
+                            Icons.Filled.CalendarToday,
                             contentDescription = "Calendar view"
                         )
                     }
