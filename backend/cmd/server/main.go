@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/koreicc/garou-second-brain/backend/internal/config"
 	"github.com/koreicc/garou-second-brain/backend/internal/handler"
@@ -89,35 +88,18 @@ func main() {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
-	// Graceful shutdown: when the process receives a termination signal, stop
-	// accepting new requests. Force-close after 3s if keep-alive connections
-	// are still hanging (common with Ktor HTTP client on Android).
-	go func() {
-		<-ctx.Done()
-		log.Println("Shutting down server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		if err := e.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Graceful shutdown error: %v", err)
-		}
-		// Force-close any remaining connections (idle keep-alive, etc.)
-		if err := e.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("Force close error: %v", err)
-		}
-	}()
-
 	addr := ":" + cfg.Port
 	log.Printf("Server starting on %s", addr)
 
-	srv := &http.Server{
-		Addr:              addr,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-	if err := e.StartServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("Server error: %v", err)
-	}
-	stop()
+	// Run server in a goroutine so we can listen for signals on main.
+	go func() {
+		if err := e.Start(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	// Block until signal (CTRL+C / SIGTERM), then close the listener.
+	<-ctx.Done()
+	log.Println("Shutting down...")
+	e.Close()
 }
