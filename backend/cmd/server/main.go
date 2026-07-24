@@ -20,6 +20,10 @@ import (
 func main() {
 	cfg := config.Load()
 
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid configuration: %v", err)
+	}
+
 	v := vault.New(cfg.VaultPath)
 	if err := v.Init(); err != nil {
 		log.Fatalf("Failed to initialize vault: %v", err)
@@ -53,12 +57,14 @@ func main() {
 
 	taskHandler := handler.NewTaskHandler(v)
 	api.GET("/tasks", taskHandler.List)
+	api.GET("/tasks/templates", taskHandler.ListTemplates)
+	api.GET("/tasks/by-date", taskHandler.ListByDate)
 	api.GET("/tasks/:id", taskHandler.Get)
 	api.POST("/tasks", taskHandler.Create)
 	api.PUT("/tasks/:id", taskHandler.Update)
 	api.DELETE("/tasks/:id", taskHandler.Delete)
 
-	qtHandler := handler.NewQuickTaskHandlerWithContext(v, ctx)
+	qtHandler := handler.NewQuickTaskHandler(v)
 	api.GET("/quick-tasks", qtHandler.List)
 	api.POST("/quick-tasks", qtHandler.Create)
 	api.PUT("/quick-tasks/:id/complete", qtHandler.MarkComplete)

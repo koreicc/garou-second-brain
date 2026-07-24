@@ -11,11 +11,6 @@ data class SearchResultDto(
 )
 
 @Serializable
-data class SearchResponseDto(
-    val results: List<SearchResultDto> = emptyList()
-)
-
-@Serializable
 data class WikilinkResponse(
     val type: String = "",
     val id: String = "",

@@ -29,16 +29,21 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -61,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +79,7 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.IconPickerDialog
 import com.secondbrain.ui.util.TagInput
 import com.secondbrain.ui.util.resolveIcon
+import com.secondbrain.domain.model.Task
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -135,6 +142,14 @@ fun TaskEditScreen(
         )
     }
 
+    // Due date picker dialog
+    if (state.showDueDatePicker) {
+        DatePickerDialogContent(
+            onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetDueDate(date)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissDueDatePicker) }
+        )
+    }
+
     // Start date picker dialog
     if (state.showStartDatePicker) {
         DatePickerDialogContent(
@@ -160,6 +175,39 @@ fun TaskEditScreen(
         DatePickerDialogContent(
             onDateSelected = { date -> viewModel.onEvent(TaskEditEvent.SetEndDate(date)) },
             onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndDatePicker) }
+        )
+    }
+
+    // Edit mode dialog: show when editing an occurrence
+    if (state.showEditModeDialog) {
+        OccurrenceEditModeDialog(
+            taskTitle = state.title,
+            onEditThisOnly = { viewModel.onEvent(TaskEditEvent.SetOccurrenceEdit(true)) },
+            onEditTemplate = { viewModel.onEvent(TaskEditEvent.SetOccurrenceEdit(false)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEditModeDialog) }
+        )
+    }
+
+    // Time picker dialogs
+    if (state.showDueTimePicker) {
+        TimePickerDialogContent(
+            initialTime = state.dueTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetDueTime(time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissDueTimePicker) }
+        )
+    }
+    if (state.showStartTimePicker) {
+        TimePickerDialogContent(
+            initialTime = state.startTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetStartTime(time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissStartTimePicker) }
+        )
+    }
+    if (state.showEndTimePicker) {
+        TimePickerDialogContent(
+            initialTime = state.endTime,
+            onTimeSelected = { time -> viewModel.onEvent(TaskEditEvent.SetEndTime(time)) },
+            onDismiss = { viewModel.onEvent(TaskEditEvent.DismissEndTimePicker) }
         )
     }
 
@@ -273,6 +321,29 @@ fun TaskEditScreen(
                             singleLine = true,
                             shape = MaterialTheme.shapes.medium
                         )
+
+                        // -- Status --
+                        Text("Status", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatusChip(
+                                label = "Pending",
+                                value = "pending",
+                                selectedValue = state.status,
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("pending")) }
+                            )
+                            StatusChip(
+                                label = "In Progress",
+                                value = "in-progress",
+                                selectedValue = state.status,
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("in-progress")) }
+                            )
+                            StatusChip(
+                                label = "Completed",
+                                value = "completed",
+                                selectedValue = state.status,
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetStatus("completed")) }
+                            )
+                        }
                     }
                 }
 
@@ -292,89 +363,293 @@ fun TaskEditScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        DateField(
-                            label = "Start Date",
-                            date = state.startDate,
-                            onClick = { viewModel.onEvent(TaskEditEvent.ShowStartDatePicker) },
-                            onClear = { viewModel.onEvent(TaskEditEvent.SetStartDate("")) }
-                        )
 
-                        DateField(
-                            label = "End Date",
-                            date = state.endDate,
-                            onClick = { viewModel.onEvent(TaskEditEvent.ShowEndDatePicker) },
-                            onClear = { viewModel.onEvent(TaskEditEvent.SetEndDate("")) }
-                        )
-
-                        Text("Recurrence", style = MaterialTheme.typography.titleSmall)
+                        // -- Date Mode --
+                        Text("Date", style = MaterialTheme.typography.titleSmall)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            RecurrenceChip("None", null, state.recurrenceType) {
-                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType(null))
-                            }
-                            RecurrenceChip("Daily", "daily", state.recurrenceType) {
-                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType("daily"))
-                            }
-                            RecurrenceChip("Weekly", "weekly", state.recurrenceType) {
-                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType("weekly"))
-                            }
-                            RecurrenceChip("Monthly", "monthly", state.recurrenceType) {
-                                viewModel.onEvent(TaskEditEvent.SetRecurrenceType("monthly"))
-                            }
-                        }
-                        if (state.recurrenceType != null && state.recurrenceType != "daily") {
-                            OutlinedTextField(
-                                value = state.recurrenceInterval.toString(),
-                                onValueChange = { value ->
-                                    val intVal = value.toIntOrNull()
-                                    if (intVal != null && intVal > 0) {
-                                        viewModel.onEvent(TaskEditEvent.SetRecurrenceInterval(intVal))
-                                    }
-                                },
-                                label = {
-                                    when (state.recurrenceType) {
-                                        "weekly" -> Text("Every N weeks")
-                                        "monthly" -> Text("Every N months")
-                                        else -> Text("Every N periods")
-                                    }
-                                },
-                                modifier = Modifier.width(160.dp),
-                                singleLine = true,
-                                shape = MaterialTheme.shapes.medium,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                            FilterChip(
+                                selected = state.dateMode == "",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode("")) },
+                                label = { Text("None") }
+                            )
+                            FilterChip(
+                                selected = state.dateMode == "due_date",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode("due_date")) },
+                                label = { Text("Due Date") }
+                            )
+                            FilterChip(
+                                selected = state.dateMode == "range",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode("range")) },
+                                label = { Text("Date Range") }
                             )
                         }
-                        if (state.recurrenceType == "weekly") {
-                            val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                dayNames.forEachIndexed { index, name ->
-                                    val selected = state.recurrenceDaysOfWeek.contains(index + 1)
-                                    Surface(
-                                        modifier = Modifier
-                                            .clickable {
-                                                val newDays = if (selected) {
-                                                    state.recurrenceDaysOfWeek - (index + 1)
-                                                } else {
-                                                    state.recurrenceDaysOfWeek + (index + 1)
-                                                }
-                                                viewModel.onEvent(TaskEditEvent.SetRecurrenceDaysOfWeek(newDays))
-                                            },
-                                        shape = MaterialTheme.shapes.small,
-                                        color = if (selected) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.surfaceVariant
-                                    ) {
-                                        Text(
-                                            text = name,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                            color = if (selected) MaterialTheme.colorScheme.onPrimary
-                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
+
+                        // Conditional date inputs
+                        if (state.dateMode == "due_date") {
+                            DateField(
+                                label = "Due Date",
+                                date = state.dueDate,
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDueDatePicker) },
+                                onClear = { viewModel.onEvent(TaskEditEvent.SetDueDate("")) }
+                            )
+                        }
+
+                        if (state.dateMode == "range") {
+                            DateField(
+                                label = "Start Date",
+                                date = state.startDate,
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowStartDatePicker) },
+                                onClear = { viewModel.onEvent(TaskEditEvent.SetStartDate("")) }
+                            )
+                            DateField(
+                                label = "End Date",
+                                date = state.endDate,
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowEndDatePicker) },
+                                onClear = { viewModel.onEvent(TaskEditEvent.SetEndDate("")) }
+                            )
+
+                            // Recurrence (only for range mode)
+                            Text("Recurrence", style = MaterialTheme.typography.titleSmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                RecurrenceChip("None", null, state.recurrenceType) {
+                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceType(null))
+                                }
+                                RecurrenceChip("Daily", "daily", state.recurrenceType) {
+                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceType("daily"))
+                                }
+                                RecurrenceChip("Weekly", "weekly", state.recurrenceType) {
+                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceType("weekly"))
+                                }
+                                RecurrenceChip("Monthly", "monthly", state.recurrenceType) {
+                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceType("monthly"))
+                                }
+                            }
+                            if (state.recurrenceType != null && state.recurrenceType != "daily") {
+                                OutlinedTextField(
+                                    value = state.recurrenceInterval.toString(),
+                                    onValueChange = { value ->
+                                        val intVal = value.toIntOrNull()
+                                        if (intVal != null && intVal > 0) {
+                                            viewModel.onEvent(TaskEditEvent.SetRecurrenceInterval(intVal))
+                                        }
+                                    },
+                                    label = {
+                                        when (state.recurrenceType) {
+                                            "weekly" -> Text("Every N weeks")
+                                            "monthly" -> Text("Every N months")
+                                            else -> Text("Every N periods")
+                                        }
+                                    },
+                                    modifier = Modifier.width(160.dp),
+                                    singleLine = true,
+                                    shape = MaterialTheme.shapes.medium,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                                )
+                            }
+                            if (state.recurrenceType == "weekly") {
+                                val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    dayNames.forEachIndexed { index, name ->
+                                        val selected = state.recurrenceDaysOfWeek.contains(index + 1)
+                                        Surface(
+                                            modifier = Modifier
+                                                .clickable {
+                                                    val newDays = if (selected) {
+                                                        state.recurrenceDaysOfWeek - (index + 1)
+                                                    } else {
+                                                        state.recurrenceDaysOfWeek + (index + 1)
+                                                    }
+                                                    viewModel.onEvent(TaskEditEvent.SetRecurrenceDaysOfWeek(newDays))
+                                                },
+                                            shape = MaterialTheme.shapes.small,
+                                            color = if (selected) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = name,
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Section 2b: Time
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Time",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        // -- Time Mode --
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            FilterChip(
+                                selected = state.timeMode == "",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("")) },
+                                label = { Text("None") }
+                            )
+                            FilterChip(
+                                selected = state.timeMode == "due_time",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("due_time")) },
+                                label = { Text("Due Time") }
+                            )
+                            FilterChip(
+                                selected = state.timeMode == "start_end",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("start_end")) },
+                                label = { Text("Start/End") }
+                            )
+                            FilterChip(
+                                selected = state.timeMode == "start_duration",
+                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("start_duration")) },
+                                label = { Text("Start + Duration") }
+                            )
+                        }
+
+                        // Conditional time inputs
+                        if (state.timeMode == "due_time") {
+                            OutlinedButton(
+                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDueTimePicker) },
+                                modifier = Modifier.width(160.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (state.dueTime.isNotBlank()) state.dueTime else "Select time",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            if (state.dueTime.isNotBlank()) {
+                                IconButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.SetDueTime("")) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear time", modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+
+                        if (state.timeMode == "start_end") {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartTimePicker) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.startTime.isNotBlank()) state.startTime else "Start",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (state.startTime.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetStartTime("")) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear start time", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowEndTimePicker) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.endTime.isNotBlank()) state.endTime else "End",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (state.endTime.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetEndTime("")) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear end time", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        if (state.timeMode == "start_duration") {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowStartTimePicker) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.startTime.isNotBlank()) state.startTime else "Start",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (state.startTime.isNotBlank()) {
+                                    IconButton(
+                                        onClick = { viewModel.onEvent(TaskEditEvent.SetStartTime("")) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear start time", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                                OutlinedTextField(
+                                    value = state.durationMinutes,
+                                    onValueChange = { viewModel.onEvent(TaskEditEvent.SetDurationMinutes(it)) },
+                                    label = { Text("Duration (min)") },
+                                    placeholder = { Text("30") },
+                                    modifier = Modifier.width(140.dp),
+                                    singleLine = true,
+                                    shape = MaterialTheme.shapes.medium,
+                                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                                )
                             }
                         }
                     }
@@ -658,6 +933,36 @@ private fun RecurrenceChip(
     )
 }
 
+@Composable
+private fun StatusChip(
+    label: String,
+    value: String,
+    selectedValue: String,
+    onClick: () -> Unit
+) {
+    val chipColors = when (value) {
+        "pending" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.tertiary
+        )
+        "in-progress" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.primary
+        )
+        "completed" -> FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+            selectedLabelColor = MaterialTheme.colorScheme.secondary
+        )
+        else -> FilterChipDefaults.filterChipColors()
+    }
+    FilterChip(
+        selected = selectedValue == value,
+        onClick = onClick,
+        label = { Text(label, style = MaterialTheme.typography.bodySmall) },
+        colors = chipColors
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerDialogContent(
@@ -689,4 +994,90 @@ private fun DatePickerDialogContent(
     ) {
         DatePicker(state = datePickerState)
     }
+}
+
+@Composable
+private fun OccurrenceEditModeDialog(
+    taskTitle: String,
+    onEditThisOnly: () -> Unit,
+    onEditTemplate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit occurrence") },
+        text = {
+            Column {
+                Text(
+                    text = "\"$taskTitle\" is a recurring task occurrence.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "How would you like to edit?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEditThisOnly) {
+                Text("Edit this occurrence only")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onEditTemplate) {
+                Text("Edit template (all occurrences)")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerDialogContent(
+    initialTime: String,
+    onTimeSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // Parse initial time or default to current time
+    val initialHour = initialTime.split(":").getOrNull(0)?.toIntOrNull() ?: java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val initialMinute = initialTime.split(":").getOrNull(1)?.toIntOrNull() ?: 0
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialHour.coerceIn(0, 23),
+        initialMinute = initialMinute.coerceIn(0, 59),
+        is24Hour = true
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Time") },
+        text = {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TimePicker(
+                    state = timePickerState
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val hour = timePickerState.hour
+                    val minute = timePickerState.minute
+                    val formatted = "%02d:%02d".format(hour, minute)
+                    onTimeSelected(formatted)
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

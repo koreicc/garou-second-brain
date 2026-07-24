@@ -65,7 +65,10 @@ class NoteListViewModel(
         viewModelScope.launch {
             noteRepository.getAll()
                 .onSuccess { notes ->
-                    _state.update { it.copy(notes = notes) }
+                    _state.update { it.copy(notes = notes, error = null) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message) }
                 }
         }
     }

@@ -8,7 +8,7 @@ import io.ktor.http.*
 
 class KtorApiService(
     private val client: HttpClient,
-    private val baseUrl: String = "http://localhost:8080/api/v1"
+    private val baseUrl: String
 ) : ApiService {
 
     // ===== Notes =====
@@ -47,6 +47,12 @@ class KtorApiService(
 
     override suspend fun getTask(id: String): ApiResponse<TaskDto> {
         return client.get("$baseUrl/tasks/$id").body()
+    }
+
+    override suspend fun getTasksByDate(date: String): ApiResponse<List<TaskDto>> {
+        return client.get("$baseUrl/tasks/by-date") {
+            parameter("date", date)
+        }.body()
     }
 
     override suspend fun createTask(request: CreateTaskRequest): ApiResponse<TaskDto> {

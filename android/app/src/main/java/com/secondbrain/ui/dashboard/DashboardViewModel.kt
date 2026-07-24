@@ -35,11 +35,13 @@ data class DashboardUiState(
     // Greeting
     val greeting: String = "",
     val dateString: String = "",
+    // Selected date for viewing
+    val selectedDate: LocalDate = LocalDate.now(),
     // Routine
     val routine: RoutineInfo? = null,
     val routineTimeOfDay: String = "",
-    // Today's tasks
-    val todayTasks: List<Task> = emptyList(),
+    // Tasks for the selected date (occurrences)
+    val selectedDateTasks: List<Task> = emptyList(),
     // Quick tasks
     val quickTasks: List<QuickTask> = emptyList(),
     val completingQuickTasks: Map<String, Int> = emptyMap(),
@@ -54,6 +56,7 @@ data class DashboardUiState(
 
 sealed interface DashboardEvent {
     data object LoadData : DashboardEvent
+    data class SelectDate(val date: LocalDate) : DashboardEvent
     // Routine
     data class ToggleRoutineSubtask(val subtaskId: String) : DashboardEvent
     data object CompleteRoutine : DashboardEvent
@@ -86,6 +89,7 @@ class DashboardViewModel(
     fun onEvent(event: DashboardEvent) {
         when (event) {
             is DashboardEvent.LoadData -> loadData()
+            is DashboardEvent.SelectDate -> selectDate(event.date)
             is DashboardEvent.ToggleRoutineSubtask -> toggleRoutineSubtask(event.subtaskId)
             is DashboardEvent.CompleteRoutine -> completeRoutine()
             is DashboardEvent.CreateQuickTask -> createQuickTask(event.title)
@@ -111,6 +115,14 @@ class DashboardViewModel(
         }
     }
 
+    private fun selectDate(date: LocalDate) {
+        _state.update { it.copy(selectedDate = date, isLoading = true) }
+        viewModelScope.launch {
+            loadTasksForDate(date)
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
     private suspend fun loadDataInternal(isSilent: Boolean) {
         val now = LocalDateTime.now()
         val hour = now.hour
@@ -128,18 +140,20 @@ class DashboardViewModel(
         }
 
         val hidden = _state.value.hiddenQuickTaskIds
+        val selectedDate = _state.value.selectedDate
 
         coroutineScope {
-            val tasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
+            val allTasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
             val quickTasksDeferred = async { quickTaskRepository.getAll().getOrDefault(emptyList()) }
 
-            val allTasks = tasksDeferred.await()
+            val allTasks = allTasksDeferred.await()
 
             val routineInfo = routineTime?.let { timeTag ->
                 allTasks
                     .filter { task ->
                         task.tags.any { tag -> tag == "routine" } &&
-                            task.tags.any { tag -> tag == timeTag }
+                            task.tags.any { tag -> tag == timeTag } &&
+                            task.status != "expired"
                     }
                     .maxByOrNull { task -> task.updatedAt }
                     ?.let { task ->
@@ -154,23 +168,8 @@ class DashboardViewModel(
                     }
             }
 
-            val today = LocalDate.now()
-            val todayTasks = allTasks
-                .filter { task ->
-                    task.status == "pending" || task.status == "in-progress"
-                }
-                .filter { task ->
-                    val start = task.startDate.take(10)
-                    val end = task.endDate.take(10)
-                    val todayStr = today.toString()
-                    start.isEmpty() && end.isEmpty() ||
-                        start.isNotEmpty() && end.isEmpty() && start <= todayStr ||
-                        start.isEmpty() && end.isNotEmpty() && end >= todayStr ||
-                        start.isNotEmpty() && end.isNotEmpty() && start <= todayStr && end >= todayStr
-                }
-                .filter { task -> !task.tags.contains("routine") }
-                .sortedWith(compareBy<Task> { it.endDate.take(10) }.thenBy { it.title })
-                .take(5)
+            // Load tasks for the selected date
+            loadTasksForDate(selectedDate)
 
             val quickTasks = quickTasksDeferred.await().filter { qt -> qt.id !in hidden }
 
@@ -180,11 +179,46 @@ class DashboardViewModel(
                     dateString = dateStr,
                     routine = routineInfo,
                     routineTimeOfDay = routineTime?.removeSuffix("-routine") ?: "",
-                    todayTasks = todayTasks,
                     quickTasks = quickTasks,
                     isLoading = if (!isSilent) false else it.isLoading
                 )
             }
+        }
+    }
+
+    private suspend fun loadTasksForDate(date: LocalDate) {
+        val todayStr = date.toString()
+        val allTasks = taskRepository.getAll().getOrDefault(emptyList())
+
+        // Get occurrences from API
+        val byDateResult = taskRepository.getByDate(todayStr)
+        val occurrences = byDateResult.getOrDefault(emptyList())
+
+        // Also find templates whose date range includes this date
+        val matchingTemplates = allTasks.filter { task ->
+            task.isTemplate &&
+                task.dateMode == "range" &&
+                task.startDate.take(10).isNotEmpty() &&
+                task.endDate.take(10).isNotEmpty() &&
+                task.startDate.take(10) <= todayStr &&
+                task.endDate.take(10) >= todayStr
+        }.map { task ->
+            // Create a display copy: show as occurrence if not already in occurrences list
+            val existingIds = occurrences.map { it.id }.toSet()
+            if (task.id !in existingIds) task else null
+        }.filterNotNull()
+
+        // Merge: occurrences first, then matching templates not already in occurrences
+        val existingIds = occurrences.map { it.id }.toSet()
+        val extraTemplates = matchingTemplates.filter { it.id !in existingIds }
+        val merged = occurrences + extraTemplates
+
+        _state.update { it.copy(selectedDateTasks = merged) }
+    }
+
+    fun silentReloadDateTasks() {
+        viewModelScope.launch {
+            loadTasksForDate(_state.value.selectedDate)
         }
     }
 
@@ -198,12 +232,8 @@ class DashboardViewModel(
         viewModelScope.launch {
             val subtaskDtos = updatedSubtasks.map { it.toDto() }
             taskRepository.update(task.id, UpdateTaskRequest(subtasks = subtaskDtos))
-                .onSuccess {
-                    silentReload()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
-                }
+                .onSuccess { silentReload() }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
     }
 
@@ -214,13 +244,12 @@ class DashboardViewModel(
 
         viewModelScope.launch {
             val subtaskDtos = updatedSubtasks.map { it.toDto() }
-            taskRepository.update(task.id, UpdateTaskRequest(subtasks = subtaskDtos))
-                .onSuccess {
-                    silentReload()
-                }
-                .onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
-                }
+            taskRepository.update(task.id, UpdateTaskRequest(
+                subtasks = subtaskDtos,
+                status = "completed"
+            ))
+                .onSuccess { silentReload() }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
     }
 
@@ -274,9 +303,7 @@ class DashboardViewModel(
 
     private fun deleteQuickTask(id: String) {
         viewModelScope.launch {
-            _state.update {
-                it.copy(quickTasks = it.quickTasks.filter { qt -> qt.id != id })
-            }
+            _state.update { it.copy(quickTasks = it.quickTasks.filter { qt -> qt.id != id }) }
             quickTaskRepository.delete(id)
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message) }
@@ -294,9 +321,7 @@ class DashboardViewModel(
                 .onSuccess {
                     _state.update { it.copy(quickNoteTitle = "", quickNoteContent = "") }
                 }
-                .onFailure { e ->
-                    _state.update { it.copy(error = e.message) }
-                }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
     }
 }

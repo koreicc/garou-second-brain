@@ -7,6 +7,7 @@ import com.secondbrain.domain.model.Note
 @Serializable
 data class NoteDto(
     val id: String,
+    val type: String = "note",
     val title: String,
     val status: String = "active",
     val tags: List<String> = emptyList(),
@@ -37,6 +38,7 @@ data class UpdateNoteRequest(
 
 fun NoteDto.toDomain(): Note = Note(
     id = id,
+    type = type,
     title = title,
     status = status,
     tags = tags,

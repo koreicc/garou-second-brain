@@ -15,6 +15,7 @@ android/captures/
 .idea/
 *.iml
 .vscode/
+*.swp
 
 # OS
 .DS_Store
@@ -22,12 +23,18 @@ Thumbs.db
 
 # Environment
 .env
+.env.*
 *.local
 
 # Temp
 *.tmp
-*.swp
 app-debug/
+
+# Secrets
+secrets/
+*.pem
+*.key
+credentials.json
 
 # Skills (local copy of pi agent skills)
 skills/

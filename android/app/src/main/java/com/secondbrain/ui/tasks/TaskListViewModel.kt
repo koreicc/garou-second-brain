@@ -56,13 +56,24 @@ class TaskListViewModel(
     }
 
     /**
+     * Filters out occurrences (tasks that belong to a parent template).
+     * Only standalone tasks and templates are shown in the list.
+     */
+    private fun filterStandalone(tasks: List<Task>): List<Task> {
+        return tasks.filter { it.parentId.isEmpty() }
+    }
+
+    /**
      * Silently reloads without showing the loading indicator.
      */
     fun silentReload() {
         viewModelScope.launch {
             taskRepository.getAll()
                 .onSuccess { tasks ->
-                    _state.update { it.copy(tasks = tasks) }
+                    _state.update { it.copy(tasks = filterStandalone(tasks), error = null) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message) }
                 }
         }
     }
@@ -71,7 +82,9 @@ class TaskListViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             taskRepository.getAll()
-                .onSuccess { tasks -> _state.update { it.copy(tasks = tasks, isLoading = false) } }
+                .onSuccess { tasks ->
+                    _state.update { it.copy(tasks = filterStandalone(tasks), isLoading = false) }
+                }
                 .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
         }
     }

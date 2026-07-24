@@ -62,7 +62,10 @@ class PersonListViewModel(
         viewModelScope.launch {
             personRepository.getAll()
                 .onSuccess { people ->
-                    _state.update { it.copy(people = people) }
+                    _state.update { it.copy(people = people, error = null) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(error = e.message) }
                 }
         }
     }

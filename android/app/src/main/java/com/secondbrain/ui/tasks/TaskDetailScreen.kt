@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -152,7 +153,7 @@ fun TaskDetailScreen(
                         StatusBadge(status = task.status)
                     }
 
-                    if (task.location.isNotEmpty() || task.startDate.isNotEmpty() || task.endDate.isNotEmpty() || task.tags.isNotEmpty()) {
+                    if (task.location.isNotEmpty() || task.dateMode.isNotEmpty() || task.timeMode.isNotEmpty() || task.tags.isNotEmpty()) {
                         Surface(
                             shape = MaterialTheme.shapes.medium,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -172,7 +173,9 @@ fun TaskDetailScreen(
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                 }
-                                if (task.startDate.isNotEmpty() || task.endDate.isNotEmpty()) {
+
+                                // Date display
+                                if (task.dateMode.isNotEmpty()) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
                                             Icons.Default.CalendarToday,
@@ -181,17 +184,49 @@ fun TaskDetailScreen(
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        val startStr = task.startDate.take(10)
-                                        val endStr = task.endDate.take(10)
-                                        val dateText = if (startStr == endStr || endStr.isEmpty()) startStr else "$startStr - $endStr"
+                                        val dateText = when (task.dateMode) {
+                                            "due_date" -> "Due: ${task.dueDate.take(10)}"
+                                            "range" -> {
+                                                val startStr = task.startDate.take(10)
+                                                val endStr = task.endDate.take(10)
+                                                if (startStr == endStr || endStr.isEmpty()) startStr else "$startStr - $endStr"
+                                            }
+                                            else -> ""
+                                        }
                                         Text(
                                             text = dateText,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
+
+                                // Time display
+                                if (task.timeMode.isNotEmpty()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        val timeText = when (task.timeMode) {
+                                            "due_time" -> "Due: ${task.dueTime}"
+                                            "start_end" -> "${task.startTime} - ${task.endTime}"
+                                            "start_duration" -> "${task.startTime} + ${task.durationMinutes}min"
+                                            else -> ""
+                                        }
+                                        Text(
+                                            text = timeText,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+
                                 if (task.tags.isNotEmpty()) {
                                     Row(verticalAlignment = Alignment.Top) {
                                         Icon(

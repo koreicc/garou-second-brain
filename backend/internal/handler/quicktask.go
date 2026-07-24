@@ -16,15 +16,15 @@ import (
 
 type QuickTaskHandler struct {
 	vault *vault.Vault
-	ctx   context.Context
 }
 
 func NewQuickTaskHandler(v *vault.Vault) *QuickTaskHandler {
-	return NewQuickTaskHandlerWithContext(v, context.Background())
+	return &QuickTaskHandler{vault: v}
 }
 
-func NewQuickTaskHandlerWithContext(v *vault.Vault, ctx context.Context) *QuickTaskHandler {
-	return &QuickTaskHandler{vault: v, ctx: ctx}
+// Deprecated: use NewQuickTaskHandler instead. Context is no longer stored on the struct.
+func NewQuickTaskHandlerWithContext(v *vault.Vault, _ context.Context) *QuickTaskHandler {
+	return &QuickTaskHandler{vault: v}
 }
 
 func (h *QuickTaskHandler) List(c echo.Context) error {
@@ -87,14 +87,17 @@ func (h *QuickTaskHandler) MarkComplete(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save quick task: %v", err)))
 	}
 
+	// Auto-delete after 5 seconds using a background context.
+	// Using c.Request().Context() would cancel when the HTTP response is sent
+	// (before the 5-second timer fires), preventing the auto-delete.
 	go func() {
+		timer := time.NewTimer(5 * time.Second)
+		defer timer.Stop()
 		select {
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
 			if err := h.vault.Delete(model.TypeQuickTask, id); err != nil && !errors.Is(err, vault.ErrNotFound) {
 				log.Printf("quick task auto-delete failed: id=%s err=%v", id, err)
 			}
-		case <-h.ctx.Done():
-			return
 		}
 	}()
 

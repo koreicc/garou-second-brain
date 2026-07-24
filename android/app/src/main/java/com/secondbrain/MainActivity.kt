@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import com.secondbrain.ui.navigation.AppNavigation
 import com.secondbrain.ui.settings.SettingsViewModel
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val themeState by settingsViewModel.themeState.collectAsState()
+            val themeState by settingsViewModel.themeState.collectAsStateWithLifecycle()
             SecondBrainTheme(themeState = themeState) {
                 AppNavigation(settingsViewModel = settingsViewModel)
             }
