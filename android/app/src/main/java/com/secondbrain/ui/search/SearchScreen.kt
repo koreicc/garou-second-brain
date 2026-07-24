@@ -1,6 +1,5 @@
 package com.secondbrain.ui.search
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,100 +14,57 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.NoteAlt
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.Task
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.SearchResult
-import com.secondbrain.ui.theme.transparentTopAppBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    onNavigateToNoteDetail: (String) -> Unit,
-    onNavigateToTaskDetail: (String) -> Unit,
-    onNavigateToPersonDetail: (String) -> Unit,
-    onNavigateBack: () -> Unit
+    viewModel: SearchViewModel,
+    onNavigateBack: () -> Unit,
+    onNoteClick: (String) -> Unit,
+    onTaskClick: (String) -> Unit,
+    onPersonClick: (String) -> Unit
 ) {
-    val viewModel: SearchViewModel = viewModel(
-        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return SearchViewModel(
-                    searchRepository = AppModule.searchRepository
-                ) as T
-            }
-        }
-    )
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    var selectedFilter by remember { mutableStateOf("all") }
-
-    // Show errors in snackbar
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
-        }
-    }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Search",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                colors = transparentTopAppBarColors(),
+                title = { Text("Search") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to previous screen")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { padding ->
@@ -116,92 +72,22 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
+            // Search input
             OutlinedTextField(
                 value = state.query,
                 onValueChange = { viewModel.onEvent(SearchEvent.UpdateQuery(it)) },
                 placeholder = { Text("Search notes, tasks, people...") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
-                },
-                trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onEvent(SearchEvent.UpdateQuery("")) }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear search query")
-                        }
-                    }
-                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(28.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.Transparent
-                )
+                shape = MaterialTheme.shapes.medium
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = selectedFilter == "all",
-                    onClick = { selectedFilter = "all" },
-                    label = { Text("All") }
-                )
-                FilterChip(
-                    selected = selectedFilter == "note",
-                    onClick = { selectedFilter = "note" },
-                    label = { Text("Notes") },
-                    leadingIcon = { Icon(Icons.Default.NoteAlt, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
-                FilterChip(
-                    selected = selectedFilter == "task",
-                    onClick = { selectedFilter = "task" },
-                    label = { Text("Tasks") },
-                    leadingIcon = { Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
-                FilterChip(
-                    selected = selectedFilter == "person",
-                    onClick = { selectedFilter = "person" },
-                    label = { Text("People") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (state.query.isNotBlank()) {
-                Button(
-                    onClick = { viewModel.onEvent(SearchEvent.Search) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text(if (state.isLoading) "Searching..." else "Search")
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val filteredResults = state.results.filter { 
-                selectedFilter == "all" || it.type == selectedFilter 
-            }
-
             when {
-                state.isLoading -> {
+                state.isSearching -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -210,85 +96,51 @@ fun SearchScreen(
                     }
                 }
                 state.hasSearched && state.results.isEmpty() -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No results found",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Try a different search term",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                state.hasSearched && filteredResults.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "No $selectedFilter results found",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.SearchOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "No results found",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
-                filteredResults.isNotEmpty() -> {
-                    SuggestionChip(
-                        onClick = { },
-                        label = { Text("${filteredResults.size} result(s)") }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                state.results.isNotEmpty() -> {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredResults, key = { "${it.type}:${it.id}" }) { result ->
+                        items(state.results, key = { it.id }) { result ->
                             SearchResultCard(
                                 result = result,
                                 onClick = {
                                     when (result.type) {
-                                        "note" -> onNavigateToNoteDetail(result.id)
-                                        "task" -> onNavigateToTaskDetail(result.id)
-                                        "person" -> onNavigateToPersonDetail(result.id)
+                                        "note" -> onNoteClick(result.id)
+                                        "task" -> onTaskClick(result.id)
+                                        "person" -> onPersonClick(result.id)
                                     }
                                 }
                             )
                         }
                     }
                 }
-                !state.hasSearched -> {
-                    Column(
+                else -> {
+                    Box(
                         modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Search your vault",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Find notes, tasks, and people",
+                            text = "Type at least 2 characters to search",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -300,12 +152,21 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SearchResultCard(result: SearchResult, onClick: () -> Unit) {
+private fun SearchResultCard(
+    result: SearchResult,
+    onClick: () -> Unit
+) {
+    val (icon, color) = when (result.type) {
+        "note" -> Icons.Default.Description to MaterialTheme.colorScheme.tertiary
+        "task" -> Icons.Default.TaskAlt to MaterialTheme.colorScheme.primary
+        "person" -> Icons.Default.Person to MaterialTheme.colorScheme.secondary
+        else -> Icons.Default.Description to MaterialTheme.colorScheme.outline
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable { onClick() },
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 1.dp,
@@ -314,41 +175,33 @@ private fun SearchResultCard(result: SearchResult, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val accentColor = when (result.type) {
-                "note" -> MaterialTheme.colorScheme.tertiary
-                "task" -> MaterialTheme.colorScheme.primary
-                "person" -> MaterialTheme.colorScheme.secondary
-                else -> MaterialTheme.colorScheme.primary
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = color.copy(alpha = 0.12f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
-
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(accentColor)
-            )
             Spacer(modifier = Modifier.width(12.dp))
-
-            val icon: ImageVector = when (result.type) {
-                "note" -> Icons.Default.NoteAlt
-                "task" -> Icons.Default.CheckCircle
-                "person" -> Icons.Default.Person
-                else -> Icons.Default.Search
-            }
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = result.title.ifEmpty { "Untitled" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text = result.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (result.snippet.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = result.snippet,
                         style = MaterialTheme.typography.bodySmall,
@@ -357,21 +210,12 @@ private fun SearchResultCard(result: SearchResult, onClick: () -> Unit) {
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                Text(
+                    text = result.type.replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color
+                )
             }
-            
-            Spacer(modifier = Modifier.width(12.dp))
-
-            SuggestionChip(
-                onClick = { },
-                label = { Text(result.type.replaceFirstChar { it.uppercase() }) },
-                icon = {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            )
         }
     }
 }

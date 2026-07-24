@@ -31,6 +31,8 @@ import com.secondbrain.ui.notes.NoteDetailScreen
 import com.secondbrain.ui.notes.NoteEditScreen
 import com.secondbrain.ui.people.PersonDetailScreen
 import com.secondbrain.ui.people.PersonEditScreen
+import com.secondbrain.ui.search.SearchScreen
+import com.secondbrain.ui.search.SearchViewModel
 import com.secondbrain.ui.settings.SettingsScreen
 import com.secondbrain.ui.settings.SettingsViewModel
 import com.secondbrain.ui.tasks.TaskDetailScreen
@@ -150,6 +152,9 @@ fun AppNavigation(
                         },
                         onNavigateToCalendar = {
                             navController.navigate(Screen.Calendar)
+                        },
+                        onNavigateToSearch = {
+                            navController.navigate(Screen.Search)
                         }
                     )
                 }
@@ -279,6 +284,27 @@ fun AppNavigation(
                         onNavigateBack = { navController.popBackStack() },
                         onTaskClick = { taskId ->
                             navController.navigate(Screen.TaskDetail(taskId))
+                        }
+                    )
+                }
+
+                // -- Search screen --
+
+                composable<Screen.Search> {
+                    val searchViewModel = SearchViewModel(
+                        searchRepository = AppModule.searchRepository
+                    )
+                    SearchScreen(
+                        viewModel = searchViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNoteClick = { noteId ->
+                            navController.navigate(Screen.NoteDetail(noteId))
+                        },
+                        onTaskClick = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
+                        },
+                        onPersonClick = { personId ->
+                            navController.navigate(Screen.PersonDetail(personId))
                         }
                     )
                 }

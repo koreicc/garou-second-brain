@@ -90,21 +90,7 @@ red "Overdue" section above the daily task list.
 - Frontend displays colored badge before status badge
 - Priority stored in YAML frontmatter: `priority: high`
 
----
-
 ## Remaining Features
-
-### Priority: Medium
-
-| Feature | Description | Where |
-|---|---|---|
-| **Reminders/Notifications** | Android NotificationManager + AlarmManager/WorkManager | New `reminder` service |
-| **Swipe Actions** | Swipe-to-complete, swipe-to-delete on task cards | `TaskListScreen.kt` |
-| **Search** | Full-text search across tasks | Frontend search bar |
-| **Filtering/Sorting** | By status, date, priority, folder | `TaskListScreen.kt` |
-| **Subtask Progress** | Show completion % on task card | `TaskCard` composable |
-| **Batch Operations** | Multi-select + bulk complete/delete | `TaskListViewModel.kt` |
-| **Natural Language Input** | "Buy milk tomorrow at 5pm" parsing | `TaskEditViewModel.kt` |
 
 ### Priority: Low
 
@@ -115,6 +101,7 @@ red "Overdue" section above the daily task list.
 | **Widget** | Android home-screen widget | New `widget` package |
 | **Drag-Drop Reschedule** | Drag tasks in calendar view | `CalendarScreen.kt` |
 | **ICS Import** | Import tasks from calendar files | New `import` handler |
+| **Natural Language Input** | "Buy milk tomorrow at 5pm" parsing | `TaskEditViewModel.kt` |
 
 ---
 

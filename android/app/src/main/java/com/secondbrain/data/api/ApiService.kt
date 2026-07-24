@@ -11,12 +11,20 @@ interface ApiService {
     suspend fun deleteNote(id: String): ApiResponse<Unit>
 
     // Tasks
-    suspend fun getAllTasks(): ApiResponse<List<TaskDto>>
+    suspend fun getAllTasks(
+        status: String? = null,
+        priority: String? = null,
+        search: String? = null,
+        sortBy: String? = null,
+        sortOrder: String? = null
+    ): ApiResponse<List<TaskDto>>
     suspend fun getTask(id: String): ApiResponse<TaskDto>
     suspend fun getTasksByDate(date: String): ApiResponse<List<TaskDto>>
+    suspend fun getUpcomingTasks(days: Int = 7): ApiResponse<List<TaskDto>>
     suspend fun createTask(request: CreateTaskRequest): ApiResponse<TaskDto>
     suspend fun updateTask(id: String, request: UpdateTaskRequest): ApiResponse<TaskDto>
     suspend fun deleteTask(id: String): ApiResponse<Unit>
+    suspend fun batchTasks(request: BatchTaskRequest): ApiResponse<BatchTaskResponse>
 
     // Quick Tasks
     suspend fun getAllQuickTasks(): ApiResponse<List<QuickTaskDto>>

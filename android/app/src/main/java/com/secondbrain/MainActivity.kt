@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import com.secondbrain.ui.navigation.AppNavigation
+import com.secondbrain.ui.reminder.createReminderNotificationChannel
 import com.secondbrain.ui.settings.SettingsViewModel
 import com.secondbrain.ui.theme.SecondBrainTheme
 
@@ -17,6 +18,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Create notification channel for task reminders
+        createReminderNotificationChannel(this)
+
         enableEdgeToEdge()
         setContent {
             val themeState by settingsViewModel.themeState.collectAsStateWithLifecycle()

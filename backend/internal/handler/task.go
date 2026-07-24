@@ -22,8 +22,6 @@ func NewTaskHandler(v *vault.Vault) *TaskHandler {
 }
 
 // enrichTasks sets the EffectiveStatus field on one or more tasks.
-// The current time is adjusted by the optional X-Timezone-Offset header (minutes)
-// so that status transitions happen at the user's local midnight.
 func enrichTasks(c echo.Context, tasks ...*model.Task) {
 	now := time.Now().UTC()
 	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
@@ -40,7 +38,26 @@ func enrichTasks(c echo.Context, tasks ...*model.Task) {
 	}
 }
 
-// List returns all tasks (templates + occurrences).
+// getNowForRequest returns the current time adjusted by the timezone offset header.
+func getNowForRequest(c echo.Context) time.Time {
+	now := time.Now().UTC()
+	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
+	if tzOffsetStr != "" {
+		offset, err := strconv.Atoi(tzOffsetStr)
+		if err == nil {
+			now = now.Add(time.Duration(offset) * time.Minute)
+		}
+	}
+	return now
+}
+
+// List returns all tasks with optional filtering and sorting.
+// Query params:
+//   status=        filter by status (pending, in-progress, completed, expired)
+//   priority=      filter by priority (low, medium, high, urgent)
+//   search=        filter by title/body text (case-insensitive substring match)
+//   sort_by=       field to sort by (title, created_at, updated_at, due_date, priority) default: created_at
+//   sort_order=    asc or desc (default: desc)
 func (h *TaskHandler) List(c echo.Context) error {
 	tasks, err := h.vault.ListTasks()
 	if err != nil {
@@ -49,9 +66,194 @@ func (h *TaskHandler) List(c echo.Context) error {
 	if tasks == nil {
 		tasks = []*model.Task{}
 	}
-	tasks = paginate(tasks, c)
-	enrichTasks(c, tasks...)
-	return c.JSON(http.StatusOK, model.DataResponse(tasks))
+
+	// Apply filters
+	statusFilter := c.QueryParam("status")
+	priorityFilter := c.QueryParam("priority")
+	searchQuery := c.QueryParam("search")
+
+	filtered := make([]*model.Task, 0, len(tasks))
+	for _, t := range tasks {
+		if statusFilter != "" && string(t.Status) != statusFilter {
+			continue
+		}
+		if priorityFilter != "" && t.Priority != priorityFilter {
+			continue
+		}
+		if searchQuery != "" {
+			q := strings.ToLower(searchQuery)
+			if !strings.Contains(strings.ToLower(t.Title), q) &&
+				!strings.Contains(strings.ToLower(t.Body), q) {
+				continue
+			}
+		}
+		filtered = append(filtered, t)
+	}
+
+	// Apply sorting
+	sortBy := c.QueryParam("sort_by")
+	sortOrder := c.QueryParam("sort_order")
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	switch sortBy {
+	case "title":
+		sortTasks(filtered, func(t *model.Task) string { return t.Title }, sortOrder == "asc")
+	case "priority":
+		sortTasks(filtered, func(t *model.Task) string { return t.Priority }, sortOrder == "asc")
+	case "due_date":
+		sortTasksByDueDate(filtered, sortOrder == "asc")
+	case "updated_at":
+		sortTasks(filtered, func(t *model.Task) string { return t.UpdatedAt.Format(time.RFC3339) }, sortOrder == "asc")
+	default:
+		// Default: sort by created_at descending
+		sortTasks(filtered, func(t *model.Task) string { return t.CreatedAt.Format(time.RFC3339) }, false)
+	}
+
+	filtered = paginate(filtered, c)
+	enrichTasks(c, filtered...)
+	return c.JSON(http.StatusOK, model.DataResponse(filtered))
+}
+
+func sortTasks(tasks []*model.Task, key func(*model.Task) string, ascending bool) {
+	for i := 0; i < len(tasks); i++ {
+		for j := i + 1; j < len(tasks); j++ {
+			less := key(tasks[i]) < key(tasks[j])
+			if ascending != less {
+				tasks[i], tasks[j] = tasks[j], tasks[i]
+			}
+		}
+	}
+}
+
+func sortTasksByDueDate(tasks []*model.Task, ascending bool) {
+	for i := 0; i < len(tasks); i++ {
+		for j := i + 1; j < len(tasks); j++ {
+			ti := tasks[i].DueDate
+			tj := tasks[j].DueDate
+			var less bool
+			if ti == nil && tj == nil {
+				less = false
+			} else if ti == nil {
+				less = !ascending
+			} else if tj == nil {
+				less = ascending
+			} else {
+				less = ti.Before(*tj)
+			}
+			if ascending != less {
+				tasks[i], tasks[j] = tasks[j], tasks[i]
+			}
+		}
+	}
+}
+
+// BatchRequest is used for batch operations on tasks.
+type BatchRequest struct {
+	IDs    []string `json:"ids"`
+	Action string   `json:"action"` // "delete" or "complete"
+}
+
+// Batch handles batch operations on tasks (delete, complete).
+func (h *TaskHandler) Batch(c echo.Context) error {
+	var req BatchRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("invalid request body"))
+	}
+	if len(req.IDs) == 0 {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("ids array is required"))
+	}
+	if req.Action != "delete" && req.Action != "complete" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("action must be 'delete' or 'complete'"))
+	}
+
+	now := time.Now().UTC()
+	var errors []string
+
+	for _, id := range req.IDs {
+		switch req.Action {
+		case "delete":
+			if err := h.vault.Delete(model.TypeTask, id); err != nil {
+				errors = append(errors, fmt.Sprintf("delete %s: %v", id, err))
+			}
+		case "complete":
+			task, err := h.vault.ReadTask(id)
+			if err != nil {
+				errors = append(errors, fmt.Sprintf("read %s: %v", id, err))
+				continue
+			}
+			task.Status = model.StatusCompleted
+			task.UpdatedAt = now
+			if err := h.vault.WriteTask(task); err != nil {
+				errors = append(errors, fmt.Sprintf("complete %s: %v", id, err))
+			}
+		}
+	}
+
+	if errors != nil {
+		return c.JSON(http.StatusOK, model.DataResponse(map[string]interface{}{
+			"success": len(req.IDs) - len(errors),
+			"errors":  errors,
+		}))
+	}
+	return c.JSON(http.StatusOK, model.DataResponse(map[string]interface{}{
+		"success": len(req.IDs),
+	}))
+}
+
+// Upcoming returns tasks due within the next N days.
+// Query param: days=7 (default 7)
+func (h *TaskHandler) Upcoming(c echo.Context) error {
+	daysStr := c.QueryParam("days")
+	days := 7
+	if daysStr != "" {
+		if d, err := strconv.Atoi(daysStr); err == nil && d > 0 && d <= 365 {
+			days = d
+		}
+	}
+
+	now := getNowForRequest(c)
+	cutoff := now.AddDate(0, 0, days)
+
+	tasks, err := h.vault.ListTasks()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("list tasks: %v", err)))
+	}
+	if tasks == nil {
+		tasks = []*model.Task{}
+	}
+
+	upcoming := make([]*model.Task, 0)
+	for _, t := range tasks {
+		if t.Status == model.StatusCompleted || t.Status == model.StatusExpired {
+			continue
+		}
+		status := model.ComputeEffectiveStatus(t, now)
+		if status == model.StatusCompleted || status == model.StatusExpired {
+			continue
+		}
+		if t.DateMode == "" {
+			continue
+		}
+		// Check if due date or start date falls within the window
+		var taskDate time.Time
+		if t.DateMode == "due_date" && t.DueDate != nil {
+			taskDate = *t.DueDate
+		} else if t.DateMode == "range" && t.StartDate != nil {
+			taskDate = *t.StartDate
+		} else {
+			continue
+		}
+		if !taskDate.Before(now) && !taskDate.After(cutoff) {
+			upcoming = append(upcoming, t)
+		}
+	}
+
+	// Sort by due/start date ascending
+	sortTasksByDueDate(upcoming, true)
+	enrichTasks(c, upcoming...)
+	return c.JSON(http.StatusOK, model.DataResponse(upcoming))
 }
 
 // ListTemplates returns only template tasks.
@@ -68,7 +270,6 @@ func (h *TaskHandler) ListTemplates(c echo.Context) error {
 }
 
 // ListByDate returns tasks (occurrences) for a given date.
-// Query param: date=YYYY-MM-DD
 func (h *TaskHandler) ListByDate(c echo.Context) error {
 	date := c.QueryParam("date")
 	if date == "" {
@@ -85,15 +286,12 @@ func (h *TaskHandler) ListByDate(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
 }
 
-// Get returns a task by ID. If the task is not found on disk, the handler
-// checks whether the ID matches a dynamic occurrence pattern (<parent-id>_<date>)
-// and computes the occurrence on-the-fly from the parent template.
+// Get returns a task by ID.
 func (h *TaskHandler) Get(c echo.Context) error {
 	id := c.Param("id")
 	task, err := h.vault.ReadTask(id)
 	if err != nil {
 		if isNotFound(err) {
-			// Check if this is a dynamic occurrence ID: <parentID>_<YYYY-MM-DD>
 			underscoreIdx := strings.LastIndex(id, "_")
 			if underscoreIdx > 0 && underscoreIdx < len(id)-1 {
 				parentID := id[:underscoreIdx]
@@ -105,7 +303,6 @@ func (h *TaskHandler) Get(c echo.Context) error {
 						if vault.DateMatchesRecurrence(parsedDate, parent) {
 							occ := vault.ComputeDynamicOccurrence(parent, date)
 							if occ != nil {
-								// Apply any per-occurrence overrides
 								if override, _ := h.vault.ReadOccurrenceOverride(parentID, date); override != nil {
 									vault.ApplyOccurrenceOverride(occ, override)
 								}
@@ -169,7 +366,6 @@ func (h *TaskHandler) Create(c echo.Context) error {
 
 	id := uuid.New().String()
 
-	// Determine if this is a template: is_template=true OR has both recurrence and date range
 	isTemplate := req.IsTemplate
 	if !isTemplate && req.Recurrence != nil && req.DateMode == "range" && req.StartDate != nil && req.EndDate != nil {
 		isTemplate = true
@@ -215,7 +411,6 @@ func (h *TaskHandler) Create(c echo.Context) error {
 		task.Subtasks = []model.Subtask{}
 	}
 
-	// Save the task (template or standalone)
 	if err := h.vault.WriteTask(task); err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save task: %v", err)))
 	}
@@ -246,8 +441,6 @@ type UpdateTaskRequest struct {
 	Body            string            `json:"body"`
 }
 
-// UpdateOccurrenceRequest is for updating a single dynamic occurrence.
-// Only mutable fields are allowed: status, title, body, subtasks.
 type UpdateOccurrenceRequest struct {
 	Status   string          `json:"status"`
 	Title    string          `json:"title"`
@@ -354,13 +547,10 @@ func (h *TaskHandler) Delete(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.DataResponse(nil))
 }
 
-// UpdateOccurrence updates a single dynamic occurrence (not the template).
-// Only status, title, body, and subtasks can be overridden.
 func (h *TaskHandler) UpdateOccurrence(c echo.Context) error {
 	parentID := c.Param("parentId")
 	date := c.Param("date")
 
-	// Verify parent template exists
 	parent, err := h.vault.ReadTask(parentID)
 	if err != nil {
 		if isNotFound(err) {
@@ -377,11 +567,9 @@ func (h *TaskHandler) UpdateOccurrence(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse("invalid request body"))
 	}
 
-	// Validate status if provided
 	if req.Status != "" {
 		switch req.Status {
 		case model.TaskStatusPending, model.TaskStatusInProgress, model.TaskStatusCompleted:
-			// valid
 		default:
 			return c.JSON(http.StatusBadRequest, model.ErrorResponse("status must be one of: pending, in-progress, completed"))
 		}
@@ -398,7 +586,6 @@ func (h *TaskHandler) UpdateOccurrence(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save override: %v", err)))
 	}
 
-	// Return the updated occurrence
 	occ := vault.ComputeDynamicOccurrence(parent, date)
 	if occ == nil {
 		return c.JSON(http.StatusNotFound, model.ErrorResponse("occurrence not found for this date"))

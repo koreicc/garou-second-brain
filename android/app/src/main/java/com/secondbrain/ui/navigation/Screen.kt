@@ -33,4 +33,7 @@ sealed interface Screen {
 
     @Serializable
     data object Calendar : Screen
+
+    @Serializable
+    data object Search : Screen
 }

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -78,11 +79,8 @@ import com.secondbrain.ui.util.resolveIcon
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
 // ---------------------------------------------------------------------------
 // Top-level screen composable
-// ---------------------------------------------------------------------------
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -91,7 +89,8 @@ fun DashboardScreen(
     onNavigateToPeople: () -> Unit,
     onNavigateToNoteDetail: (String) -> Unit,
     onNavigateToTaskDetail: (String) -> Unit,
-    onNavigateToCalendar: () -> Unit
+    onNavigateToCalendar: () -> Unit,
+    onNavigateToSearch: () -> Unit
 ) {
     val viewModel: DashboardViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -109,17 +108,12 @@ fun DashboardScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by remember { mutableStateOf(false) }
-
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
-        }
     }
-
     RefreshOnResume {
         viewModel.silentReload()
-    }
-
     // Date picker dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
@@ -147,12 +141,8 @@ fun DashboardScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
         ) {
             DatePicker(state = datePickerState)
-        }
-    }
-
     Scaffold(
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -167,34 +157,25 @@ fun DashboardScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Text(
                             text = state.dateString,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 },
                 colors = transparentTopAppBarColors(),
                 actions = {
                     IconButton(
-                        onClick = { onNavigateToCalendar() }
+                        onClick = { onNavigateToSearch() }
                     ) {
                         Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search"
+                        onClick = { onNavigateToCalendar() }
                             Icons.Default.DateRange,
                             contentDescription = "Calendar view"
-                        )
-                    }
-                    IconButton(
                         onClick = { viewModel.onEvent(DashboardEvent.LoadData) },
                         enabled = !state.isLoading
-                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh dashboard")
-                    }
-                }
             )
-        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -202,7 +183,6 @@ fun DashboardScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
             // ---- Scope filter chips ----
             item(key = "scope-chips") {
                 ScopeChipsRow(
@@ -210,8 +190,6 @@ fun DashboardScreen(
                     onSelectScope = { scope -> viewModel.onEvent(DashboardEvent.SelectScope(scope)) },
                     onOpenDatePicker = { showDatePicker = true }
                 )
-            }
-
             // ---- Date selector (hidden in week view) ----
             if (state.selectedScope != "week") {
                 item(key = "date-selector") {
@@ -220,9 +198,6 @@ fun DashboardScreen(
                         onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
                         onOpenDatePicker = { showDatePicker = true }
                     )
-                }
-            }
-
             // ---- Routine section ----
             state.routine?.let { routine ->
                 item(key = "routine") {
@@ -234,49 +209,28 @@ fun DashboardScreen(
                         },
                         onCompleteRoutine = {
                             viewModel.onEvent(DashboardEvent.CompleteRoutine)
-                        }
-                    )
-                }
-            }
-
             // ---- Overdue tasks ----
             if (state.overdueTasks.isNotEmpty()) {
                 item(key = "overdue-tasks") {
                     OverdueTasksSection(
                         tasks = state.overdueTasks,
                         onTaskClick = onNavigateToTaskDetail
-                    )
-                }
-            }
-
             // ---- Tasks section: week view or single day ----
             if (state.selectedScope == "week") {
                 item(key = "week-tasks") {
                     WeekTasksSection(
                         weekStartDate = state.weekStartDate,
                         tasksByDay = state.weekTasksByDay,
-                        onTaskClick = onNavigateToTaskDetail
-                    )
-                }
             } else {
                 item(key = "date-tasks") {
                     DateTasksSection(
                         date = state.selectedDate,
                         tasks = state.selectedDateTasks,
-                        onTaskClick = onNavigateToTaskDetail
-                    )
-                }
-            }
-
             // ---- Quick task input ----
             item(key = "quick-task-input") {
                 QuickTaskInputCard(
                     onAddQuickTask = { title ->
                         viewModel.onEvent(DashboardEvent.CreateQuickTask(title = title))
-                    }
-                )
-            }
-
             // ---- Quick task list ----
             items(state.quickTasks, key = { it.id }) { qTask ->
                 val countdown = state.completingQuickTasks[qTask.id]
@@ -285,9 +239,6 @@ fun DashboardScreen(
                     countdown = countdown,
                     onComplete = { viewModel.onEvent(DashboardEvent.CompleteQuickTask(qTask.id)) },
                     onDelete = { viewModel.onEvent(DashboardEvent.DeleteQuickTask(qTask.id)) }
-                )
-            }
-
             // ---- Quick note input ----
             item(key = "quick-note-input") {
                 QuickNoteInputCard(
@@ -296,9 +247,6 @@ fun DashboardScreen(
                     onTitleChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteTitle(it)) },
                     onContentChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteContent(it)) },
                     onAddNote = { viewModel.onEvent(DashboardEvent.CreateQuickNote) }
-                )
-            }
-
             // ---- Loading indicator ----
             if (state.isLoading) {
                 item(key = "loading") {
@@ -307,37 +255,21 @@ fun DashboardScreen(
                             .fillMaxWidth()
                             .padding(32.dp),
                         contentAlignment = Alignment.Center
-                    ) {
                         CircularProgressIndicator()
-                    }
-                }
-            }
-
             // ---- Bottom spacer ----
             item(key = "bottom-spacer") {
                 Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-    }
 }
-
-// ---------------------------------------------------------------------------
 // Scope filter chips row
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun ScopeChipsRow(
     selectedScope: String,
     onSelectScope: (String) -> Unit,
     onOpenDatePicker: () -> Unit
-) {
     val scopes = listOf(
         "today" to "Today",
         "tomorrow" to "Tomorrow",
         "week" to "This Week",
         "date" to "Pick Date"
-    )
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -353,48 +285,30 @@ private fun ScopeChipsRow(
                         onOpenDatePicker()
                     } else {
                         onSelectScope(value)
-                    }
-                },
                 label = { Text(label) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Week tasks section
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun WeekTasksSection(
     weekStartDate: LocalDate,
     tasksByDay: Map<LocalDate, List<Task>>,
     onTaskClick: (String) -> Unit
-) {
     val weekEndDate = weekStartDate.plusDays(6)
     val headerText = "This Week: ${weekStartDate.format(DateTimeFormatter.ofPattern("MMM d"))} - ${weekEndDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))}"
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
-    ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = headerText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
-            )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             var current = weekStartDate
             val today = LocalDate.now()
             while (current <= weekEndDate) {
@@ -402,22 +316,18 @@ private fun WeekTasksSection(
                 val isToday = current == today
                 val dayLabel = current.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
                 val dayColor = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-
                 Text(
                     text = if (isToday) "$dayLabel (Today)" else dayLabel,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.SemiBold,
                     color = dayColor,
                     modifier = Modifier.padding(vertical = 4.dp)
-                )
-
                 if (dayTasks.isEmpty()) {
                     Text(
                         text = "No tasks",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-                    )
                 } else {
                     dayTasks.forEach { task ->
                         Surface(
@@ -449,56 +359,26 @@ private fun WeekTasksSection(
                                         text = task.icon,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
-                                    )
                                 }
                                 if (task.icon.isNotEmpty()) {
                                     Spacer(modifier = Modifier.width(8.dp))
-                                }
-
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
                                         text = task.title,
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
-                                    )
-                                }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     PriorityBadge(priority = task.priority)
                                     StatusBadge(status = task.displayStatus)
-                                }
                             }
-                        }
-                    }
-                }
-
                 current = current.plusDays(1)
                 if (current <= weekEndDate) {
                     Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Overdue tasks section
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun OverdueTasksSection(
     tasks: List<Task>,
-    onTaskClick: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -507,313 +387,146 @@ private fun OverdueTasksSection(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp)
-                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
                     text = "Overdue (${tasks.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.error
-                )
-            }
             Spacer(modifier = Modifier.height(8.dp))
             tasks.forEach { task ->
                 DateTaskItem(
                     task = task,
                     onClick = { onTaskClick(task.id) }
-                )
                 if (task != tasks.last()) {
                     Spacer(modifier = Modifier.height(6.dp))
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Date selector card
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun DateSelectorCard(
     selectedDate: LocalDate,
     onChangeDate: (LocalDate) -> Unit,
-    onOpenDatePicker: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
         Row(
-            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
-        ) {
             IconButton(onClick = { onChangeDate(selectedDate.minusDays(1)) }) {
                 Icon(Icons.Default.ChevronLeft, contentDescription = "Previous day")
-            }
-
-            Row(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = onOpenDatePicker),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
                     Icons.Default.CalendarToday,
-                    contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
                         text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
-                    )
                     val today = LocalDate.now()
                     val label = when {
                         selectedDate == today -> "Today"
                         selectedDate == today.minusDays(1) -> "Yesterday"
                         selectedDate == today.plusDays(1) -> "Tomorrow"
                         else -> ""
-                    }
                     if (label.isNotEmpty()) {
-                        Text(
                             text = label,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
             IconButton(onClick = { onChangeDate(selectedDate.plusDays(1)) }) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Next day")
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Selected date tasks section
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun DateTasksSection(
     date: LocalDate,
-    tasks: List<Task>,
-    onTaskClick: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
                     text = "Tasks for this day (${tasks.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
             if (tasks.isEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
                     text = "No tasks for this day",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
                 Spacer(modifier = Modifier.height(8.dp))
                 tasks.forEach { task ->
                     DateTaskItem(
                         task = task,
                         onClick = { onTaskClick(task.id) }
-                    )
                     if (task != tasks.last()) {
                         Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun DateTaskItem(
     task: Task,
     onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
-        ) {
             val iconVector = resolveIcon(task.icon)
             if (iconVector != null) {
-                Icon(
                     imageVector = iconVector,
                     contentDescription = task.icon,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
             } else if (task.icon.isNotEmpty()) {
-                Text(
                     text = task.icon,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
-                )
-            }
             if (task.icon.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(10.dp))
-            }
-
             Column(modifier = Modifier.weight(1f)) {
-                Text(
                     text = task.title,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
-                )
                 if (task.parentId.isNotEmpty()) {
-                    Text(
                         text = "Occurrence",
-                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-            }
             Spacer(modifier = Modifier.width(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PriorityBadge(priority = task.priority)
                 StatusBadge(status = task.displayStatus)
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Routine section
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun RoutineSection(
     routine: RoutineInfo,
     timeOfDay: String,
     onToggleSubtask: (String) -> Unit,
     onCompleteRoutine: () -> Unit
-) {
     val label = when (timeOfDay) {
         "morning" -> "Morning Routine"
         "evening" -> "Evening Routine"
         else -> "Routine"
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
                     text = label,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
                 if (routine.totalCount > 0) {
-                    Text(
                         text = "${routine.completedCount}/${routine.totalCount}",
                         style = MaterialTheme.typography.titleSmall,
                         color = if (routine.isComplete)
                             MaterialTheme.colorScheme.primary
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
             if (routine.totalCount > 0) {
-                Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { routine.completedCount.toFloat() / routine.totalCount.toFloat() },
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
             routine.task.subtasks.forEach { subtask ->
                 SubtaskRow(
                     subtask = subtask,
                     onToggle = { onToggleSubtask(subtask.id) }
-                )
-            }
-
             if (!routine.isComplete && routine.totalCount > 0) {
-                Spacer(modifier = Modifier.height(12.dp))
                 FilledTonalButton(
                     onClick = onCompleteRoutine,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Complete Routine")
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SubtaskRow(
     subtask: Subtask,
     onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
-    ) {
         Checkbox(
             checked = subtask.completed,
             onCheckedChange = { onToggle() }
-        )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = subtask.title,
@@ -824,214 +537,83 @@ private fun SubtaskRow(
                 MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Quick Task input card
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun QuickTaskInputCard(onAddQuickTask: (String) -> Unit) {
     var title by remember { mutableStateOf("") }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
                     Icons.Default.FlashOn,
-                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
                     "Quick Task",
-                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
                     placeholder = { Text("What needs to be done?") },
                     modifier = Modifier.weight(1f),
                     singleLine = true
-                )
                 FilledTonalIconButton(
-                    onClick = {
                         if (title.isNotBlank()) {
                             onAddQuickTask(title.trim())
                             title = ""
-                        }
                     },
                     enabled = title.isNotBlank(),
                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
                     Icon(Icons.Default.Add, contentDescription = "Add quick task")
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Quick task row card
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun QuickTaskRowCard(
     quickTask: QuickTask,
     countdown: Int?,
     onComplete: () -> Unit,
     onDelete: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
                     text = quickTask.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
                 if (quickTask.createdAt.isNotEmpty() && countdown == null) {
-                    Text(
                         text = formatRelativeTime(quickTask.createdAt),
-                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 if (countdown != null) {
-                    Text(
                         text = "Completed. Deleting in $countdown...",
-                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
             if (countdown == null) {
                 Checkbox(
                     checked = false,
                     onCheckedChange = { onComplete() }
-                )
-            } else {
-                Text(
                     text = countdown.toString(),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.secondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.size(40.dp)
-                )
-            }
             IconButton(onClick = onDelete) {
-                Icon(
                     Icons.Default.Delete,
                     contentDescription = "Delete quick task: ${quickTask.title}",
                     tint = MaterialTheme.colorScheme.error
-                )
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Quick Note input card
-// ---------------------------------------------------------------------------
-
-@Composable
 private fun QuickNoteInputCard(
     title: String,
     content: String,
     onTitleChange: (String) -> Unit,
     onContentChange: (String) -> Unit,
     onAddNote: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
                     Icons.Default.NoteAlt,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
                     "Quick Note",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
             Column(
-                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = title,
                     onValueChange = onTitleChange,
                     placeholder = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
                     value = content,
                     onValueChange = onContentChange,
                     placeholder = { Text("What's on your mind?") },
-                    modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 5
-                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
-                ) {
                     FilledTonalButton(
                         onClick = onAddNote,
                         enabled = title.isNotBlank()
-                    ) {
-                        Icon(
                             Icons.Default.Add,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
-                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Add Note")
-                    }
-                }
-            }
-        }
-    }
-}

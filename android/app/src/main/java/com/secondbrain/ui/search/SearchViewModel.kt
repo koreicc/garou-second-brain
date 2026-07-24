@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val query: String = "",
     val results: List<SearchResult> = emptyList(),
-    val isLoading: Boolean = false,
+    val isSearching: Boolean = false,
     val hasSearched: Boolean = false,
     val error: String? = null
 )
@@ -23,7 +23,7 @@ data class SearchUiState(
 sealed interface SearchEvent {
     data class UpdateQuery(val query: String) : SearchEvent
     data object Search : SearchEvent
-    data object ClearResults : SearchEvent
+    data object DismissError : SearchEvent
 }
 
 class SearchViewModel(
@@ -39,27 +39,32 @@ class SearchViewModel(
         when (event) {
             is SearchEvent.UpdateQuery -> {
                 _state.update { it.copy(query = event.query) }
+                // Debounce search
+                searchJob?.cancel()
+                if (event.query.length >= 2) {
+                    searchJob = viewModelScope.launch {
+                        delay(300)
+                        performSearch(event.query)
+                    }
+                } else {
+                    _state.update { it.copy(results = emptyList(), hasSearched = false) }
+                }
             }
-            is SearchEvent.Search -> performSearch()
-            is SearchEvent.ClearResults -> {
-                _state.update { it.copy(results = emptyList(), hasSearched = false) }
-            }
+            is SearchEvent.Search -> performSearch(_state.value.query)
+            is SearchEvent.DismissError -> _state.update { it.copy(error = null) }
         }
     }
 
-    private fun performSearch() {
-        val query = _state.value.query.trim()
-        if (query.isEmpty()) return
-
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-            searchRepository.search(query)
+    private fun performSearch(query: String) {
+        if (query.isBlank()) return
+        viewModelScope.launch {
+            _state.update { it.copy(isSearching = true, error = null) }
+            searchRepository.search(query.trim())
                 .onSuccess { results ->
-                    _state.update { it.copy(results = results, isLoading = false, hasSearched = true) }
+                    _state.update { it.copy(results = results, isSearching = false, hasSearched = true) }
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(isLoading = false, error = e.message, hasSearched = true) }
+                    _state.update { it.copy(isSearching = false, error = e.message, hasSearched = true) }
                 }
         }
     }

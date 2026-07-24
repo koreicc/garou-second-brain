@@ -11,13 +11,11 @@ class KtorApiService(
     private val baseUrl: String
 ) : ApiService {
 
-    // Returns the device's timezone offset from UTC in minutes.
     private fun tzOffsetMinutes(): String {
         val offset = java.util.TimeZone.getDefault().rawOffset / 60000
         return offset.toString()
     }
 
-    // Adds the timezone offset header to a request builder.
     private fun HttpRequestBuilder.withTimezone() {
         header("X-Timezone-Offset", tzOffsetMinutes())
     }
@@ -52,9 +50,20 @@ class KtorApiService(
 
     // ===== Tasks =====
 
-    override suspend fun getAllTasks(): ApiResponse<List<TaskDto>> {
+    override suspend fun getAllTasks(
+        status: String?,
+        priority: String?,
+        search: String?,
+        sortBy: String?,
+        sortOrder: String?
+    ): ApiResponse<List<TaskDto>> {
         return client.get("$baseUrl/tasks") {
             withTimezone()
+            status?.let { parameter("status", it) }
+            priority?.let { parameter("priority", it) }
+            search?.let { parameter("search", it) }
+            sortBy?.let { parameter("sort_by", it) }
+            sortOrder?.let { parameter("sort_order", it) }
         }.body()
     }
 
@@ -68,6 +77,13 @@ class KtorApiService(
         return client.get("$baseUrl/tasks/by-date") {
             withTimezone()
             parameter("date", date)
+        }.body()
+    }
+
+    override suspend fun getUpcomingTasks(days: Int): ApiResponse<List<TaskDto>> {
+        return client.get("$baseUrl/tasks/upcoming") {
+            withTimezone()
+            parameter("days", days.toString())
         }.body()
     }
 
@@ -90,6 +106,14 @@ class KtorApiService(
     override suspend fun deleteTask(id: String): ApiResponse<Unit> {
         return client.delete("$baseUrl/tasks/$id") {
             withTimezone()
+        }.body()
+    }
+
+    override suspend fun batchTasks(request: BatchTaskRequest): ApiResponse<BatchTaskResponse> {
+        return client.post("$baseUrl/tasks/batch") {
+            withTimezone()
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }.body()
     }
 
