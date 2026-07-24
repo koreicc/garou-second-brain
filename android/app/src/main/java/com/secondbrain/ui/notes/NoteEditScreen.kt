@@ -129,16 +129,37 @@ fun NoteEditScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back to notes")
                     }
                 },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.onEvent(NoteEditEvent.Save) },
-                        enabled = state.title.isNotBlank()
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = "Save note")
-                    }
-                },
                 colors = transparentTopAppBarColors()
             )
+        },
+        bottomBar = {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = { viewModel.onEvent(NoteEditEvent.Save) },
+                        modifier = Modifier.weight(1f),
+                        enabled = state.title.isNotBlank() && !state.isSaving
+                    ) {
+                        if (state.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                }
+            }
         }
     ) { padding ->
         Column(

@@ -24,6 +24,7 @@ data class PersonEditUiState(
     val newPlatform: String = "",
     val newUrl: String = "",
     val isLoading: Boolean = false,
+    val isSaving: Boolean = false,
     val isSaved: Boolean = false,
     val error: String? = null
 )
@@ -132,7 +133,7 @@ class PersonEditViewModel(
         if (s.name.isBlank()) return
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isSaving = true, error = null) }
             val contacts = buildList {
                 if (s.phone.isNotBlank()) add(ContactDto(type = "phone", value = s.phone, label = "Personal"))
                 if (s.email.isNotBlank()) add(ContactDto(type = "email", value = s.email, label = "Personal"))
@@ -162,8 +163,8 @@ class PersonEditViewModel(
             }
 
             result
-                .onSuccess { _state.update { it.copy(isLoading = false, isSaved = true) } }
-                .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
+                .onSuccess { _state.update { it.copy(isSaving = false, isSaved = true) } }
+                .onFailure { e -> _state.update { it.copy(isSaving = false, error = e.message) } }
         }
     }
 }

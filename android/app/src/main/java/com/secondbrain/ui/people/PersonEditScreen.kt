@@ -137,16 +137,37 @@ fun PersonEditScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back to people")
                     }
                 },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.onEvent(PersonEditEvent.Save) },
-                        enabled = state.name.isNotBlank()
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = "Save person")
-                    }
-                },
                 colors = transparentTopAppBarColors()
             )
+        },
+        bottomBar = {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = { viewModel.onEvent(PersonEditEvent.Save) },
+                        modifier = Modifier.weight(1f),
+                        enabled = state.name.isNotBlank() && !state.isSaving
+                    ) {
+                        if (state.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                }
+            }
         }
     ) { padding ->
         if (state.isLoading && personId != null) {

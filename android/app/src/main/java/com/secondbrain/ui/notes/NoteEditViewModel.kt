@@ -19,6 +19,7 @@ data class NoteEditUiState(
     val showLinkPicker: Boolean = false,
     val linkPickerLoading: Boolean = false,
     val isLoading: Boolean = false,
+    val isSaving: Boolean = false,
     val isSaved: Boolean = false,
     val error: String? = null
 )
@@ -85,7 +86,7 @@ class NoteEditViewModel(
         if (s.title.isBlank()) return
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isSaving = true, error = null) }
 
             val result = if (noteId != null) {
                 noteRepository.update(noteId, UpdateNoteRequest(
@@ -104,8 +105,8 @@ class NoteEditViewModel(
             }
 
             result
-                .onSuccess { _state.update { it.copy(isLoading = false, isSaved = true) } }
-                .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
+                .onSuccess { _state.update { it.copy(isSaving = false, isSaved = true) } }
+                .onFailure { e -> _state.update { it.copy(isSaving = false, error = e.message) } }
         }
     }
 }
