@@ -895,8 +895,23 @@ func GenerateDatesInRange(start, end time.Time, rec *model.Recurrence) []string 
 		if interval < 1 {
 			interval = 1
 		}
-		for d := start; !d.After(end); d = d.AddDate(0, interval, 0) {
+		// Remember the target day-of-month from start so we can clamp
+		// each iteration to the last valid day (Jan 31 → Feb 28 → Mar 31 → Apr 30).
+		targetDay := start.Day()
+		for d := start; !d.After(end); {
 			dates = append(dates, d.Format("2006-01-02"))
+			// Advance by interval months, clamping day to last valid day.
+			next := d.AddDate(0, interval, 0)
+			// If the day was clamped (e.g. 31 → 28), restore targetDay and re-clamp.
+			if next.Day() != targetDay {
+				lastDay := time.Date(next.Year(), next.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
+				day := targetDay
+				if day > lastDay {
+					day = lastDay
+				}
+				next = time.Date(next.Year(), next.Month(), day, 0, 0, 0, 0, time.UTC)
+			}
+			d = next
 		}
 
 	case "yearly":
@@ -904,8 +919,20 @@ func GenerateDatesInRange(start, end time.Time, rec *model.Recurrence) []string 
 		if interval < 1 {
 			interval = 1
 		}
-		for d := start; !d.After(end); d = d.AddDate(interval, 0, 0) {
+		for d := start; !d.After(end); {
 			dates = append(dates, d.Format("2006-01-02"))
+			// Advance by interval years, handling Feb 29 → Feb 28 in non-leap years.
+			next := d.AddDate(interval, 0, 0)
+			if next.Day() != d.Day() {
+				// Day was clamped (e.g. Feb 29 → Feb 28). Restore original day, re-clamp.
+				lastDay := time.Date(next.Year(), next.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
+				day := d.Day()
+				if day > lastDay {
+					day = lastDay
+				}
+				next = time.Date(next.Year(), next.Month(), day, 0, 0, 0, 0, time.UTC)
+			}
+			d = next
 		}
 	}
 

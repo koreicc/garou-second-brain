@@ -233,6 +233,47 @@ func TestMonthlyRecurrence(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("full clamping cycle Jan 31 through Jun 30", func(t *testing.T) {
+		t.Parallel()
+		start := time.Date(2026, 1, 31, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC)
+		rec := &model.Recurrence{Type: "monthly", Interval: 1}
+		dates := GenerateDatesInRange(start, end, rec)
+		expected := []string{
+			"2026-01-31", // Jan 31
+			"2026-02-28", // Feb clamped from 31
+			"2026-03-31", // Mar restored to 31
+			"2026-04-30", // Apr clamped from 31
+			"2026-05-31", // May restored to 31
+			"2026-06-30", // Jun clamped from 31
+		}
+		if len(dates) != len(expected) {
+			t.Errorf("monthly full cycle: got %d dates, want %d", len(dates), len(expected))
+		}
+		for i, d := range dates {
+			if i < len(expected) && d != expected[i] {
+				t.Errorf("date[%d] = %s, want %s", i, d, expected[i])
+			}
+		}
+	})
+
+	t.Run("Jan 30 through Apr 30", func(t *testing.T) {
+		t.Parallel()
+		start := time.Date(2026, 1, 30, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2026, 4, 30, 0, 0, 0, 0, time.UTC)
+		rec := &model.Recurrence{Type: "monthly", Interval: 1}
+		dates := GenerateDatesInRange(start, end, rec)
+		expected := []string{"2026-01-30", "2026-02-28", "2026-03-30", "2026-04-30"}
+		if len(dates) != len(expected) {
+			t.Errorf("monthly Jan 30: got %d dates, want %d", len(dates), len(expected))
+		}
+		for i, d := range dates {
+			if i < len(expected) && d != expected[i] {
+				t.Errorf("date[%d] = %s, want %s", i, d, expected[i])
+			}
+		}
+	})
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +294,25 @@ func TestYearlyRecurrence(t *testing.T) {
 		expected := []string{"2028-02-29", "2029-02-28", "2030-02-28"}
 		if len(dates) != len(expected) {
 			t.Errorf("yearly Feb 29: got %d dates, want %d", len(dates), len(expected))
+		}
+		for i, d := range dates {
+			if i < len(expected) && d != expected[i] {
+				t.Errorf("date[%d] = %s, want %s", i, d, expected[i])
+			}
+		}
+	})
+
+	t.Run("Feb 29 across leap year boundary restores to 29", func(t *testing.T) {
+		t.Parallel()
+		// Start in non-leap 2027, next is leap 2028 (Feb 29 exists)
+		start := time.Date(2027, 2, 28, 0, 0, 0, 0, time.UTC)
+		end := time.Date(2030, 3, 1, 0, 0, 0, 0, time.UTC)
+		rec := &model.Recurrence{Type: "yearly", Interval: 1}
+		dates := GenerateDatesInRange(start, end, rec)
+		// 2027-02-28, 2028-02-29 (leap), 2029-02-28, 2030-02-28
+		expected := []string{"2027-02-28", "2028-02-29", "2029-02-28", "2030-02-28"}
+		if len(dates) != len(expected) {
+			t.Errorf("yearly Feb 28/29: got %d dates, want %d", len(dates), len(expected))
 		}
 		for i, d := range dates {
 			if i < len(expected) && d != expected[i] {
