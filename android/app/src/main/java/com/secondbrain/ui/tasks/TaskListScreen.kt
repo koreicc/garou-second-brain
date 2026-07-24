@@ -266,32 +266,63 @@ fun TaskListScreen(
                     }
                 }
                 else -> {
+                    val timeBucketLabels = mapOf(
+                        0 to "Overdue",
+                        1 to "Today",
+                        2 to "Tomorrow",
+                        3 to "This Week",
+                        4 to "Later",
+                        5 to "Anytime",
+                        6 to "Completed"
+                    )
+                    val orderedBuckets = listOf(0, 1, 2, 3, 4, 5, 6)
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(state.tasks, key = { it.id }) { task ->
-                            TaskCard(
-                                task = task,
-                                isSelectionMode = state.isSelectionMode,
-                                isSelected = task.id in state.selectedIds,
-                                onClick = {
-                                    if (state.isSelectionMode) {
-                                        viewModel.onEvent(TaskListEvent.ToggleSelection(task.id))
-                                    } else {
-                                        onTaskClick(task.id)
+                        orderedBuckets.forEach { bucket ->
+                            val tasksInBucket = state.groupedTasks[bucket]
+                            if (!tasksInBucket.isNullOrEmpty()) {
+                                stickyHeader(key = "header_$bucket") {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        tonalElevation = 0.dp
+                                    ) {
+                                        Text(
+                                            text = timeBucketLabels[bucket] ?: "Other",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                                        )
                                     }
-                                },
-                                onLongClick = {
-                                    if (!state.isSelectionMode) {
-                                        viewModel.onEvent(TaskListEvent.ToggleSelectionMode)
-                                        viewModel.onEvent(TaskListEvent.ToggleSelection(task.id))
-                                    }
-                                },
-                                onDelete = { viewModel.onEvent(TaskListEvent.ShowDeleteConfirmation(task)) }
-                            )
+                                }
+                                items(tasksInBucket, key = { it.id }) { task ->
+                                    TaskCard(
+                                        task = task,
+                                        isSelectionMode = state.isSelectionMode,
+                                        isSelected = task.id in state.selectedIds,
+                                        onClick = {
+                                            if (state.isSelectionMode) {
+                                                viewModel.onEvent(TaskListEvent.ToggleSelection(task.id))
+                                            } else {
+                                                onTaskClick(task.id)
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!state.isSelectionMode) {
+                                                viewModel.onEvent(TaskListEvent.ToggleSelectionMode)
+                                                viewModel.onEvent(TaskListEvent.ToggleSelection(task.id))
+                                            }
+                                        },
+                                        onDelete = { viewModel.onEvent(TaskListEvent.ShowDeleteConfirmation(task)) }
+                                    )
+                                }
+                            }
                         }
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -442,6 +473,7 @@ private fun TaskCard(
         "pending" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
         "in-progress" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
         "completed" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
+        "expired" -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
         else -> MaterialTheme.colorScheme.outline to MaterialTheme.colorScheme.onSurface
     }
 

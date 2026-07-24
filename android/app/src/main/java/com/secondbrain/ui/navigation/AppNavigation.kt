@@ -35,6 +35,7 @@ import com.secondbrain.ui.search.SearchScreen
 import com.secondbrain.ui.search.SearchViewModel
 import com.secondbrain.ui.settings.SettingsScreen
 import com.secondbrain.ui.settings.SettingsViewModel
+import com.secondbrain.ui.tasks.RepeatingScreen
 import com.secondbrain.ui.tasks.TaskDetailScreen
 import com.secondbrain.ui.tasks.TaskEditScreen
 import com.secondbrain.ui.workspace.WorkspaceScreen
@@ -305,6 +306,17 @@ fun AppNavigation(
                         },
                         onPersonClick = { personId ->
                             navController.navigate(Screen.PersonDetail(personId))
+                        }
+                    )
+                }
+
+                // -- Repeating screen --
+
+                composable<Screen.Repeating> {
+                    RepeatingScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onTemplateClick = { taskId ->
+                            navController.navigate(Screen.TaskDetail(taskId))
                         }
                     )
                 }

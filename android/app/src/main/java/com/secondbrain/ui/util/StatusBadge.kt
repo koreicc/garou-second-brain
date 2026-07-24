@@ -38,6 +38,11 @@ fun StatusBadge(status: String) {
             MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
             MaterialTheme.colorScheme.secondary
         )
+        "expired" -> Triple(
+            "Missed",
+            MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.error
+        )
         else -> Triple(
             status,
             MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),

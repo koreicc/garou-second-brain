@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 
 data class TaskListUiState(
     val tasks: List<Task> = emptyList(),
+    val groupedTasks: Map<Int, List<Task>> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     // Delete dialog
@@ -21,8 +22,8 @@ data class TaskListUiState(
     val statusFilter: String = "",
     val priorityFilter: String = "",
     val searchQuery: String = "",
-    val sortBy: String = "created_at",
-    val sortOrder: String = "desc",
+    val sortBy: String = "sort_key",
+    val sortOrder: String = "asc",
     // Selection mode for batch ops
     val isSelectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),
@@ -134,6 +135,10 @@ class TaskListViewModel(
         return tasks.filter { it.parentId.isEmpty() }
     }
 
+    private fun groupByTimeBucket(tasks: List<Task>): Map<Int, List<Task>> {
+        return tasks.groupBy { it.timeBucket }
+    }
+
     fun silentReload() {
         viewModelScope.launch {
             val s = _state.value
@@ -145,7 +150,8 @@ class TaskListViewModel(
                 sortOrder = s.sortOrder
             )
                 .onSuccess { tasks ->
-                    _state.update { it.copy(tasks = filterStandalone(tasks), error = null) }
+                    val filtered = filterStandalone(tasks)
+                    _state.update { it.copy(tasks = filtered, groupedTasks = groupByTimeBucket(filtered), error = null) }
                 }
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message) }
@@ -165,7 +171,8 @@ class TaskListViewModel(
                 sortOrder = s.sortOrder
             )
                 .onSuccess { tasks ->
-                    _state.update { it.copy(tasks = filterStandalone(tasks), isLoading = false) }
+                    val filtered = filterStandalone(tasks)
+                    _state.update { it.copy(tasks = filtered, groupedTasks = groupByTimeBucket(filtered), isLoading = false) }
                 }
                 .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
         }
