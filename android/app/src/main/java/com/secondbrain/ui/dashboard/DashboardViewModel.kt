@@ -194,6 +194,7 @@ class DashboardViewModel(
         // with recurrence patterns, so no client-side fallback is needed.
         val byDateResult = taskRepository.getByDate(todayStr)
         val tasks = byDateResult.getOrDefault(emptyList())
+            .filter { it.parentId.isNotEmpty() }
 
         _state.update { it.copy(selectedDateTasks = tasks) }
     }
