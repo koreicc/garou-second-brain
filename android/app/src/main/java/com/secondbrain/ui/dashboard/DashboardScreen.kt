@@ -108,12 +108,17 @@ fun DashboardScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDatePicker by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+        }
     }
+
     RefreshOnResume {
         viewModel.silentReload()
+    }
+
     // Date picker dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(

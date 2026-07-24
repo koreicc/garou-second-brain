@@ -227,7 +227,8 @@ private fun CalendarGrid(
                                 isToday = isToday,
                                 hasTasks = hasTasks,
                                 taskCount = taskCount,
-                                onClick = { onDateSelected(date) }
+                                onClick = { onDateSelected(date) },
+                                modifier = Modifier.weight(1f)
                             )
                         } else {
                             Spacer(modifier = Modifier.weight(1f))
@@ -247,11 +248,11 @@ private fun CalendarDayCell(
     isToday: Boolean,
     hasTasks: Boolean,
     taskCount: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
-            .weight(1f)
+        modifier = modifier
             .padding(2.dp)
             .size(36.dp)
             .clip(CircleShape)
