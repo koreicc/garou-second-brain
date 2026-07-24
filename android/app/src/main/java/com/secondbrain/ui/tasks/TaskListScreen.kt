@@ -207,7 +207,7 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        val (statusColor, onStatusColor) = when (task.status) {
+        val (statusColor, onStatusColor) = when (task.displayStatus) {
             "pending" -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
             "in-progress" -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
             "completed" -> MaterialTheme.colorScheme.secondary to MaterialTheme.colorScheme.onSecondary
@@ -260,7 +260,7 @@ private fun TaskCard(task: Task, onClick: () -> Unit, onDelete: () -> Unit) {
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
                         )
-                        StatusBadge(status = task.status)
+                        StatusBadge(status = task.displayStatus)
                     }
                     if (task.location.isNotEmpty()) {
                         Text(

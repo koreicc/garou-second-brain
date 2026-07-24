@@ -101,7 +101,7 @@ fun TaskDetailScreen(
                     }
                 },
                 actions = {
-                    if (state.task?.status != "completed") {
+                    if (state.task?.displayStatus != "completed") {
                         IconButton(onClick = { viewModel.onEvent(TaskDetailEvent.Complete) }) {
                             Icon(Icons.Default.Check, contentDescription = "Complete task")
                         }
@@ -150,7 +150,7 @@ fun TaskDetailScreen(
                                 }
                             }
                         }
-                        StatusBadge(status = task.status)
+                        StatusBadge(status = task.displayStatus)
                     }
 
                     if (task.location.isNotEmpty() || task.dateMode.isNotEmpty() || task.timeMode.isNotEmpty() || task.tags.isNotEmpty()) {

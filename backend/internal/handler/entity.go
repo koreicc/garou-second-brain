@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/koreicc/garou-second-brain/backend/internal/model"
 	"github.com/koreicc/garou-second-brain/backend/internal/vault"
@@ -35,6 +36,7 @@ func (h *EntityHandler) GetByIDs(c echo.Context) error {
 
 	ids := strings.Split(idsParam, ",")
 	results := make([]EntityInfo, 0, len(ids))
+	now := time.Now().UTC()
 
 	for _, id := range ids {
 		id = strings.TrimSpace(id)
@@ -49,7 +51,8 @@ func (h *EntityHandler) GetByIDs(c echo.Context) error {
 		}
 		// Try task
 		if task, err := h.vault.ReadTask(id); err == nil {
-			results = append(results, EntityInfo{ID: task.ID, Type: "task", Title: task.Title, Status: string(task.Status)})
+			effectiveStatus := model.ComputeEffectiveStatus(task, now)
+			results = append(results, EntityInfo{ID: task.ID, Type: "task", Title: task.Title, Status: string(effectiveStatus)})
 			continue
 		}
 		// Try person

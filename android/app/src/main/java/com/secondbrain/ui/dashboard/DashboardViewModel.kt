@@ -153,7 +153,7 @@ class DashboardViewModel(
                     .filter { task ->
                         task.tags.any { tag -> tag == "routine" } &&
                             task.tags.any { tag -> tag == timeTag } &&
-                            task.status != "expired"
+                            task.displayStatus != "expired"
                     }
                     .maxByOrNull { task -> task.updatedAt }
                     ?.let { task ->

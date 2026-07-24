@@ -456,7 +456,7 @@ private fun DateTaskItem(
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
-            StatusBadge(status = task.status)
+            StatusBadge(status = task.displayStatus)
         }
     }
 }

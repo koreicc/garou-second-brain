@@ -1,12 +1,19 @@
 package model
 
-import "time"
+import (
+	"strconv"
+	"strings"
+	"time"
+)
 
 type Task struct {
 	BaseEntity `yaml:",inline" json:",inline"`
 	Title      string `yaml:"title" json:"title"`
 	Icon       string `yaml:"icon,omitempty" json:"icon,omitempty"`
 	Location   string `yaml:"location,omitempty" json:"location,omitempty"`
+
+	// EffectiveStatus is computed by the server and NOT persisted to YAML.
+	EffectiveStatus EntityStatus `yaml:"-" json:"effective_status,omitempty"`
 
 	// Template / occurrence fields
 	ParentID       string `yaml:"parent_id,omitempty" json:"parent_id,omitempty"`
@@ -105,4 +112,105 @@ func (t *Task) Validate() error {
 		}
 	}
 	return nil
+}
+
+// startOfDay returns the start (00:00:00.000) of the given date in UTC.
+func startOfDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// endOfDay returns the last nanosecond of the given date in UTC.
+func endOfDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, time.UTC)
+}
+
+// combineDateAndTime parses a "HH:mm" string and combines it with a date to
+// produce a UTC timestamp. If parsing fails, startOfDay is returned.
+func combineDateAndTime(date time.Time, timeStr string) time.Time {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 2 {
+		return startOfDay(date)
+	}
+	h, errH := strconv.Atoi(parts[0])
+	m, errM := strconv.Atoi(parts[1])
+	if errH != nil || errM != nil {
+		return startOfDay(date)
+	}
+	return time.Date(date.Year(), date.Month(), date.Day(), h, m, 0, 0, time.UTC)
+}
+
+// ComputeEffectiveStatus calculates the task's status based on date/time
+// configuration and the current time. It respects manual overrides:
+//   - If date_mode is empty (none), the stored status is returned as-is.
+//   - If the stored status is "completed" or "expired", that value is
+//     preserved (manual override).
+//   - Otherwise, the date/time fields determine the effective status.
+func ComputeEffectiveStatus(t *Task, now time.Time) EntityStatus {
+	// No date mode -> fully manual
+	if t.DateMode == "" {
+		return t.Status
+	}
+
+	// Manually completed or expired -> don't override
+	if t.Status == StatusCompleted || t.Status == StatusExpired {
+		return t.Status
+	}
+
+	switch t.DateMode {
+	case DateModeDueDate:
+		return computeDueDateStatus(t, now)
+	case DateModeRange:
+		return computeRangeStatus(t, now)
+	default:
+		return t.Status
+	}
+}
+
+func computeDueDateStatus(t *Task, now time.Time) EntityStatus {
+	if t.DueDate == nil {
+		return t.Status
+	}
+
+	startBoundary := startOfDay(*t.DueDate)
+	if t.DueTime != "" {
+		startBoundary = combineDateAndTime(*t.DueDate, t.DueTime)
+	}
+	endBoundary := endOfDay(*t.DueDate)
+
+	if now.Before(startBoundary) {
+		return StatusPending
+	}
+	if now.After(endBoundary) {
+		return StatusCompleted
+	}
+	return StatusInProgress
+}
+
+func computeRangeStatus(t *Task, now time.Time) EntityStatus {
+	if t.StartDate == nil || t.EndDate == nil {
+		return t.Status
+	}
+
+	startBoundary := startOfDay(*t.StartDate)
+	if t.TimeMode == TimeModeStartEnd && t.StartTime != "" {
+		startBoundary = combineDateAndTime(*t.StartDate, t.StartTime)
+	} else if t.TimeMode == TimeModeStartDuration && t.StartTime != "" {
+		startBoundary = combineDateAndTime(*t.StartDate, t.StartTime)
+	}
+
+	endBoundary := endOfDay(*t.EndDate)
+	if t.TimeMode == TimeModeStartEnd && t.EndTime != "" {
+		endBoundary = combineDateAndTime(*t.EndDate, t.EndTime)
+	} else if t.TimeMode == TimeModeStartDuration && t.StartTime != "" && t.DurationMinutes > 0 {
+		startParsed := combineDateAndTime(*t.StartDate, t.StartTime)
+		endBoundary = startParsed.Add(time.Duration(t.DurationMinutes) * time.Minute)
+	}
+
+	if now.Before(startBoundary) {
+		return StatusPending
+	}
+	if now.After(endBoundary) {
+		return StatusCompleted
+	}
+	return StatusInProgress
 }

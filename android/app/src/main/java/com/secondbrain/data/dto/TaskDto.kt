@@ -10,6 +10,8 @@ data class TaskDto(
     val type: String = "task",
     val title: String,
     val status: String = "pending",
+    @SerialName("effective_status")
+    val effectiveStatus: String = "",
     val icon: String = "",
     val location: String = "",
     val tags: List<String> = emptyList(),
@@ -152,6 +154,7 @@ fun TaskDto.toDomain(): Task = Task(
     type = type,
     title = title,
     status = status,
+    effectiveStatus = effectiveStatus,
     icon = icon,
     location = location,
     tags = tags,

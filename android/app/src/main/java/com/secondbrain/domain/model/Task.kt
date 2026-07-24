@@ -5,6 +5,7 @@ data class Task(
     val type: String = "task",
     val title: String,
     val status: String = "pending",
+    val effectiveStatus: String = "",
     val icon: String = "",
     val location: String = "",
     val tags: List<String> = emptyList(),
@@ -29,7 +30,10 @@ data class Task(
     val body: String = "",
     val createdAt: String = "",
     val updatedAt: String = ""
-)
+) {
+    val displayStatus: String
+        get() = effectiveStatus.ifEmpty { status }
+}
 
 data class Subtask(
     val id: String,
