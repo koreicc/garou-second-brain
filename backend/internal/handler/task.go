@@ -21,7 +21,7 @@ func NewTaskHandler(v *vault.Vault) *TaskHandler {
 	return &TaskHandler{vault: v}
 }
 
-// enrichTasks sets the EffectiveStatus field on one or more tasks.
+// enrichTasks sets the EffectiveStatus and A6 enrichment fields on one or more tasks.
 func enrichTasks(c echo.Context, tasks ...*model.Task) {
 	now := time.Now().UTC()
 	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
@@ -34,6 +34,7 @@ func enrichTasks(c echo.Context, tasks ...*model.Task) {
 	for _, t := range tasks {
 		if t != nil {
 			t.EffectiveStatus = model.ComputeEffectiveStatus(t, now)
+			model.EnrichTask(t, now)
 		}
 	}
 }
@@ -57,8 +58,8 @@ func getNowForRequest(c echo.Context) time.Time {
 //	status=        filter by status (pending, in-progress, completed, expired)
 //	priority=      filter by priority (low, medium, high, urgent)
 //	search=        filter by title/body text (case-insensitive substring match)
-//	sort_by=       field to sort by (title, created_at, updated_at, due_date, priority) default: created_at
-//	sort_order=    asc or desc (default: desc)
+//	sort_by=       field to sort by (title, created_at, updated_at, due_date, priority, sort_key) default: sort_key
+//	sort_order=    asc or desc (default: asc for sort_key, desc for others)
 func (h *TaskHandler) List(c echo.Context) error {
 	tasks, err := h.vault.ListTasks()
 	if err != nil {
@@ -91,29 +92,43 @@ func (h *TaskHandler) List(c echo.Context) error {
 		filtered = append(filtered, t)
 	}
 
+	// Enrich before sorting so sortKey is available.
+	enrichTasks(c, filtered...)
+
 	// Apply sorting
 	sortBy := c.QueryParam("sort_by")
 	sortOrder := c.QueryParam("sort_order")
-	if sortOrder == "" {
-		sortOrder = "desc"
-	}
 
 	switch sortBy {
 	case "title":
+		if sortOrder == "" {
+			sortOrder = "asc"
+		}
 		sortTasks(filtered, func(t *model.Task) string { return t.Title }, sortOrder == "asc")
 	case "priority":
+		if sortOrder == "" {
+			sortOrder = "desc"
+		}
 		sortTasks(filtered, func(t *model.Task) string { return t.Priority }, sortOrder == "asc")
 	case "due_date":
+		if sortOrder == "" {
+			sortOrder = "asc"
+		}
 		sortTasksByDueDate(filtered, sortOrder == "asc")
 	case "updated_at":
+		if sortOrder == "" {
+			sortOrder = "desc"
+		}
 		sortTasks(filtered, func(t *model.Task) string { return t.UpdatedAt.Format(time.RFC3339) }, sortOrder == "asc")
 	default:
-		// Default: sort by created_at descending
-		sortTasks(filtered, func(t *model.Task) string { return t.CreatedAt.Format(time.RFC3339) }, false)
+		// Default: sort by sortKey ascending per MASTER_SPEC A6.
+		if sortOrder == "" {
+			sortOrder = "asc"
+		}
+		sortTasks(filtered, func(t *model.Task) string { return t.SortKey }, sortOrder == "asc")
 	}
 
 	filtered = paginate(filtered, c)
-	enrichTasks(c, filtered...)
 	return c.JSON(http.StatusOK, model.DataResponse(filtered))
 }
 
@@ -237,7 +252,6 @@ func (h *TaskHandler) Upcoming(c echo.Context) error {
 		if t.DateMode == "" {
 			continue
 		}
-		// Check if due date or start date falls within the window
 		var taskDate time.Time
 		if t.DateMode == "due_date" && t.DueDate != nil {
 			taskDate = *t.DueDate
@@ -251,7 +265,6 @@ func (h *TaskHandler) Upcoming(c echo.Context) error {
 		}
 	}
 
-	// Sort by due/start date ascending
 	sortTasksByDueDate(upcoming, true)
 	enrichTasks(c, upcoming...)
 	return c.JSON(http.StatusOK, model.DataResponse(upcoming))
@@ -268,6 +281,85 @@ func (h *TaskHandler) ListTemplates(c echo.Context) error {
 	}
 	enrichTasks(c, tasks...)
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
+}
+
+// ListToday returns tasks in timeBucket 0 (overdue) or 1 (today).
+func (h *TaskHandler) ListToday(c echo.Context) error {
+	tasks, err := h.vault.ListTasks()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("list tasks: %v", err)))
+	}
+	if tasks == nil {
+		tasks = []*model.Task{}
+	}
+
+	now := getNowForRequest(c)
+	result := make([]*model.Task, 0)
+	for _, t := range tasks {
+		if t.Status == model.StatusCompleted {
+			continue
+		}
+		t.EffectiveStatus = model.ComputeEffectiveStatus(t, now)
+		model.EnrichTask(t, now)
+		if t.TimeBucket == model.TimeBucketOverdue || t.TimeBucket == model.TimeBucketToday {
+			result = append(result, t)
+		}
+	}
+
+	sortTasks(result, func(t *model.Task) string { return t.SortKey }, true)
+	return c.JSON(http.StatusOK, model.DataResponse(result))
+}
+
+// ListOverdue returns tasks in timeBucket 0 (overdue/expired, not completed).
+func (h *TaskHandler) ListOverdue(c echo.Context) error {
+	tasks, err := h.vault.ListTasks()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("list tasks: %v", err)))
+	}
+	if tasks == nil {
+		tasks = []*model.Task{}
+	}
+
+	now := getNowForRequest(c)
+	result := make([]*model.Task, 0)
+	for _, t := range tasks {
+		if t.Status == model.StatusCompleted {
+			continue
+		}
+		t.EffectiveStatus = model.ComputeEffectiveStatus(t, now)
+		model.EnrichTask(t, now)
+		if t.TimeBucket == model.TimeBucketOverdue {
+			result = append(result, t)
+		}
+	}
+
+	sortTasks(result, func(t *model.Task) string { return t.SortKey }, true)
+	return c.JSON(http.StatusOK, model.DataResponse(result))
+}
+
+// ListAnytime returns tasks with dateMode="" (fully manual, never overdue).
+func (h *TaskHandler) ListAnytime(c echo.Context) error {
+	tasks, err := h.vault.ListTasks()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("list tasks: %v", err)))
+	}
+	if tasks == nil {
+		tasks = []*model.Task{}
+	}
+
+	now := getNowForRequest(c)
+	result := make([]*model.Task, 0)
+	for _, t := range tasks {
+		if t.DateMode != "" {
+			continue
+		}
+		t.EffectiveStatus = model.ComputeEffectiveStatus(t, now)
+		model.EnrichTask(t, now)
+		result = append(result, t)
+	}
+
+	sortTasks(result, func(t *model.Task) string { return t.SortKey }, true)
+	return c.JSON(http.StatusOK, model.DataResponse(result))
 }
 
 // ListByDate returns tasks (occurrences) for a given date.
@@ -581,6 +673,51 @@ func (h *TaskHandler) UpdateOccurrence(c echo.Context) error {
 		Title:    req.Title,
 		Body:     req.Body,
 		Subtasks: req.Subtasks,
+	}
+
+	if err := h.vault.WriteOccurrenceOverride(parentID, date, override); err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save override: %v", err)))
+	}
+
+	occ := vault.ComputeDynamicOccurrence(parent, date)
+	if occ == nil {
+		return c.JSON(http.StatusNotFound, model.ErrorResponse("occurrence not found for this date"))
+	}
+	vault.ApplyOccurrenceOverride(occ, override)
+
+	enrichTasks(c, occ)
+	return c.JSON(http.StatusOK, model.DataResponse(occ))
+}
+
+// CompleteOccurrence writes an override marking the occurrence as completed.
+// POST /tasks/occurrence/:parentId/:date/complete
+func (h *TaskHandler) CompleteOccurrence(c echo.Context) error {
+	return h.writeOccurrenceStatus(c, model.TaskStatusCompleted)
+}
+
+// SkipOccurrence writes an override marking the occurrence as expired (skipped).
+// POST /tasks/occurrence/:parentId/:date/skip
+func (h *TaskHandler) SkipOccurrence(c echo.Context) error {
+	return h.writeOccurrenceStatus(c, model.TaskStatusExpired)
+}
+
+func (h *TaskHandler) writeOccurrenceStatus(c echo.Context, status string) error {
+	parentID := c.Param("parentId")
+	date := c.Param("date")
+
+	parent, err := h.vault.ReadTask(parentID)
+	if err != nil {
+		if isNotFound(err) {
+			return c.JSON(http.StatusNotFound, model.ErrorResponse("template not found"))
+		}
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("read template: %v", err)))
+	}
+	if !parent.IsTemplate {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("parent is not a template"))
+	}
+
+	override := &vault.OccurrenceOverride{
+		Status: status,
 	}
 
 	if err := h.vault.WriteOccurrenceOverride(parentID, date, override); err != nil {

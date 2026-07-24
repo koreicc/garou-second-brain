@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +48,13 @@ type Task struct {
 	Recurrence *Recurrence `yaml:"recurrence,omitempty" json:"recurrence,omitempty"`
 	Subtasks   []Subtask   `yaml:"subtasks,omitempty" json:"subtasks,omitempty"`
 	Body       string      `yaml:"-" json:"body"`
+
+	// A6 enrichment fields — computed server-side, never persisted.
+	IsOverdue      bool   `yaml:"-" json:"is_overdue"`
+	IsToday        bool   `yaml:"-" json:"is_today"`
+	TimeBucket     int    `yaml:"-" json:"time_bucket"`
+	PriorityWeight int    `yaml:"-" json:"priority_weight"`
+	SortKey        string `yaml:"-" json:"sort_key"`
 }
 
 func NewTask(id, title string) *Task {
@@ -197,7 +205,7 @@ func computeDueDateStatus(t *Task, now time.Time) EntityStatus {
 		return StatusPending
 	}
 	if now.After(endBoundary) {
-		return StatusCompleted
+		return StatusExpired
 	}
 	return StatusInProgress
 }
@@ -226,7 +234,108 @@ func computeRangeStatus(t *Task, now time.Time) EntityStatus {
 		return StatusPending
 	}
 	if now.After(endBoundary) {
-		return StatusCompleted
+		return StatusExpired
 	}
 	return StatusInProgress
+}
+
+// --------------------------------------------------------------------------
+// A6 enrichment — timeBucket, priorityWeight, sortKey, isOverdue, isToday
+// --------------------------------------------------------------------------
+
+// TimeBucket constants per MASTER_SPEC A6.
+const (
+	TimeBucketOverdue   = 0
+	TimeBucketToday     = 1
+	TimeBucketTomorrow  = 2
+	TimeBucketNextWeek  = 3
+	TimeBucketLater     = 4
+	TimeBucketAnytime   = 5
+	TimeBucketCompleted = 6
+)
+
+// PriorityWeightValue maps a priority string to its numeric weight.
+func PriorityWeightValue(priority string) int {
+	switch priority {
+	case PriorityUrgent:
+		return 4
+	case PriorityHigh:
+		return 3
+	case PriorityMedium:
+		return 2
+	case PriorityLow:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// ComputeTimeBucket returns the A6 time bucket for a task given its effective
+// status and the current time in the user's local timezone.
+func ComputeTimeBucket(t *Task, effectiveStatus EntityStatus, now time.Time) int {
+	if effectiveStatus == StatusCompleted {
+		return TimeBucketCompleted
+	}
+	if t.DateMode == "" {
+		return TimeBucketAnytime
+	}
+	if effectiveStatus == StatusExpired {
+		return TimeBucketOverdue
+	}
+
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	tomorrow := today.AddDate(0, 0, 1)
+	nextWeek := today.AddDate(0, 0, 7)
+
+	var refDate time.Time
+	switch t.DateMode {
+	case DateModeDueDate:
+		if t.DueDate != nil {
+			refDate = startOfDay(*t.DueDate)
+		}
+	case DateModeRange:
+		if t.StartDate != nil {
+			refDate = startOfDay(*t.StartDate)
+		}
+	}
+
+	if refDate.IsZero() {
+		return TimeBucketLater
+	}
+
+	if refDate.Before(today) {
+		return TimeBucketOverdue
+	}
+	if !refDate.After(today) {
+		return TimeBucketToday
+	}
+	if !refDate.After(tomorrow) {
+		return TimeBucketTomorrow
+	}
+	if refDate.Before(nextWeek) {
+		return TimeBucketNextWeek
+	}
+	return TimeBucketLater
+}
+
+// ComputeSortKey builds the A6 sort key: "timeBucket|priorityWeight|dueDate".
+func ComputeSortKey(timeBucket, priorityWeight int, dueDate *time.Time) string {
+	dateStr := "9999-12-31"
+	if dueDate != nil {
+		dateStr = dueDate.Format("2006-01-02")
+	}
+	return fmt.Sprintf("%d|%d|%s", timeBucket, priorityWeight, dateStr)
+}
+
+// EnrichTask sets the A6 enrichment fields on a single task. It must be called
+// after ComputeEffectiveStatus so that effectiveStatus is already populated.
+func EnrichTask(t *Task, now time.Time) {
+	if t == nil {
+		return
+	}
+	t.IsOverdue = t.EffectiveStatus == StatusExpired && t.DateMode != ""
+	t.IsToday = ComputeTimeBucket(t, t.EffectiveStatus, now) == TimeBucketToday
+	t.TimeBucket = ComputeTimeBucket(t, t.EffectiveStatus, now)
+	t.PriorityWeight = PriorityWeightValue(t.Priority)
+	t.SortKey = ComputeSortKey(t.TimeBucket, t.PriorityWeight, t.DueDate)
 }

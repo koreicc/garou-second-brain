@@ -57,6 +57,9 @@ func main() {
 	taskHandler := handler.NewTaskHandler(v)
 	api.GET("/tasks", taskHandler.List)
 	api.GET("/tasks/templates", taskHandler.ListTemplates)
+	api.GET("/tasks/today", taskHandler.ListToday)
+	api.GET("/tasks/overdue", taskHandler.ListOverdue)
+	api.GET("/tasks/anytime", taskHandler.ListAnytime)
 	api.GET("/tasks/by-date", taskHandler.ListByDate)
 	api.GET("/tasks/upcoming", taskHandler.Upcoming)
 	api.POST("/tasks/batch", taskHandler.Batch)
@@ -65,6 +68,8 @@ func main() {
 	api.PUT("/tasks/:id", taskHandler.Update)
 	api.DELETE("/tasks/:id", taskHandler.Delete)
 	api.PUT("/tasks/occurrence/:parentId/:date", taskHandler.UpdateOccurrence)
+	api.POST("/tasks/occurrence/:parentId/:date/complete", taskHandler.CompleteOccurrence)
+	api.POST("/tasks/occurrence/:parentId/:date/skip", taskHandler.SkipOccurrence)
 
 	qtHandler := handler.NewQuickTaskHandler(v)
 	api.GET("/quick-tasks", qtHandler.List)
