@@ -50,4 +50,11 @@ interface ApiService {
 
     // Occurrence override
     suspend fun updateOccurrence(parentId: String, date: String, request: UpdateOccurrenceRequest): ApiResponse<TaskDto>
+
+    // A7 convenience endpoints
+    suspend fun getTodayTasks(): ApiResponse<List<TaskDto>>
+    suspend fun getOverdueTasks(): ApiResponse<List<TaskDto>>
+    suspend fun getAnytimeTasks(): ApiResponse<List<TaskDto>>
+    suspend fun completeOccurrence(parentId: String, date: String): ApiResponse<TaskDto>
+    suspend fun skipOccurrence(parentId: String, date: String): ApiResponse<TaskDto>
 }

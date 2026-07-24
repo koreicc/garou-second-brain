@@ -201,4 +201,36 @@ class KtorApiService(
             setBody(request)
         }.body()
     }
+
+    // ===== A7 convenience endpoints =====
+
+    override suspend fun getTodayTasks(): ApiResponse<List<TaskDto>> {
+        return client.get("$baseUrl/tasks/today") {
+            withTimezone()
+        }.body()
+    }
+
+    override suspend fun getOverdueTasks(): ApiResponse<List<TaskDto>> {
+        return client.get("$baseUrl/tasks/overdue") {
+            withTimezone()
+        }.body()
+    }
+
+    override suspend fun getAnytimeTasks(): ApiResponse<List<TaskDto>> {
+        return client.get("$baseUrl/tasks/anytime") {
+            withTimezone()
+        }.body()
+    }
+
+    override suspend fun completeOccurrence(parentId: String, date: String): ApiResponse<TaskDto> {
+        return client.post("$baseUrl/tasks/occurrence/$parentId/$date/complete") {
+            withTimezone()
+        }.body()
+    }
+
+    override suspend fun skipOccurrence(parentId: String, date: String): ApiResponse<TaskDto> {
+        return client.post("$baseUrl/tasks/occurrence/$parentId/$date/skip") {
+            withTimezone()
+        }.body()
+    }
 }

@@ -1,5 +1,8 @@
 package com.secondbrain.ui.tasks
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +45,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.OutlinedButton
@@ -54,6 +61,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -293,71 +301,77 @@ fun TaskEditScreen(
                             }
                         }
 
-                        OutlinedTextField(
-                            value = state.location,
-                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
-                            label = { Text("Location") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.medium
-                        )
-
                         // -- Status --
                         Text("Status", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StatusChip(
-                                label = "Pending",
-                                value = "pending",
-                                selectedValue = state.status,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("pending")) }
-                            )
-                            StatusChip(
-                                label = "In Progress",
-                                value = "in-progress",
-                                selectedValue = state.status,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("in-progress")) }
-                            )
-                            StatusChip(
-                                label = "Completed",
-                                value = "completed",
-                                selectedValue = state.status,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus("completed")) }
-                            )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            val statusOptions = listOf("pending" to "Pending", "in-progress" to "In Progress", "completed" to "Done")
+                            statusOptions.forEachIndexed { i, (value, label) ->
+                                SegmentedButton(
+                                    selected = state.status == value,
+                                    onClick = { viewModel.onEvent(TaskEditEvent.UpdateStatus(value)) },
+                                    shape = SegmentedButtonDefaults.itemShape(i, statusOptions.size),
+                                    icon = { SegmentedButtonDefaults.Icon(active = state.status == value) },
+                                ) { Text(label, style = MaterialTheme.typography.bodySmall) }
+                            }
                         }
 
                         // -- Priority --
                         Text("Priority", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            PriorityChip(
-                                label = "None",
-                                value = "",
-                                selectedValue = state.priority,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("")) }
-                            )
-                            PriorityChip(
-                                label = "Low",
-                                value = "low",
-                                selectedValue = state.priority,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("low")) }
-                            )
-                            PriorityChip(
-                                label = "Medium",
-                                value = "medium",
-                                selectedValue = state.priority,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("medium")) }
-                            )
-                            PriorityChip(
-                                label = "High",
-                                value = "high",
-                                selectedValue = state.priority,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("high")) }
-                            )
-                            PriorityChip(
-                                label = "Urgent",
-                                value = "urgent",
-                                selectedValue = state.priority,
-                                onClick = { viewModel.onEvent(TaskEditEvent.UpdatePriority("urgent")) }
-                            )
+                        var prioritySheetVisible by remember { mutableStateOf(false) }
+                        val priorityLabel = when (state.priority) {
+                            "low" -> "Low"
+                            "medium" -> "Medium"
+                            "high" -> "High"
+                            "urgent" -> "Urgent"
+                            else -> "None"
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { prioritySheetVisible = true },
+                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "\u2691 $priorityLabel",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                        if (prioritySheetVisible) {
+                            ModalBottomSheet(
+                                onDismissRequest = { prioritySheetVisible = false },
+                                sheetState = rememberModalBottomSheetState()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Priority", style = MaterialTheme.typography.titleMedium)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    listOf("" to "None", "low" to "Low", "medium" to "Medium", "high" to "High", "urgent" to "Urgent").forEach { (value, label) ->
+                                        Surface(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    viewModel.onEvent(TaskEditEvent.UpdatePriority(value))
+                                                    prioritySheetVisible = false
+                                                },
+                                            color = if (state.priority == value) MaterialTheme.colorScheme.primaryContainer
+                                                   else Color.Transparent
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                modifier = Modifier.padding(16.dp),
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
                         }
                     }
                 }
@@ -382,26 +396,24 @@ fun TaskEditScreen(
 
                         // -- Date Mode --
                         Text("Date", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = state.dateMode == "",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode("")) },
-                                label = { Text("None") }
-                            )
-                            FilterChip(
-                                selected = state.dateMode == "due_date",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode("due_date")) },
-                                label = { Text("Due Date") }
-                            )
-                            FilterChip(
-                                selected = state.dateMode == "range",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode("range")) },
-                                label = { Text("Date Range") }
-                            )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            val dateModeOptions = listOf("" to "None", "due_date" to "Due Date", "range" to "Range")
+                            dateModeOptions.forEachIndexed { i, (value, label) ->
+                                SegmentedButton(
+                                    selected = state.dateMode == value,
+                                    onClick = { viewModel.onEvent(TaskEditEvent.SetDateMode(value)) },
+                                    shape = SegmentedButtonDefaults.itemShape(i, dateModeOptions.size),
+                                    icon = { SegmentedButtonDefaults.Icon(active = state.dateMode == value) },
+                                ) { Text(label, style = MaterialTheme.typography.bodySmall) }
+                            }
                         }
 
-                        // Conditional date inputs
-                        if (state.dateMode == "due_date") {
+                        // Conditional date inputs with animated expand/collapse
+                        AnimatedVisibility(
+                            visible = state.dateMode == "due_date",
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
                             DateField(
                                 label = "Due Date",
                                 date = state.dueDate,
@@ -410,19 +422,24 @@ fun TaskEditScreen(
                             )
                         }
 
-                        if (state.dateMode == "range") {
-                            DateField(
-                                label = "Start Date",
-                                date = state.startDate,
-                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.Start)) },
-                                onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.Start, "")) }
-                            )
-                            DateField(
-                                label = "End Date",
-                                date = state.endDate,
-                                onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.End)) },
-                                onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.End, "")) }
-                            )
+                        AnimatedVisibility(
+                            visible = state.dateMode == "range",
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                DateField(
+                                    label = "Start Date",
+                                    date = state.startDate,
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.Start)) },
+                                    onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.Start, "")) }
+                                )
+                                DateField(
+                                    label = "End Date",
+                                    date = state.endDate,
+                                    onClick = { viewModel.onEvent(TaskEditEvent.ShowDatePicker(DatePickerType.End)) },
+                                    onClear = { viewModel.onEvent(TaskEditEvent.SetDate(DatePickerType.End, "")) }
+                                )
 
                             // Recurrence (only for templates and new tasks with range mode)
                             if (showRecurrence) {
@@ -498,7 +515,8 @@ fun TaskEditScreen(
                                 }
                             }
                             } // end showRecurrence
-                        }
+                            } // end Column inside AnimatedVisibility
+                        } // end AnimatedVisibility for range
                     }
                 }
 
@@ -673,7 +691,7 @@ fun TaskEditScreen(
                     }
                 }
 
-                // Section 3: Tags & Subtasks
+                // Section 3: Subtasks
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -685,14 +703,9 @@ fun TaskEditScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Tags & Subtasks",
+                            text = "Subtasks",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
-                        )
-                        TagInput(
-                            tags = state.tags,
-                            onTagsChanged = { viewModel.onEvent(TaskEditEvent.SetTags(it)) },
-                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Row(
@@ -777,7 +790,69 @@ fun TaskEditScreen(
                     }
                 }
 
-                // Section 3.5: Linked Entities Section
+                // Section 4: Notes (borderless, collapsed)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        OutlinedTextField(
+                            value = state.body,
+                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateBody(it)) },
+                            placeholder = { Text("Add notes...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            shape = MaterialTheme.shapes.medium
+                        )
+                    }
+                }
+
+                // Section 5: More details chip → sheet
+                var moreDetailsSheetVisible by remember { mutableStateOf(false) }
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { moreDetailsSheetVisible = true },
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Link,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "More details",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                if (moreDetailsSheetVisible) {
+                    MoreDetailsSheet(
+                        location = state.location,
+                        onLocationChange = { viewModel.onEvent(TaskEditEvent.UpdateLocation(it)) },
+                        tags = state.tags,
+                        onTagsChange = { viewModel.onEvent(TaskEditEvent.SetTags(it)) },
+                        links = state.links,
+                        allLinkableEntities = allLinkableEntities,
+                        onShowLinkPicker = { viewModel.onEvent(TaskEditEvent.ShowLinkPicker) },
+                        onDismiss = { moreDetailsSheetVisible = false }
+                    )
+                }
+
+                // Section 6: Linked Entities (if any)
                 if (state.links.isNotEmpty()) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -838,55 +913,35 @@ fun TaskEditScreen(
                         }
                     }
                 }
-
-                // Add Link Button
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.onEvent(TaskEditEvent.ShowLinkPicker) },
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 1.dp
+            }
+        }
+    },
+    bottomBar = {
+        // Sticky save bar — always visible, never scroll to save
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.compose.material3.Button(
+                    onClick = { viewModel.onEvent(TaskEditEvent.Save) },
+                    modifier = Modifier.weight(1f),
+                    enabled = state.title.isNotBlank() && !state.isSaving
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Link,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                    if (state.isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
-                        Text(
-                            text = if (state.links.isEmpty()) "Add Links" else "Edit Links (${state.links.size})",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                // Section 4: Description Body
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 1.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = state.body,
-                            onValueChange = { viewModel.onEvent(TaskEditEvent.UpdateBody(it)) },
-                            label = { Text("Description") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 5,
-                            shape = MaterialTheme.shapes.medium
-                        )
+                    } else {
+                        Text("Save")
                     }
                 }
             }
@@ -1132,4 +1187,124 @@ private fun TimePickerDialogContent(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MoreDetailsSheet(
+    location: String,
+    onLocationChange: (String) -> Unit,
+    tags: List<String>,
+    onTagsChange: (List<String>) -> Unit,
+    links: List<String>,
+    allLinkableEntities: List<LinkedEntityInfo>,
+    onShowLinkPicker: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("More details", style = MaterialTheme.typography.titleMedium)
+
+            // Location
+            OutlinedTextField(
+                value = location,
+                onValueChange = onLocationChange,
+                label = { Text("Location") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium
+            )
+
+            // Tags
+            Text("Tags", style = MaterialTheme.typography.titleSmall)
+            TagInput(
+                tags = tags,
+                onTagsChanged = onTagsChange,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Links
+            Text("Links", style = MaterialTheme.typography.titleSmall)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        onShowLinkPicker()
+                    },
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = if (links.isEmpty()) "Add links" else "${links.size} link(s) selected",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Show linked entities
+            if (links.isNotEmpty()) {
+                links.forEach { linkId ->
+                    val entityInfo = allLinkableEntities.find { it.id == linkId }
+                    if (entityInfo != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val (chipIcon, color) = when (entityInfo.type) {
+                                "note" -> Icons.Default.NoteAlt to MaterialTheme.colorScheme.tertiary
+                                "task" -> Icons.Default.TaskAlt to MaterialTheme.colorScheme.primary
+                                else -> Icons.Default.People to MaterialTheme.colorScheme.secondary
+                            }
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = color.copy(alpha = 0.12f),
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = chipIcon,
+                                        contentDescription = null,
+                                        tint = color,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = entityInfo.title,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
 }

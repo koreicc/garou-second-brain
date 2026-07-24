@@ -51,7 +51,18 @@ data class TaskDto(
     @SerialName("created_at")
     val createdAt: String = "",
     @SerialName("updated_at")
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    // A6 enrichment fields
+    @SerialName("is_overdue")
+    val isOverdue: Boolean = false,
+    @SerialName("is_today")
+    val isToday: Boolean = false,
+    @SerialName("time_bucket")
+    val timeBucket: Int = 5,
+    @SerialName("priority_weight")
+    val priorityWeight: Int = 0,
+    @SerialName("sort_key")
+    val sortKey: String = ""
 )
 
 @Serializable
@@ -181,7 +192,12 @@ fun TaskDto.toDomain(): Task = Task(
     subtasks = subtasks.map { it.toDomain() },
     body = body,
     createdAt = createdAt,
-    updatedAt = updatedAt
+    updatedAt = updatedAt,
+    isOverdue = isOverdue,
+    isToday = isToday,
+    timeBucket = timeBucket,
+    priorityWeight = priorityWeight,
+    sortKey = sortKey
 )
 
 fun RecurrenceDto.toDomain(): Recurrence = Recurrence(

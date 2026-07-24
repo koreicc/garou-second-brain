@@ -30,7 +30,13 @@ data class Task(
     val subtasks: List<Subtask> = emptyList(),
     val body: String = "",
     val createdAt: String = "",
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    // A6 enrichment fields
+    val isOverdue: Boolean = false,
+    val isToday: Boolean = false,
+    val timeBucket: Int = 5,
+    val priorityWeight: Int = 0,
+    val sortKey: String = ""
 ) {
     val displayStatus: String
         get() = effectiveStatus.ifEmpty { status }
