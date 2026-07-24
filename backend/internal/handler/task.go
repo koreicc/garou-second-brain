@@ -2,8 +2,8 @@ package handler
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,12 +62,32 @@ func (h *TaskHandler) ListByDate(c echo.Context) error {
 	return c.JSON(http.StatusOK, model.DataResponse(tasks))
 }
 
-// Get returns a task (template or occurrence) by ID.
+// Get returns a task by ID. If the task is not found on disk, the handler
+// checks whether the ID matches a dynamic occurrence pattern (<parent-id>_<date>)
+// and computes the occurrence on-the-fly from the parent template.
 func (h *TaskHandler) Get(c echo.Context) error {
 	id := c.Param("id")
 	task, err := h.vault.ReadTask(id)
 	if err != nil {
 		if isNotFound(err) {
+			// Check if this is a dynamic occurrence ID: <parentID>_<YYYY-MM-DD>
+			underscoreIdx := strings.LastIndex(id, "_")
+			if underscoreIdx > 0 && underscoreIdx < len(id)-1 {
+				parentID := id[:underscoreIdx]
+				date := id[underscoreIdx+1:]
+				if _, parseErr := time.Parse("2006-01-02", date); parseErr == nil {
+					parent, parentErr := h.vault.ReadTask(parentID)
+					if parentErr == nil && parent.IsTemplate && parent.Recurrence != nil {
+						parsedDate, _ := time.Parse("2006-01-02", date)
+						if vault.DateMatchesRecurrence(parsedDate, parent) {
+							occ := vault.ComputeDynamicOccurrence(parent, date)
+							if occ != nil {
+								return c.JSON(http.StatusOK, model.DataResponse(occ))
+							}
+						}
+					}
+				}
+			}
 			return c.JSON(http.StatusNotFound, model.ErrorResponse("task not found"))
 		}
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("read task: %v", err)))
@@ -169,137 +189,7 @@ func (h *TaskHandler) Create(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save task: %v", err)))
 	}
 
-	// If this is a template with date range + recurrence, generate occurrences
-	if isTemplate && req.Recurrence != nil && req.StartDate != nil && req.EndDate != nil {
-		occurrences := h.generateOccurrences(task, *req.StartDate, *req.EndDate)
-		for _, occ := range occurrences {
-			if err := h.vault.WriteTask(occ); err != nil {
-				log.Printf("write occurrence %s for template %s: %v", occ.ID, task.ID, err)
-			}
-		}
-	}
-
 	return c.JSON(http.StatusCreated, model.DataResponse(task))
-}
-
-// generateOccurrences creates occurrence tasks for a template within the given date range.
-func (h *TaskHandler) generateOccurrences(template *model.Task, start, end time.Time) []*model.Task {
-	var occurrences []*model.Task
-	dates := generateDatesInRange(start, end, template.Recurrence)
-
-	for _, dateStr := range dates {
-		occID := model.OccurrenceID(template.ID, dateStr)
-
-		// Parse the date for occurrence-specific settings
-		occDate, err := time.Parse("2006-01-02", dateStr)
-		if err != nil {
-			continue
-		}
-
-		occ := &model.Task{
-			BaseEntity: model.BaseEntity{
-				ID:        occID,
-				Type:      model.TypeTask,
-				Status:    model.StatusPending,
-				Tags:      copySlice(template.Tags),
-				Links:     copySlice(template.Links),
-				CreatedAt: time.Now().UTC(),
-				UpdatedAt: time.Now().UTC(),
-			},
-			Title:           template.Title,
-			Icon:            template.Icon,
-			Location:        template.Location,
-			ParentID:        template.ID,
-			IsTemplate:      false,
-			OccurrenceDate:  dateStr,
-			DateMode:        "due_date",
-			DueDate:         &occDate,
-			TimeMode:        template.TimeMode,
-			StartTime:       template.StartTime,
-			EndTime:         template.EndTime,
-			DurationMinutes: template.DurationMinutes,
-			DueTime:         template.DueTime,
-			Recurrence:      nil, // occurrences have no recurrence of their own
-			Subtasks:        resetSubtasks(template.Subtasks),
-			Body:            template.Body,
-		}
-		if occ.Tags == nil {
-			occ.Tags = []string{}
-		}
-		if occ.Links == nil {
-			occ.Links = []string{}
-		}
-		if occ.Subtasks == nil {
-			occ.Subtasks = []model.Subtask{}
-		}
-
-		occurrences = append(occurrences, occ)
-	}
-
-	return occurrences
-}
-
-// generateDatesInRange returns all dates from start to end (inclusive) matching the recurrence pattern.
-func generateDatesInRange(start, end time.Time, rec *model.Recurrence) []string {
-	var dates []string
-
-	start = start.Truncate(24 * time.Hour)
-	end = end.Truncate(24 * time.Hour)
-
-	switch rec.Type {
-	case "daily":
-		interval := rec.Interval
-		if interval < 1 {
-			interval = 1
-		}
-		for d := start; !d.After(end); d = d.AddDate(0, 0, interval) {
-			dates = append(dates, d.Format("2006-01-02"))
-		}
-
-	case "weekly":
-		interval := rec.Interval
-		if interval < 1 {
-			interval = 1
-		}
-		// If specific days of week are set, use them
-		if len(rec.DaysOfWeek) > 0 {
-			dayMap := make(map[int]bool)
-			for _, d := range rec.DaysOfWeek {
-				dayMap[d] = true
-			}
-			for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
-				wd := int(d.Weekday()) // 0=Sunday, 1=Monday, ...
-				if dayMap[wd] {
-					dates = append(dates, d.Format("2006-01-02"))
-				}
-			}
-		} else {
-			// Every N weeks from start
-			for d := start; !d.After(end); d = d.AddDate(0, 0, 7*interval) {
-				dates = append(dates, d.Format("2006-01-02"))
-			}
-		}
-
-	case "monthly":
-		interval := rec.Interval
-		if interval < 1 {
-			interval = 1
-		}
-		for d := start; !d.After(end); d = d.AddDate(0, interval, 0) {
-			dates = append(dates, d.Format("2006-01-02"))
-		}
-
-	case "yearly":
-		interval := rec.Interval
-		if interval < 1 {
-			interval = 1
-		}
-		for d := start; !d.After(end); d = d.AddDate(interval, 0, 0) {
-			dates = append(dates, d.Format("2006-01-02"))
-		}
-	}
-
-	return dates
 }
 
 type UpdateTaskRequest struct {
@@ -340,27 +230,23 @@ func (h *TaskHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse("invalid request body"))
 	}
 
-	// Track changes for propagation
-	changedFields := make(map[string]bool)
+	// Track changes for propagation (reserved for future dynamic occurrence propagation)
+	_ = make(map[string]bool)
 
 	if req.Title != "" {
 		task.Title = req.Title
-		changedFields["title"] = true
 	}
 	if req.Status != "" {
 		task.Status = model.EntityStatus(req.Status)
 	}
 	if req.Icon != "" {
 		task.Icon = req.Icon
-		changedFields["icon"] = true
 	}
 	if req.Location != "" {
 		task.Location = req.Location
-		changedFields["location"] = true
 	}
 	if req.Tags != nil {
 		task.Tags = req.Tags
-		changedFields["tags"] = true
 	}
 	if req.Links != nil {
 		task.Links = req.Links
@@ -394,46 +280,14 @@ func (h *TaskHandler) Update(c echo.Context) error {
 	}
 	if req.Recurrence != nil {
 		task.Recurrence = req.Recurrence
-		changedFields["recurrence"] = true
 	}
 	if req.Subtasks != nil {
 		task.Subtasks = req.Subtasks
-		changedFields["subtasks"] = true
 	}
 	if req.Body != "" {
 		task.Body = req.Body
-		changedFields["body"] = true
 	}
 	task.UpdatedAt = time.Now().UTC()
-
-	// Propagate changes to occurrences if requested and this is a template
-	if req.PropagateToOccurrences && task.IsTemplate && len(changedFields) > 0 {
-		occurrences, err := h.vault.ListTasksByParent(task.ID)
-		if err == nil {
-			for _, occ := range occurrences {
-				if changedFields["title"] {
-					occ.Title = task.Title
-				}
-				if changedFields["icon"] {
-					occ.Icon = task.Icon
-				}
-				if changedFields["location"] {
-					occ.Location = task.Location
-				}
-				if changedFields["tags"] {
-					occ.Tags = copySlice(task.Tags)
-				}
-				if changedFields["subtasks"] {
-					occ.Subtasks = resetSubtasks(task.Subtasks)
-				}
-				if changedFields["body"] {
-					occ.Body = task.Body
-				}
-				occ.UpdatedAt = time.Now().UTC()
-				h.vault.WriteTask(occ)
-			}
-		}
-	}
 
 	if err := h.vault.WriteTask(task); err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("save task: %v", err)))
@@ -445,18 +299,6 @@ func (h *TaskHandler) Update(c echo.Context) error {
 func (h *TaskHandler) Delete(c echo.Context) error {
 	id := c.Param("id")
 
-	// Read the task first to check if it's a template
-	task, err := h.vault.ReadTask(id)
-	if err == nil && task.IsTemplate {
-		// Delete all occurrences first
-		occurrences, listErr := h.vault.ListTasksByParent(task.ID)
-		if listErr == nil {
-			for _, occ := range occurrences {
-				h.vault.Delete(model.TypeTask, occ.ID)
-			}
-		}
-	}
-
 	if err := h.vault.Delete(model.TypeTask, id); err != nil {
 		if isNotFound(err) {
 			return c.JSON(http.StatusNotFound, model.ErrorResponse("task not found"))
@@ -464,25 +306,4 @@ func (h *TaskHandler) Delete(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("delete task: %v", err)))
 	}
 	return c.JSON(http.StatusOK, model.DataResponse(nil))
-}
-
-func resetSubtasks(subtasks []model.Subtask) []model.Subtask {
-	result := make([]model.Subtask, len(subtasks))
-	for i, s := range subtasks {
-		result[i] = model.Subtask{
-			ID:        uuid.New().String(),
-			Title:     s.Title,
-			Completed: false,
-		}
-	}
-	return result
-}
-
-func copySlice(s []string) []string {
-	if s == nil {
-		return nil
-	}
-	result := make([]string, len(s))
-	copy(result, s)
-	return result
 }

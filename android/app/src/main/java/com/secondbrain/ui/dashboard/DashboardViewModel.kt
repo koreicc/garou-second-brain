@@ -188,32 +188,14 @@ class DashboardViewModel(
 
     private suspend fun loadTasksForDate(date: LocalDate) {
         val todayStr = date.toString()
-        val allTasks = taskRepository.getAll().getOrDefault(emptyList())
 
-        // Get occurrences from API
+        // Get tasks for this date from the API.
+        // The backend now dynamically computes occurrences from templates
+        // with recurrence patterns, so no client-side fallback is needed.
         val byDateResult = taskRepository.getByDate(todayStr)
-        val occurrences = byDateResult.getOrDefault(emptyList())
+        val tasks = byDateResult.getOrDefault(emptyList())
 
-        // Also find templates whose date range includes this date
-        val matchingTemplates = allTasks.filter { task ->
-            task.isTemplate &&
-                task.dateMode == "range" &&
-                task.startDate.take(10).isNotEmpty() &&
-                task.endDate.take(10).isNotEmpty() &&
-                task.startDate.take(10) <= todayStr &&
-                task.endDate.take(10) >= todayStr
-        }.map { task ->
-            // Create a display copy: show as occurrence if not already in occurrences list
-            val existingIds = occurrences.map { it.id }.toSet()
-            if (task.id !in existingIds) task else null
-        }.filterNotNull()
-
-        // Merge: occurrences first, then matching templates not already in occurrences
-        val existingIds = occurrences.map { it.id }.toSet()
-        val extraTemplates = matchingTemplates.filter { it.id !in existingIds }
-        val merged = occurrences + extraTemplates
-
-        _state.update { it.copy(selectedDateTasks = merged) }
+        _state.update { it.copy(selectedDateTasks = tasks) }
     }
 
     fun silentReloadDateTasks() {
