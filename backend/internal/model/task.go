@@ -8,11 +8,11 @@ import (
 
 // Task priority levels.
 const (
-	PriorityNone    = ""
-	PriorityLow     = "low"
-	PriorityMedium  = "medium"
-	PriorityHigh    = "high"
-	PriorityUrgent  = "urgent"
+	PriorityNone   = ""
+	PriorityLow    = "low"
+	PriorityMedium = "medium"
+	PriorityHigh   = "high"
+	PriorityUrgent = "urgent"
 )
 
 type Task struct {

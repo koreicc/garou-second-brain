@@ -53,11 +53,12 @@ func getNowForRequest(c echo.Context) time.Time {
 
 // List returns all tasks with optional filtering and sorting.
 // Query params:
-//   status=        filter by status (pending, in-progress, completed, expired)
-//   priority=      filter by priority (low, medium, high, urgent)
-//   search=        filter by title/body text (case-insensitive substring match)
-//   sort_by=       field to sort by (title, created_at, updated_at, due_date, priority) default: created_at
-//   sort_order=    asc or desc (default: desc)
+//
+//	status=        filter by status (pending, in-progress, completed, expired)
+//	priority=      filter by priority (low, medium, high, urgent)
+//	search=        filter by title/body text (case-insensitive substring match)
+//	sort_by=       field to sort by (title, created_at, updated_at, due_date, priority) default: created_at
+//	sort_order=    asc or desc (default: desc)
 func (h *TaskHandler) List(c echo.Context) error {
 	tasks, err := h.vault.ListTasks()
 	if err != nil {
