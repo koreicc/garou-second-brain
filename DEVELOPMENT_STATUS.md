@@ -60,33 +60,35 @@ red "Overdue" section above the daily task list.
 - Task list below calendar for selected date
 - Access via calendar icon in Dashboard top bar
 
----
+### 5. Smart Lists (Today/Tomorrow/This Week)
 
-## Smart Lists (Todo/Tomorrow/This Week)
+**Files changed:**
+- `android/.../DashboardViewModel.kt` -- `selectedScope`, `weekStartDate`, `weekTasksByDay` fields, `selectScope()`, `loadWeekTasks()`
+- `android/.../DashboardScreen.kt` -- `ScopeChipsRow` with FilterChips, `WeekTasksSection`
 
-### Current State
+**Features:**
+- 4 filter chips: Today, Tomorrow, This Week, Pick Date
+- Today/Tomorrow: tasks for that date, with date selector nav
+- This Week: Mon-Sun grouped view showing all tasks in the week
+- Pick Date: opens date picker, switches to custom date mode
+- Week view auto-loads tasks for all 7 days from the local task list
 
-Dashboard has a date selector with prev/next day navigation and a date picker.
-Smart Lists (Today/Tomorrow/This Week) are NOT yet implemented as a separate
-tabbed interface.
+### 6. Priority System
 
-### How to Implement
+**Files changed:**
+- `backend/internal/model/task.go` -- `Priority` field, constants, validation
+- `backend/internal/handler/task.go` -- `Priority` in Create/Update requests
+- `android/.../domain/model/Task.kt` -- `priority` field
+- `android/.../data/dto/TaskDto.kt` -- `@SerialName("priority")` in 3 DTOs
+- `android/.../ui/util/StatusBadge.kt` -- `PriorityBadge` composable (Low/Med/High/Urg)
+- `android/.../ui/tasks/TaskEditViewModel.kt` -- `priority` state + save
+- `android/.../ui/tasks/TaskEditScreen.kt` -- priority chip selector (5 levels)
+- `android/.../ui/dashboard/DashboardScreen.kt` -- shows PriorityBadge on task cards
 
-**Option A: Quick date shortcuts (simplest)**
-Add filter chips below the date selector:
-- "Today" -> `selectDate(LocalDate.now())`
-- "Tomorrow" -> `selectDate(LocalDate.now().plusDays(1))`
-- "This Week" -> show a week overview section
-
-**Option B: State-based scope**
-Add `selectedScope` to `DashboardUiState`:
-- `"today"`, `"tomorrow"`, `"week"`, `"date"` (custom)
-- Filter `allTasks` (already loaded) by scope
-- For "week", show tasks grouped by day Mon-Sun
-
-### Code Location
-- `android/.../DashboardViewModel.kt` -- `DashboardUiState` + filter logic
-- `android/.../DashboardScreen.kt` -- segmented buttons + week section
+**Priority levels:** `None`, `Low`, `Medium`, `High`, `Urgent`
+- Backend validates against allowed values
+- Frontend displays colored badge before status badge
+- Priority stored in YAML frontmatter: `priority: high`
 
 ---
 
@@ -97,7 +99,6 @@ Add `selectedScope` to `DashboardUiState`:
 | Feature | Description | Where |
 |---|---|---|
 | **Reminders/Notifications** | Android NotificationManager + AlarmManager/WorkManager | New `reminder` service |
-| **Priority System** | Low/Medium/High/Urgent on tasks | `model/task.go` + UI |
 | **Swipe Actions** | Swipe-to-complete, swipe-to-delete on task cards | `TaskListScreen.kt` |
 | **Search** | Full-text search across tasks | Frontend search bar |
 | **Filtering/Sorting** | By status, date, priority, folder | `TaskListScreen.kt` |
@@ -148,7 +149,7 @@ Add `selectedScope` to `DashboardUiState`:
 |---|---|
 | `backend/cmd/server/main.go` | Entry point, routes |
 | `backend/internal/handler/task.go` | Task CRUD + `enrichTasks()` |
-| `backend/internal/model/task.go` | Task struct + `ComputeEffectiveStatus()` |
+| `backend/internal/model/task.go` | Task struct + `ComputeEffectiveStatus()` + `Priority` |
 | `backend/internal/model/common.go` | EntityStatus, BaseEntity constants |
 | `backend/internal/vault/vault.go` | File operations, locking |
 | `backend/internal/handler/entity.go` | Entity resolution |
@@ -157,17 +158,18 @@ Add `selectedScope` to `DashboardUiState`:
 
 | File | Purpose |
 |---|---|
-| `ui/dashboard/DashboardScreen.kt` | Dashboard with overdue, tasks, quick-actions |
-| `ui/dashboard/DashboardViewModel.kt` | Dashboard state + loading |
+| `ui/dashboard/DashboardScreen.kt` | Dashboard with scope chips, week view, overdue, tasks, quick-actions |
+| `ui/dashboard/DashboardViewModel.kt` | Dashboard state + scope/date/week loading |
 | `ui/calendar/CalendarScreen.kt` | Month grid calendar |
 | `ui/calendar/CalendarViewModel.kt` | Calendar state + task loading |
 | `ui/tasks/TaskListScreen.kt` | Task list with status colors |
 | `ui/tasks/TaskDetailScreen.kt` | Task detail view |
-| `ui/tasks/TaskEditScreen.kt` | Task creation/editing |
+| `ui/tasks/TaskEditScreen.kt` | Task creation/editing with priority |
 | `data/api/KtorApiService.kt` | API client with timezone header |
-| `domain/model/Task.kt` | Task model + `displayStatus` |
+| `domain/model/Task.kt` | Task model + `displayStatus` + `priority` |
 | `ui/navigation/AppNavigation.kt` | Navigation host + routes |
 | `ui/navigation/Screen.kt` | Route definitions |
+| `ui/util/StatusBadge.kt` | `StatusBadge` + `PriorityBadge` composables |
 
 ---
 
