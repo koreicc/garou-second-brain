@@ -8,20 +8,18 @@ Read it at session start. For project overview, architecture, and API docs, see
 
 ## Workflow
 
-1. **Think first** -- output a THINKING block before writing code. State your plan,
-   which files you will touch, and which rule you are following.
-2. **Discover** -- use `ls`, `rg`, `find`, and `read` to understand existing code.
+1. **Discover** -- use `ls`, `rg`, `find`, and `read` to understand existing code.
    Do not guess file contents.
-3. **Branch** -- never work on main. Use `feat/[name]` or `fix/[name]`.
-4. **Implement** -- backend first (YAML schema + Go structs), then frontend sync
+2. **Branch** -- never work on main. Use `feat/[name]` or `fix/[name]`.
+3. **Implement** -- backend first (YAML schema + Go structs), then frontend sync
    (Kotlin data classes to match).
-5. **Validate** -- backend: `gofmt -w .` then `go build ./...`. Frontend:
+4. **Validate** -- backend: `gofmt -w .` then `go build ./...`. Frontend:
    `./gradlew ktlintCheck` then `./gradlew assembleDebug`. Do NOT commit if
    validation fails.
-6. **Anti-patterns** -- load `docs/agent-anti-patterns.md` before writing Go code.
+5. **Anti-patterns** -- load `docs/agent-anti-patterns.md` before writing Go code.
    For Compose code, load the Compose anti-patterns reference. Audit your output
    against the WRONG/RIGHT tables.
-7. **Commit** -- use semantic commit messages (see below). Push and open a PR.
+6. **Commit** -- use semantic commit messages (see below). Push and open a PR.
 
 ---
 
@@ -84,7 +82,6 @@ After pushing a branch, test the backend on Termux:
 - NEVER use SQL databases.
 - NEVER commit build artifacts (`/build`, `.gradle/`, `bin/`).
 - NEVER push directly to main.
-- NEVER skip the THINKING block before coding.
 - NEVER overwrite a file without reading it first.
 - NEVER leave TODO or FIXME comments -- implement or file an issue.
 - NEVER commit secrets, hardcoded tokens, or absolute paths.
