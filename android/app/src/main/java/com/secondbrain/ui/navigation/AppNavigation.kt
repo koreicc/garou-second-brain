@@ -181,6 +181,12 @@ fun AppNavigation(
                         },
                         onNavigateToPersonEdit = {
                             navController.navigate(Screen.PersonEdit())
+                        },
+                        onNavigateToHabitDetail = { habitId ->
+                            navController.navigate(Screen.HabitEdit(habitId))
+                        },
+                        onNavigateToHabitEdit = {
+                            navController.navigate(Screen.HabitEdit())
                         }
                     )
                 }

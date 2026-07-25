@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
@@ -67,6 +68,7 @@ import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Note
 import com.secondbrain.domain.model.Person
 import com.secondbrain.domain.model.Task
+import com.secondbrain.domain.model.Habit
 import com.secondbrain.ui.theme.pillShape
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
@@ -74,7 +76,7 @@ import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
 import com.secondbrain.ui.util.resolveIcon
 
-private val tabTitles = listOf("Notes", "Tasks", "People")
+private val tabTitles = listOf("Notes", "Tasks", "People", "Habits")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,7 +86,9 @@ fun WorkspaceScreen(
     onNavigateToPersonDetail: (String) -> Unit,
     onNavigateToNoteEdit: () -> Unit,
     onNavigateToTaskEdit: () -> Unit,
-    onNavigateToPersonEdit: () -> Unit
+    onNavigateToPersonEdit: () -> Unit,
+    onNavigateToHabitDetail: (String) -> Unit,
+    onNavigateToHabitEdit: () -> Unit
 ) {
     val viewModel: WorkspaceViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -93,7 +97,8 @@ fun WorkspaceScreen(
                 return WorkspaceViewModel(
                     noteRepository = AppModule.noteRepository,
                     taskRepository = AppModule.taskRepository,
-                    personRepository = AppModule.personRepository
+                    personRepository = AppModule.personRepository,
+                    habitRepository = AppModule.habitRepository
                 ) as T
             }
         }
@@ -129,6 +134,10 @@ fun WorkspaceScreen(
             state.pendingDeletePerson != null -> {
                 dialogTitle = "Delete Person"
                 dialogText = "Are you sure you want to delete \"${state.pendingDeletePerson!!.name}\"? This action cannot be undone."
+            }
+            state.pendingDeleteHabit != null -> {
+                dialogTitle = "Delete Habit"
+                dialogText = "Are you sure you want to delete \"${state.pendingDeleteHabit!!.title}\"? This action cannot be undone."
             }
             else -> {
                 dialogTitle = "Delete"
@@ -175,6 +184,9 @@ fun WorkspaceScreen(
                         }
                         2 -> IconButton(onClick = onNavigateToPersonEdit) {
                             Icon(Icons.Filled.Add, contentDescription = "Add person")
+                        }
+                        3 -> IconButton(onClick = onNavigateToHabitEdit) {
+                            Icon(Icons.Filled.Add, contentDescription = "Add habit")
                         }
                     }
                 }
@@ -239,7 +251,7 @@ fun WorkspaceScreen(
 
             // Content area
             when {
-                state.isLoading && state.notes.isEmpty() && state.tasks.isEmpty() && state.people.isEmpty() -> {
+                state.isLoading && state.notes.isEmpty() && state.tasks.isEmpty() && state.people.isEmpty() && state.habits.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -272,6 +284,14 @@ fun WorkspaceScreen(
                             onPersonClick = onNavigateToPersonDetail,
                             onDeletePerson = { person -> viewModel.onEvent(WorkspaceEvent.ShowDeletePerson(person)) },
                             onAddPerson = onNavigateToPersonEdit
+                        )
+                        3 -> HabitsTabContent(
+                            habits = state.habits,
+                            searchQuery = state.searchQuery,
+                            isLoading = state.isLoading,
+                            onHabitClick = onNavigateToHabitDetail,
+                            onDeleteHabit = { habit -> viewModel.onEvent(WorkspaceEvent.ShowDeleteHabit(habit)) },
+                            onAddHabit = onNavigateToHabitEdit
                         )
                     }
                 }
@@ -691,6 +711,181 @@ private fun WorkspacePersonCard(
                     Icon(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = "Delete person: ${person.name}"
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Habits Tab
+// ============================================================================
+
+@Composable
+private fun HabitsTabContent(
+    habits: List<Habit>,
+    searchQuery: String,
+    isLoading: Boolean,
+    onHabitClick: (String) -> Unit,
+    onDeleteHabit: (Habit) -> Unit,
+    onAddHabit: () -> Unit
+) {
+    val filteredHabits = remember(habits, searchQuery) {
+        if (searchQuery.isBlank()) {
+            habits
+        } else {
+            val query = searchQuery.trim().lowercase()
+            habits.filter { habit ->
+                habit.title.lowercase().contains(query) ||
+                    habit.tags.any { it.lowercase().contains(query) }
+            }
+        }
+    }
+
+    if (filteredHabits.isEmpty() && !isLoading) {
+        EmptyTabContent(
+            icon = { Icon(Icons.Default.Repeat, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)) },
+            title = if (searchQuery.isNotBlank()) "No matching habits" else "No habits yet",
+            subtitle = if (searchQuery.isNotBlank()) "Try a different search term" else "Create your first habit to start tracking",
+            buttonLabel = "Create Habit",
+            onButtonClick = onAddHabit
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filteredHabits, key = { it.id }) { habit ->
+                WorkspaceHabitCard(
+                    habit = habit,
+                    onClick = { onHabitClick(habit.id) },
+                    onDelete = { onDeleteHabit(habit) }
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkspaceHabitCard(
+    habit: Habit,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val containerColor = if (habit.todayCompleted) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        color = containerColor,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Surface(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight(),
+                color = if (habit.todayCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+                shape = RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+            ) {}
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val iconVector = resolveIcon(habit.icon)
+                        if (iconVector != null) {
+                            Icon(
+                                imageVector = iconVector,
+                                contentDescription = habit.icon,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        } else if (habit.icon.isNotEmpty()) {
+                            Text(
+                                text = habit.icon,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        if (habit.icon.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = habit.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (habit.tags.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .horizontalScroll(rememberScrollState())
+                        ) {
+                            habit.tags.forEach { tag ->
+                                SuggestionChip(
+                                    onClick = { },
+                                    label = { Text("#$tag") },
+                                    shape = pillShape,
+                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                    ),
+                                    border = null
+                                )
+                            }
+                        }
+                    }
+                    // Day-of-week dots
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        val dayLabels = listOf("M", "T", "W", "T", "F", "S", "S")
+                        dayLabels.forEachIndexed { index, label ->
+                            val isActive = habit.daysOfWeek.contains(index + 1)
+                            Surface(
+                                shape = MaterialTheme.shapes.extraSmall,
+                                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isActive) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = "Delete habit: ${habit.title}"
                     )
                 }
             }
