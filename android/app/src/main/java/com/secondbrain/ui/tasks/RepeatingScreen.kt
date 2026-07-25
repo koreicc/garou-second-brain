@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.Task
@@ -55,7 +56,7 @@ class RepeatingViewModel(
     }
 
     private fun loadTemplates() {
-        androidx.lifecycle.viewModelScope.launch {
+        viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             taskRepository.getAll()
                 .onSuccess { tasks ->

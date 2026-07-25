@@ -227,6 +227,37 @@ fun TaskEditScreen(
                 colors = transparentTopAppBarColors()
             )
         }
+        bottomBar = {
+            // Sticky save bar — always visible, never scroll to save
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = { viewModel.onEvent(TaskEditEvent.Save) },
+                        modifier = Modifier.weight(1f),
+                        enabled = state.title.isNotBlank() && !state.isSaving
+                    ) {
+                        if (state.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                }
+            }
+        },
     ) { padding ->
         if (state.isLoading && taskId != null) {
             Column(
@@ -911,37 +942,6 @@ fun TaskEditScreen(
                                 }
                             }
                         }
-                    }
-                }
-            }
-        }
-    },
-    bottomBar = {
-        // Sticky save bar — always visible, never scroll to save
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                androidx.compose.material3.Button(
-                    onClick = { viewModel.onEvent(TaskEditEvent.Save) },
-                    modifier = Modifier.weight(1f),
-                    enabled = state.title.isNotBlank() && !state.isSaving
-                ) {
-                    if (state.isSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("Save")
                     }
                 }
             }
