@@ -35,6 +35,8 @@ data class DashboardUiState(
     // Greeting
     val greeting: String = "",
     val dateString: String = "",
+    // Selected date
+    val selectedDate: LocalDate = LocalDate.now(),
     // Routine
     val routine: RoutineInfo? = null,
     val routineTimeOfDay: String = "",
@@ -56,6 +58,7 @@ data class DashboardUiState(
 
 sealed interface DashboardEvent {
     data object LoadData : DashboardEvent
+    data class SelectDate(val date: LocalDate) : DashboardEvent
     // Routine
     data class ToggleRoutineSubtask(val subtaskId: String) : DashboardEvent
     data object CompleteRoutine : DashboardEvent
@@ -88,6 +91,7 @@ class DashboardViewModel(
     fun onEvent(event: DashboardEvent) {
         when (event) {
             is DashboardEvent.LoadData -> loadData()
+            is DashboardEvent.SelectDate -> selectDate(event.date)
             is DashboardEvent.ToggleRoutineSubtask -> toggleRoutineSubtask(event.subtaskId)
             is DashboardEvent.CompleteRoutine -> completeRoutine()
             is DashboardEvent.CreateQuickTask -> createQuickTask(event.title)
@@ -110,6 +114,14 @@ class DashboardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             loadDataInternal(isSilent = false)
+        }
+    }
+
+    private fun selectDate(date: LocalDate) {
+        _state.update { it.copy(selectedDate = date, isLoading = true) }
+        viewModelScope.launch {
+            loadTasksForDate(date)
+            _state.update { it.copy(isLoading = false) }
         }
     }
 
@@ -165,8 +177,9 @@ class DashboardViewModel(
                     task.displayStatus == "completed"
             }
 
-            // Load tasks for today
-            loadTasksForDate(today)
+            // Load tasks for selected date
+            val selectedDate = _state.value.selectedDate
+            loadTasksForDate(selectedDate)
 
             val quickTasks = quickTasksDeferred.await().filter { qt -> qt.id !in hidden }
 
@@ -174,6 +187,7 @@ class DashboardViewModel(
                 it.copy(
                     greeting = greeting,
                     dateString = dateStr,
+                    selectedDate = _state.value.selectedDate,
                     routine = routineInfo,
                     routineTimeOfDay = routineTime?.removeSuffix("-routine") ?: "",
                     overdueTasks = overdueTasks,

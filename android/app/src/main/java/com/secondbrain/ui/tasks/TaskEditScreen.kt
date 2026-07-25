@@ -420,7 +420,7 @@ fun TaskEditScreen(
                     listOf("" to "None", "due_date" to "Due Date")
                 else
                     listOf("" to "None", "due_date" to "Due Date", "range" to "Range")
-                val timeModeOptions = listOf("" to "None", "due_time" to "Due Time", "start_end" to "Start/End", "start_duration" to "Start+Duration")
+                val timeModeOptions = listOf("" to "None", "due_time" to "Due Time", "start_end" to "Start/End", "start_duration" to "Duration")
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,

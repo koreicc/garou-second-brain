@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NoteAlt
@@ -25,6 +27,8 @@ import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -41,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,6 +72,8 @@ import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
 import com.secondbrain.ui.util.resolveIcon
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 // ---------------------------------------------------------------------------
 // Top-level screen composable
@@ -106,6 +113,40 @@ fun DashboardScreen(
 
     RefreshOnResume {
         viewModel.silentReload()
+    }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = java.time.ZoneId.systemDefault()
+                .let { zone ->
+                    state.selectedDate.atStartOfDay(zone)
+                        .toInstant()
+                        .toEpochMilli()
+                }
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val ld = java.time.Instant.ofEpochMilli(millis)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                            viewModel.onEvent(DashboardEvent.SelectDate(ld))
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
 
     Scaffold(
@@ -158,6 +199,15 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // ---- Date selector ----
+            item(key = "date-selector") {
+                DateSelectorCard(
+                    selectedDate = state.selectedDate,
+                    onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
+                    onOpenDatePicker = { showDatePicker = true }
+                )
+            }
+
             // ---- Routine section ----
             state.routine?.let { routine ->
                 item(key = "routine") {
@@ -723,6 +773,84 @@ private fun QuickNoteInputCard(
                         Text("Add Note")
                     }
                 }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Date selector card
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DateSelectorCard(
+    selectedDate: LocalDate,
+    onChangeDate: (LocalDate) -> Unit,
+    onOpenDatePicker: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = { onChangeDate(selectedDate.minusDays(1)) }) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous day")
+            }
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onOpenDatePicker),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(200.dp)
+                ) {
+                    Text(
+                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                    val today = LocalDate.now()
+                    val label = when {
+                        selectedDate == today -> "Today"
+                        selectedDate == today.minusDays(1) -> "Yesterday"
+                        selectedDate == today.plusDays(1) -> "Tomorrow"
+                        else -> selectedDate.format(DateTimeFormatter.ofPattern("yyyy", Locale.getDefault()))
+                    }
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selectedDate == today) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            IconButton(onClick = { onChangeDate(selectedDate.plusDays(1)) }) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next day")
             }
         }
     }
