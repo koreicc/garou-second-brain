@@ -21,14 +21,18 @@ func NewHabitHandler(v *vault.Vault) *HabitHandler {
 
 // weekdayToInt converts Go's time.Weekday (0=Sun..6=Sat) to 1=Mon..7=Sun.
 func weekdayToInt(wd time.Weekday) int {
+	if wd == time.Sunday {
+		return 7
+	}
 	return int(wd)
 }
 
 // isHabitScheduledForDate returns true if the habit's days_of_week includes
 // the given date's weekday.
 func isHabitScheduledForDate(h *model.Habit, date time.Weekday) bool {
+	habitWeekday := weekdayToInt(date)
 	for _, d := range h.DaysOfWeek {
-		if int(date) == d {
+		if habitWeekday == d {
 			return true
 		}
 	}
