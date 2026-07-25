@@ -1,13 +1,20 @@
 ---
 feature: m3-ui-refactor
-status: designed
+status: delivered
 updated: 2025-07-25
 branch: feat/m3-ui-refactor
+commits: d0a369d..7d6f373
 ---
 
 # M3 UI Refactor & Dashboard Simplification
 
 ## Report
+
+**What was built** — Dashboard simplified to today-only view (removed scope chips, date picker, search). Settings made minimalist (removed gradient/OLED/shading controls, replaced FilterChips with SegmentedButtons). TaskEdit Date+Time merged into Schedule section with SegmentedButton for time mode. Subtask drag-and-drop via compose-reorderable. Calendar uses HorizontalPager for month swiping. SearchScreen upgraded to ElevatedCard.
+
+**Verification** — `.\gradlew.bat assembleDebug` BUILD SUCCESSFUL. APK installed to device user 0.
+
+**Journey log** — Compose Next spec-first workflow. Worktree at `.worktrees/m3-ui-refactor`. compose-reorderable version is 0.9.6. Calendar HorizontalPager uses 240 pages centered on current month.
 
 ## [S1] Problem
 The app has accumulated UI bloat: Dashboard has redundant scope chips (today/tomorrow/week/pick date) and a search button that duplicates the workspace search, Settings page is too verbose, TaskEdit page has separate Date and Time sections that waste vertical space, subtasks lack drag-and-drop reordering, and occurrence editing incorrectly allows date range selection.
@@ -78,10 +85,10 @@ The app has accumulated UI bloat: Dashboard has redundant scope chips (today/tom
 - New screens or features
 
 ## Tasks
-- [ ] T1: Dashboard simplification — remove scope chips, date selector, search button; keep today-only view (covers: D1, D6)
-- [ ] T2: Settings minimalist redesign — remove toggles, replace FilterChips with SegmentedButtons, flatten layout (covers: D2)
-- [ ] T3: TaskEdit schedule consolidation — merge Date+Time into Schedule section, time SegmentedButton, occurrence date range restriction (covers: D3)
-- [ ] T4: Subtask drag-and-drop — add reorderable dependency, drag handle, ReorderSubtasks event (covers: D4)
-- [ ] T5: Calendar optimization — HorizontalPager for month swiping (covers: D5)
-- [ ] T6: SearchScreen M3 upgrade — ElevatedCard for search results (covers: D7)
-- [ ] T7: Verify all changes build and install (covers: all)
+- [x] T1: Dashboard simplification — remove scope chips, date selector, search button; keep today-only view (covers: D1, D6)
+- [x] T2: Settings minimalist redesign — remove toggles, replace FilterChips with SegmentedButtons, flatten layout (covers: D2)
+- [x] T3: TaskEdit schedule consolidation — merge Date+Time into Schedule section, time SegmentedButton, occurrence date range restriction (covers: D3)
+- [x] T4: Subtask drag-and-drop — add reorderable dependency, drag handle, ReorderSubtasks event (covers: D4)
+- [x] T5: Calendar optimization — HorizontalPager for month swiping (covers: D5)
+- [x] T6: SearchScreen M3 upgrade — ElevatedCard for search results (covers: D7)
+- [x] T7: Verify all changes build and install (covers: all)
