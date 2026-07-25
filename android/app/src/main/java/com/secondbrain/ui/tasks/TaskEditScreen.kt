@@ -226,7 +226,7 @@ fun TaskEditScreen(
                 },
                 colors = transparentTopAppBarColors()
             )
-        }
+        },
         bottomBar = {
             // Sticky save bar — always visible, never scroll to save
             Surface(
