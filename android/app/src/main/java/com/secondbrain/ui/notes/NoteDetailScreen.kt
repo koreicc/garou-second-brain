@@ -5,9 +5,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.TextSnippet
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,7 +89,7 @@ fun NoteDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to notes")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back to notes")
                     }
                 },
                 actions = {
@@ -194,7 +194,7 @@ fun NoteDetailScreen(
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(
-                                        imageVector = Icons.Default.TextSnippet,
+                                        imageVector = Icons.AutoMirrored.Default.TextSnippet,
                                         contentDescription = null,
                                         modifier = Modifier.size(64.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)

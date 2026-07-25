@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -448,7 +449,7 @@ private fun FilterBar(
                 }
                 IconButton(onClick = onToggleSortOrder, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        Icons.Default.Sort,
+                        Icons.AutoMirrored.Default.Sort,
                         contentDescription = if (sortOrder == "asc") "Ascending" else "Descending",
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary

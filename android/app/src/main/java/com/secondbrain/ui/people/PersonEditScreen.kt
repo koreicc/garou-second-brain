@@ -18,7 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
@@ -134,7 +134,7 @@ fun PersonEditScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to people")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back to people")
                     }
                 },
                 colors = transparentTopAppBarColors()

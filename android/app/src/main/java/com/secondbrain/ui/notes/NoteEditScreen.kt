@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.People
@@ -127,7 +127,7 @@ fun NoteEditScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back to notes")
+                        Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Back to notes")
                     }
                 },
                 colors = transparentTopAppBarColors()
