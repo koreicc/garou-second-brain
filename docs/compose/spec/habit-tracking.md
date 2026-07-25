@@ -1,13 +1,20 @@
 ---
 feature: habit-tracking
-status: designed
+status: delivered
 updated: 2025-07-25
 branch: feat/habit-tracking
+commits: 430f5c3..77bfa7d
 ---
 
 # Habit Tracking
 
 ## Report
+
+**What was built** — Full-stack habit tracking. Backend: Habit model, CRUD+complete+today endpoints, vault storage. Frontend: data layer, HabitListScreen, HabitEditScreen, Dashboard integration, FAB menu.
+
+**Verification** — go build/test pass. Gradle build successful. APK installed.
+
+**Journey log** — Habits share tasks/ vault, filtered by type. Backend computes todayCompleted.
 
 ## [S1] Problem
 Users need to track recurring habits (exercise, reading, meditation, etc.) that repeat on specific days of the week. Tasks with weekly recurrence are not the right abstraction — habits have no date, no dateMode, always use weekly recurrence, and need a dedicated UI for day-of-week selection.
@@ -78,9 +85,9 @@ Users need to track recurring habits (exercise, reading, meditation, etc.) that 
 - Multi-week or monthly recurrence for habits
 
 ## Tasks
-- [ ] T1: Backend habit model + validation (covers: D1)
-- [ ] T2: Backend API endpoints (covers: D2)
-- [ ] T3: Frontend data layer (covers: D3)
-- [ ] T4: HabitListScreen + HabitEditScreen (covers: D4)
-- [ ] T5: Dashboard habit section + navigation (covers: D5)
-- [ ] T6: Verify build + install (covers: all)
+- [x] T1: Backend habit model + validation (covers: D1)
+- [x] T2: Backend API endpoints (covers: D2)
+- [x] T3: Frontend data layer (covers: D3)
+- [x] T4: HabitListScreen + HabitEditScreen (covers: D4)
+- [x] T5: Dashboard habit section + navigation (covers: D5)
+- [x] T6: Verify build + install (covers: all)
