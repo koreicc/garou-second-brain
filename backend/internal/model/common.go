@@ -18,6 +18,7 @@ const (
 	TypeTask      = "task"
 	TypeQuickTask = "quick-task"
 	TypePerson    = "person"
+	TypeHabit     = "habit"
 )
 
 const (

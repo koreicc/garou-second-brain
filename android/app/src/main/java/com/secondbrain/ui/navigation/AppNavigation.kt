@@ -35,6 +35,8 @@ import com.secondbrain.ui.search.SearchScreen
 import com.secondbrain.ui.search.SearchViewModel
 import com.secondbrain.ui.settings.SettingsScreen
 import com.secondbrain.ui.settings.SettingsViewModel
+import com.secondbrain.ui.habits.HabitEditScreen
+import com.secondbrain.ui.habits.HabitListScreen
 import com.secondbrain.ui.tasks.RepeatingScreen
 import com.secondbrain.ui.tasks.TaskDetailScreen
 import com.secondbrain.ui.tasks.TaskEditScreen
@@ -153,6 +155,9 @@ fun AppNavigation(
                         },
                         onNavigateToCalendar = {
                             navController.navigate(Screen.Calendar)
+                        },
+                        onNavigateToHabits = {
+                            navController.navigate(Screen.HabitList)
                         }
                     )
                 }
@@ -317,6 +322,27 @@ fun AppNavigation(
                         }
                     )
                 }
+
+                // -- Habit screens --
+
+                composable<Screen.HabitList> {
+                    HabitListScreen(
+                        onHabitClick = { habitId ->
+                            navController.navigate(Screen.HabitEdit(habitId))
+                        },
+                        onAddHabit = {
+                            navController.navigate(Screen.HabitEdit())
+                        }
+                    )
+                }
+
+                composable<Screen.HabitEdit> { backStackEntry ->
+                    val screen: Screen.HabitEdit = backStackEntry.toRoute()
+                    HabitEditScreen(
+                        habitId = screen.habitId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
 
@@ -335,6 +361,10 @@ fun AppNavigation(
             onNewPerson = {
                 fabMenuVisible = false
                 navController.navigate(Screen.PersonEdit())
+            },
+            onNewHabit = {
+                fabMenuVisible = false
+                navController.navigate(Screen.HabitEdit())
             }
         )
     }

@@ -72,6 +72,8 @@ func entityDir(entityType string) (string, error) {
 		return DirQuickTasks, nil
 	case model.TypePerson:
 		return DirPeople, nil
+	case model.TypeHabit:
+		return DirTasks, nil
 	default:
 		return "", fmt.Errorf("unknown entity type: %s", entityType)
 	}
@@ -481,6 +483,10 @@ func (v *Vault) ListTasks() ([]*model.Task, error) {
 	for _, id := range files {
 		t, err := v.ReadTask(id)
 		if err != nil {
+			continue
+		}
+		// Skip habits — they share the tasks/ directory
+		if t.Type == model.TypeHabit {
 			continue
 		}
 		// Filter out old occurrence .md files (non-template tasks with a parent)
@@ -992,4 +998,77 @@ func ApplyOccurrenceOverride(occ *model.Task, override *OccurrenceOverride) {
 	if override.Subtasks != nil {
 		occ.Subtasks = override.Subtasks
 	}
+}
+
+// --------------------------------------------------------------------------
+// Habit methods
+// --------------------------------------------------------------------------
+
+// ReadHabit reads a habit from the tasks directory.
+func (v *Vault) ReadHabit(id string) (*model.Habit, error) {
+	var habit model.Habit
+	body, err := v.read(model.TypeHabit, id, &habit)
+	if err != nil {
+		return nil, err
+	}
+	habit.Body = body
+	return &habit, nil
+}
+
+// WriteHabit writes a habit to the tasks directory.
+func (v *Vault) WriteHabit(habit *model.Habit) error {
+	return v.write(model.TypeHabit, habit.ID, habit, habit.Body)
+}
+
+// ListHabits returns all habits from the tasks directory (habits share the
+// tasks/ dir, so we filter by type).
+func (v *Vault) ListHabits() ([]*model.Habit, error) {
+	files, err := v.listFiles(DirTasks)
+	if err != nil {
+		return nil, err
+	}
+	var habits []*model.Habit
+	for _, id := range files {
+		h, err := v.ReadHabit(id)
+		if err != nil {
+			continue
+		}
+		if h.Type != model.TypeHabit {
+			continue
+		}
+		habits = append(habits, h)
+	}
+	return habits, nil
+}
+
+// habitCompletionPath returns the file path for a habit completion override.
+func (v *Vault) habitCompletionPath(habitID, date string) string {
+	return filepath.Join(v.root, DirOverrides, "habit_"+habitID+"_"+date+".json")
+}
+
+// WriteHabitCompletion records that a habit was completed on a given date.
+func (v *Vault) WriteHabitCompletion(habitID, date string, completed bool) error {
+	path := v.habitCompletionPath(habitID, date)
+	data, err := json.MarshalIndent(map[string]bool{"completed": completed}, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal habit completion: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// ReadHabitCompletion checks if a habit was completed on a given date.
+func (v *Vault) ReadHabitCompletion(habitID, date string) (bool, error) {
+	path := v.habitCompletionPath(habitID, date)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("read habit completion: %w", err)
+	}
+	var result map[string]bool
+	if err := json.Unmarshal(data, &result); err != nil {
+		return false, fmt.Errorf("unmarshal habit completion: %w", err)
+	}
+	return result["completed"], nil
 }

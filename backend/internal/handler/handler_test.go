@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/koreicc/garou-second-brain/backend/internal/model"
 	"github.com/koreicc/garou-second-brain/backend/internal/vault"
@@ -1011,5 +1012,512 @@ func TestDataResponseFormat(t *testing.T) {
 	}
 	if resp.Data == nil {
 		t.Fatal("Data should not be nil")
+	}
+}
+
+// ---------- Habit Handler Tests ----------
+
+func TestHabitHandlerCRUD(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	// Create
+	createBody := `{"title":"Morning Exercise","days_of_week":[1,2,3,4,5],"icon":"run","tags":["health"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/habits", strings.NewReader(createBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.Create(c); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("Create status = %d, want %d", rec.Code, http.StatusCreated)
+	}
+
+	resp := parseResponse(t, rec.Body.Bytes())
+	if resp.Error != "" {
+		t.Fatalf("Create error: %s", resp.Error)
+	}
+
+	habitData, _ := json.Marshal(resp.Data)
+	var habit model.Habit
+	json.Unmarshal(habitData, &habit)
+	if habit.Title != "Morning Exercise" {
+		t.Fatalf("Title = %q, want %q", habit.Title, "Morning Exercise")
+	}
+	if habit.ID == "" {
+		t.Fatal("ID should not be empty")
+	}
+	if habit.Type != model.TypeHabit {
+		t.Fatalf("Type = %q, want %q", habit.Type, model.TypeHabit)
+	}
+	if len(habit.DaysOfWeek) != 5 {
+		t.Fatalf("DaysOfWeek len = %d, want 5", len(habit.DaysOfWeek))
+	}
+
+	habitID := habit.ID
+
+	// Get
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/habits/"+habitID, nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+	c2.SetParamNames("id")
+	c2.SetParamValues(habitID)
+
+	if err := h.Get(c2); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("Get status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+
+	resp2 := parseResponse(t, rec2.Body.Bytes())
+	habitData2, _ := json.Marshal(resp2.Data)
+	var habit2 model.Habit
+	json.Unmarshal(habitData2, &habit2)
+	if habit2.Title != "Morning Exercise" {
+		t.Fatalf("Get Title = %q, want %q", habit2.Title, "Morning Exercise")
+	}
+
+	// Update
+	updateBody := `{"title":"Evening Exercise","days_of_week":[1,3,5]}`
+	req3 := httptest.NewRequest(http.MethodPut, "/api/v1/habits/"+habitID, strings.NewReader(updateBody))
+	req3.Header.Set(echo.HeaderContentType, "application/json")
+	rec3 := httptest.NewRecorder()
+	c3 := e.NewContext(req3, rec3)
+	c3.SetParamNames("id")
+	c3.SetParamValues(habitID)
+
+	if err := h.Update(c3); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if rec3.Code != http.StatusOK {
+		t.Fatalf("Update status = %d, want %d", rec3.Code, http.StatusOK)
+	}
+
+	resp3 := parseResponse(t, rec3.Body.Bytes())
+	habitData3, _ := json.Marshal(resp3.Data)
+	var habit3 model.Habit
+	json.Unmarshal(habitData3, &habit3)
+	if habit3.Title != "Evening Exercise" {
+		t.Fatalf("Update Title = %q, want %q", habit3.Title, "Evening Exercise")
+	}
+
+	// List
+	req4 := httptest.NewRequest(http.MethodGet, "/api/v1/habits", nil)
+	rec4 := httptest.NewRecorder()
+	c4 := e.NewContext(req4, rec4)
+
+	if err := h.List(c4); err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if rec4.Code != http.StatusOK {
+		t.Fatalf("List status = %d, want %d", rec4.Code, http.StatusOK)
+	}
+
+	resp4 := parseResponse(t, rec4.Body.Bytes())
+	habitsData, _ := json.Marshal(resp4.Data)
+	var habits []*model.Habit
+	json.Unmarshal(habitsData, &habits)
+	if len(habits) != 1 {
+		t.Fatalf("List len = %d, want 1", len(habits))
+	}
+
+	// Delete
+	req5 := httptest.NewRequest(http.MethodDelete, "/api/v1/habits/"+habitID, nil)
+	rec5 := httptest.NewRecorder()
+	c5 := e.NewContext(req5, rec5)
+	c5.SetParamNames("id")
+	c5.SetParamValues(habitID)
+
+	if err := h.Delete(c5); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if rec5.Code != http.StatusOK {
+		t.Fatalf("Delete status = %d, want %d", rec5.Code, http.StatusOK)
+	}
+
+	// Verify deleted
+	req6 := httptest.NewRequest(http.MethodGet, "/api/v1/habits/"+habitID, nil)
+	rec6 := httptest.NewRecorder()
+	c6 := e.NewContext(req6, rec6)
+	c6.SetParamNames("id")
+	c6.SetParamValues(habitID)
+
+	if err := h.Get(c6); err != nil {
+		t.Fatalf("Get after delete: %v", err)
+	}
+	if rec6.Code != http.StatusNotFound {
+		t.Fatalf("Get after delete status = %d, want %d", rec6.Code, http.StatusNotFound)
+	}
+}
+
+func TestHabitCreateValidation(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{
+			name:       "empty title",
+			body:       `{"title":"","days_of_week":[1]}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "missing title",
+			body:       `{"days_of_week":[1]}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "missing days_of_week",
+			body:       `{"title":"Exercise"}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "empty days_of_week",
+			body:       `{"title":"Exercise","days_of_week":[]}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid day value",
+			body:       `{"title":"Exercise","days_of_week":[0]}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid day value too high",
+			body:       `{"title":"Exercise","days_of_week":[8]}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid json",
+			body:       `{invalid}`,
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/habits", strings.NewReader(tc.body))
+			req.Header.Set(echo.HeaderContentType, "application/json")
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			if err := h.Create(c); err != nil {
+				t.Fatalf("Create: %v", err)
+			}
+			if rec.Code != tc.wantStatus {
+				t.Fatalf("status = %d, want %d, body=%s", rec.Code, tc.wantStatus, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestHabitGetNotFound(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/habits/nonexistent", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("nonexistent")
+
+	if err := h.Get(c); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestHabitDeleteNotFound(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/habits/nonexistent", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("nonexistent")
+
+	if err := h.Delete(c); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestHabitListEmpty(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/habits", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.List(c); err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	resp := parseResponse(t, rec.Body.Bytes())
+	habitsData, _ := json.Marshal(resp.Data)
+	var habits []*model.Habit
+	json.Unmarshal(habitsData, &habits)
+	if len(habits) != 0 {
+		t.Fatalf("len = %d, want 0", len(habits))
+	}
+}
+
+func TestHabitComplete(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	// Create a habit
+	createBody := `{"title":"Meditation","days_of_week":[1,2,3,4,5,6,7]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/habits", strings.NewReader(createBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.Create(c); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	resp := parseResponse(t, rec.Body.Bytes())
+	habitData, _ := json.Marshal(resp.Data)
+	var habit model.Habit
+	json.Unmarshal(habitData, &habit)
+	habitID := habit.ID
+
+	// Complete
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/habits/"+habitID+"/complete", nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+	c2.SetParamNames("id")
+	c2.SetParamValues(habitID)
+
+	if err := h.Complete(c2); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("Complete status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+
+	resp2 := parseResponse(t, rec2.Body.Bytes())
+	habitData2, _ := json.Marshal(resp2.Data)
+	var habit2 model.Habit
+	json.Unmarshal(habitData2, &habit2)
+	if !habit2.TodayCompleted {
+		t.Fatal("TodayCompleted should be true after completing")
+	}
+}
+
+func TestHabitCompleteNotFound(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/habits/nonexistent/complete", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("nonexistent")
+
+	if err := h.Complete(c); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+func TestHabitToday(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	// Create habits with all 7 days
+	createBody := `{"title":"Daily Habit","days_of_week":[1,2,3,4,5,6,7]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/habits", strings.NewReader(createBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.Create(c); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Get today's habits
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/habits/today", nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+
+	if err := h.Today(c2); err != nil {
+		t.Fatalf("Today: %v", err)
+	}
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("Today status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+
+	resp2 := parseResponse(t, rec2.Body.Bytes())
+	habitsData, _ := json.Marshal(resp2.Data)
+	var todayHabits []*model.Habit
+	json.Unmarshal(habitsData, &todayHabits)
+	if len(todayHabits) != 1 {
+		t.Fatalf("Today len = %d, want 1", len(todayHabits))
+	}
+	if todayHabits[0].Title != "Daily Habit" {
+		t.Fatalf("Title = %q, want %q", todayHabits[0].Title, "Daily Habit")
+	}
+	if todayHabits[0].TodayCompleted {
+		t.Fatal("TodayCompleted should be false initially")
+	}
+}
+
+func TestHabitTodayEmpty(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/habits/today", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.Today(c); err != nil {
+		t.Fatalf("Today: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	resp := parseResponse(t, rec.Body.Bytes())
+	habitsData, _ := json.Marshal(resp.Data)
+	var todayHabits []*model.Habit
+	json.Unmarshal(habitsData, &todayHabits)
+	if len(todayHabits) != 0 {
+		t.Fatalf("len = %d, want 0", len(todayHabits))
+	}
+}
+
+func TestHabitTodayFiltersCorrectDay(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	h := NewHabitHandler(v)
+
+	// Create a habit only on Monday (1)
+	createBody := `{"title":"Monday Habit","days_of_week":[1]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/habits", strings.NewReader(createBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := h.Create(c); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Get today's habits — may or may not include it depending on day of week
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/habits/today", nil)
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+
+	if err := h.Today(c2); err != nil {
+		t.Fatalf("Today: %v", err)
+	}
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("Today status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+
+	// Verify the list is correct for today
+	resp2 := parseResponse(t, rec2.Body.Bytes())
+	habitsData, _ := json.Marshal(resp2.Data)
+	var todayHabits []*model.Habit
+	json.Unmarshal(habitsData, &todayHabits)
+
+	today := time.Now().Weekday()
+	isMonday := today == time.Monday
+	if isMonday && len(todayHabits) != 1 {
+		t.Fatalf("Today (Monday) len = %d, want 1", len(todayHabits))
+	}
+	if !isMonday && len(todayHabits) != 0 {
+		t.Fatalf("Today (not Monday) len = %d, want 0", len(todayHabits))
+	}
+}
+
+func TestHabitListDoesNotIncludeTasks(t *testing.T) {
+	v := setupTestVault(t)
+	e := setupEcho()
+	habitHandler := NewHabitHandler(v)
+	taskHandler := NewTaskHandler(v)
+
+	// Create a task
+	taskBody := `{"title":"A Task"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/tasks", strings.NewReader(taskBody))
+	req.Header.Set(echo.HeaderContentType, "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	if err := taskHandler.Create(c); err != nil {
+		t.Fatalf("Create task: %v", err)
+	}
+
+	// Create a habit
+	habitBody := `{"title":"A Habit","days_of_week":[1,2,3,4,5]}`
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/habits", strings.NewReader(habitBody))
+	req2.Header.Set(echo.HeaderContentType, "application/json")
+	rec2 := httptest.NewRecorder()
+	c2 := e.NewContext(req2, rec2)
+	if err := habitHandler.Create(c2); err != nil {
+		t.Fatalf("Create habit: %v", err)
+	}
+
+	// List habits — should only return the habit
+	req3 := httptest.NewRequest(http.MethodGet, "/api/v1/habits", nil)
+	rec3 := httptest.NewRecorder()
+	c3 := e.NewContext(req3, rec3)
+
+	if err := habitHandler.List(c3); err != nil {
+		t.Fatalf("List: %v", err)
+	}
+
+	resp := parseResponse(t, rec3.Body.Bytes())
+	habitsData, _ := json.Marshal(resp.Data)
+	var habits []*model.Habit
+	json.Unmarshal(habitsData, &habits)
+	if len(habits) != 1 {
+		t.Fatalf("habits len = %d, want 1", len(habits))
+	}
+	if habits[0].Title != "A Habit" {
+		t.Fatalf("Title = %q, want %q", habits[0].Title, "A Habit")
+	}
+
+	// List tasks — should only return the task
+	req4 := httptest.NewRequest(http.MethodGet, "/api/v1/tasks", nil)
+	rec4 := httptest.NewRecorder()
+	c4 := e.NewContext(req4, rec4)
+
+	if err := taskHandler.List(c4); err != nil {
+		t.Fatalf("List tasks: %v", err)
+	}
+
+	resp4 := parseResponse(t, rec4.Body.Bytes())
+	tasksData, _ := json.Marshal(resp4.Data)
+	var tasks []*model.Task
+	json.Unmarshal(tasksData, &tasks)
+	if len(tasks) != 1 {
+		t.Fatalf("tasks len = %d, want 1", len(tasks))
 	}
 }

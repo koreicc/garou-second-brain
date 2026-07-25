@@ -39,4 +39,10 @@ sealed interface Screen {
 
     @Serializable
     data object Repeating : Screen
+
+    @Serializable
+    data object HabitList : Screen
+
+    @Serializable
+    data class HabitEdit(val habitId: String? = null) : Screen
 }

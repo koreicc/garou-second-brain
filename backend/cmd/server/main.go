@@ -90,6 +90,15 @@ func main() {
 	entityHandler := handler.NewEntityHandler(v)
 	api.GET("/entities/by-ids", entityHandler.GetByIDs)
 
+	habitHandler := handler.NewHabitHandler(v)
+	api.GET("/habits", habitHandler.List)
+	api.GET("/habits/today", habitHandler.Today)
+	api.GET("/habits/:id", habitHandler.Get)
+	api.POST("/habits", habitHandler.Create)
+	api.PUT("/habits/:id", habitHandler.Update)
+	api.DELETE("/habits/:id", habitHandler.Delete)
+	api.POST("/habits/:id/complete", habitHandler.Complete)
+
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
  * @param onNewNote Called when "New Note" is selected
  * @param onNewTask Called when "New Task" is selected
  * @param onNewPerson Called when "New Person" is selected
+ * @param onNewHabit Called when "New Habit" is selected
  */
 @Composable
 fun FabMenuOverlay(
@@ -53,7 +55,8 @@ fun FabMenuOverlay(
     onDismiss: () -> Unit,
     onNewNote: () -> Unit,
     onNewTask: () -> Unit,
-    onNewPerson: () -> Unit
+    onNewPerson: () -> Unit,
+    onNewHabit: () -> Unit
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -106,6 +109,15 @@ fun FabMenuOverlay(
                     onClick = {
                         onDismiss()
                         onNewPerson()
+                    }
+                )
+                FabMenuOption(
+                    label = "New Habit",
+                    icon = Icons.Default.Repeat,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    onClick = {
+                        onDismiss()
+                        onNewHabit()
                     }
                 )
             }

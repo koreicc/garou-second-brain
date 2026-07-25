@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.secondbrain.data.dto.CreateNoteRequest
 import com.secondbrain.data.dto.UpdateTaskRequest
 import com.secondbrain.data.dto.toDto
+import com.secondbrain.data.repository.HabitRepository
 import com.secondbrain.data.repository.NoteRepository
 import com.secondbrain.data.repository.PersonRepository
 import com.secondbrain.data.repository.QuickTaskRepository
 import com.secondbrain.data.repository.TaskRepository
+import com.secondbrain.domain.model.Habit
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Task
 import kotlinx.coroutines.async
@@ -44,6 +46,8 @@ data class DashboardUiState(
     val overdueTasks: List<Task> = emptyList(),
     // Tasks for the selected date (occurrences)
     val selectedDateTasks: List<Task> = emptyList(),
+    // Today's habits
+    val todayHabits: List<Habit> = emptyList(),
     // Quick tasks
     val quickTasks: List<QuickTask> = emptyList(),
     val completingQuickTasks: Map<String, Int> = emptyMap(),
@@ -70,6 +74,8 @@ sealed interface DashboardEvent {
     data class UpdateQuickNoteTitle(val title: String) : DashboardEvent
     data class UpdateQuickNoteContent(val content: String) : DashboardEvent
     data object CreateQuickNote : DashboardEvent
+    // Habits
+    data class CompleteHabit(val id: String) : DashboardEvent
     // Error
     data object DismissError : DashboardEvent
 }
@@ -78,7 +84,8 @@ class DashboardViewModel(
     private val noteRepository: NoteRepository,
     private val taskRepository: TaskRepository,
     private val quickTaskRepository: QuickTaskRepository,
-    private val personRepository: PersonRepository
+    private val personRepository: PersonRepository,
+    private val habitRepository: HabitRepository? = null
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardUiState())
@@ -100,6 +107,7 @@ class DashboardViewModel(
             is DashboardEvent.UpdateQuickNoteTitle -> _state.update { it.copy(quickNoteTitle = event.title) }
             is DashboardEvent.UpdateQuickNoteContent -> _state.update { it.copy(quickNoteContent = event.content) }
             is DashboardEvent.CreateQuickNote -> createQuickNote()
+            is DashboardEvent.CompleteHabit -> completeHabit(event.id)
             is DashboardEvent.DismissError -> _state.update { it.copy(error = null) }
         }
     }
@@ -147,6 +155,9 @@ class DashboardViewModel(
         coroutineScope {
             val allTasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
             val quickTasksDeferred = async { quickTaskRepository.getAll().getOrDefault(emptyList()) }
+            val todayHabitsDeferred = habitRepository?.let { repo ->
+                async { repo.getToday().getOrDefault(emptyList()) }
+            }
 
             val allTasks = allTasksDeferred.await()
 
@@ -182,6 +193,7 @@ class DashboardViewModel(
             loadTasksForDate(selectedDate)
 
             val quickTasks = quickTasksDeferred.await().filter { qt -> qt.id !in hidden }
+            val todayHabits = todayHabitsDeferred?.await() ?: emptyList()
 
             _state.update {
                 it.copy(
@@ -191,6 +203,7 @@ class DashboardViewModel(
                     routine = routineInfo,
                     routineTimeOfDay = routineTime?.removeSuffix("-routine") ?: "",
                     overdueTasks = overdueTasks,
+                    todayHabits = todayHabits,
                     quickTasks = quickTasks,
                     isLoading = if (!isSilent) false else it.isLoading
                 )
@@ -315,6 +328,21 @@ class DashboardViewModel(
             noteRepository.create(CreateNoteRequest(title = title, body = content))
                 .onSuccess {
                     _state.update { it.copy(quickNoteTitle = "", quickNoteContent = "") }
+                }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+        }
+    }
+
+    private fun completeHabit(id: String) {
+        val repo = habitRepository ?: return
+        viewModelScope.launch {
+            repo.complete(id)
+                .onSuccess { completedHabit ->
+                    _state.update {
+                        it.copy(todayHabits = it.todayHabits.map { h ->
+                            if (h.id == id) completedHabit else h
+                        })
+                    }
                 }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
