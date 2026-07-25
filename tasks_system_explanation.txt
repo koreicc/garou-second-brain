@@ -1,0 +1,511 @@
+COMPLETE TASK SYSTEM ARCHITECTURE - SECOND BRAIN
+=================================================
+
+1. CORE TASK MODEL
+==================
+
+A Task is a YAML-backed entity stored as a Markdown file (<id>.md) in the
+tasks/ directory of the vault. Each task has the following attributes:
+
+  id              : string (UUID, unique identifier)
+  title           : string (task name, required)
+  icon            : string (emoji or Material icon name for visual ID)
+  location        : string (optional location)
+  status          : enum (pending, in-progress, completed, expired)
+  priority        : enum (empty = none, low, medium, high, urgent)
+  dateMode        : enum (empty = no date, due_date, range)
+  dueDate         : ISO timestamp (single due date for due_date mode)
+  startDate       : ISO timestamp (range start for range mode)
+  endDate         : ISO timestamp (range end for range mode)
+  timeMode        : enum (empty, due_time, start_end, start_duration)
+  dueTime         : HH:mm (time for due_time mode)
+  startTime       : HH:mm (start time for start_end / start_duration)
+  endTime         : HH:mm (end time for start_end mode)
+  durationMinutes : int (duration in minutes for start_duration mode)
+  recurrence      : Recurrence object (optional, see section 4)
+  subtasks        : list of Subtask (optional checklist items)
+  body            : string (Markdown description, stored as file body)
+  tags            : list of string (labels)
+  links           : list of string (IDs of linked entities)
+  isTemplate      : bool (whether this task is a recurrence template)
+  parentId        : string (for occurrences: the parent template's ID)
+  occurrenceDate  : string (for occurrences: YYYY-MM-DD of this instance)
+  effectiveStatus : string (server-computed status, not persisted)
+
+
+2. DATE MODES
+=============
+
+There are three date modes that define the temporal type of a task:
+
+2a. No Date Mode (dateMode = "") -- General Task
+
+  The task has no temporal constraint. Its status is fully manually
+  controlled by the user (pending, in-progress, completed). Serves as a
+  general to-do item.
+
+2b. Due Date (dateMode = "due_date") -- Fixed-Day Task
+
+  The task has a single dueDate (ISO date, e.g. 2025-01-15T00:00:00Z).
+  Optionally has a dueTime (HH:mm) for time-specific deadlines.
+
+  The effective status is automatically computed relative to the current
+  time:
+
+    - Before the due date/time      -> pending
+    - During the due day (00:00 to
+      23:59:59)                     -> in-progress
+    - After the due day ends         -> completed
+
+  Manual override: if the user sets status to completed or expired, it
+  is respected and not overridden.
+
+2c. Date Range (dateMode = "range") -- Span Task
+
+  The task spans from startDate to endDate (inclusive). Optionally has
+  timeMode for time-of-day specificity within the range.
+
+  The effective status:
+
+    - Before startDate    -> pending
+    - During the range    -> in-progress
+    - After endDate       -> completed
+
+  IMPORTANT: In the current application, dateMode = "range" is required
+  when recurrence is set. This means date range serves a dual purpose:
+
+    1. A simple span between two dates (non-recurring)
+    2. The date envelope within which recurrence occurrences are
+       generated (see section 4)
+
+
+3. TIME MODES
+=============
+
+Time modes add time-of-day precision to whatever date mode is active:
+
+  Mode              Fields              Behavior
+  ----              ------              --------
+  "" (none)         --                  No time constraint
+  "due_time"        dueTime             Combined with dueDate for exact
+                                        deadline moment
+  "start_end"       startTime, endTime  Combined with date(s) for
+                                        start/end boundaries
+  "start_duration"  startTime,          Start time + computed end via
+                    durationMinutes     duration
+
+The time values affect the effective status boundary computation. With
+a due_time, the transition from pending to in-progress happens at that
+exact time (not midnight). With start_end or start_duration, both the
+start and end boundaries are time-precise.
+
+
+4. RECURRENCE SYSTEM (TEMPLATES AND OCCURRENCES)
+=================================================
+
+This is the most sophisticated part of the task system.
+
+4.1 Creating a Recurring Task
+
+When a user creates a task with dateMode = "range" AND a recurrence
+object, the system automatically sets isTemplate = true. This means:
+
+  - The task itself is a template -- it defines the pattern.
+  - Individual occurrences (instances) are NOT saved as separate files
+    on disk. They are computed dynamically on-the-fly.
+
+4.2 The Recurrence Model
+
+  Recurrence {
+    Type       : string   // "daily", "weekly", "monthly", "yearly"
+    Interval   : int      // every N periods (default: 1)
+    DaysOfWeek : []int    // for weekly: 0=Sun, 1=Mon, ..., 6=Sat
+  }
+
+4.3 Recurrence Types and Their Semantics
+
+  Daily (type = "daily"):
+
+    An occurrence is generated for every N days (where N = interval)
+    between startDate and endDate.
+
+    Example: interval=3 -> occurrences on day 0, 3, 6, 9, ...
+    DaysOfWeek is ignored.
+
+  Weekly (type = "weekly"):
+
+    If DaysOfWeek is specified:
+      Occurrences are generated on specific days of the week (e.g. Mon,
+      Wed, Fri) that fall within the date range. The interval controls
+      every-N-weeks filtering (every interval * 7 days from start).
+
+      Example: DaysOfWeek=[1,3,5] (Mon, Wed, Fri) -> the system
+      iterates every day in the range and matches on those weekdays.
+      With interval=1, every matching weekday gets an occurrence.
+      With interval=2, only weeks where the day offset from start is
+      an even multiple of 14 days get occurrences.
+
+    If DaysOfWeek is empty:
+      An occurrence is generated every 7*N days from the start date.
+      Example: interval=2 -> every 14 days.
+
+  Monthly (type = "monthly"):
+
+    An occurrence is generated every N months from the start date.
+    The day-of-month is the same as the start date's day.
+
+    Example: start=Jan 15, interval=1 -> Feb 15, Mar 15, ...
+
+  Yearly (type = "yearly"):
+
+    An occurrence is generated every N years from the start date.
+    Same month and day as the start date.
+
+4.4 How Occurrences Are Computed
+
+Occurrences are never stored as files in the tasks/ directory. Instead,
+the vault computes them dynamically via three key functions:
+
+  DateMatchesRecurrence(date, template)
+
+    Checks whether a given date falls within a template's recurrence
+    pattern. It validates:
+      - The date is on or after template.startDate
+      - The date is on or before template.endDate (if set)
+      - The date matches the recurrence type's rules (daily interval,
+        weekly day-of-week + interval, monthly interval, yearly
+        interval)
+
+  ComputeDynamicOccurrence(template, date)
+
+    Creates a virtual Task object for a specific date:
+      - id = "<parent-id>_<YYYY-MM-DD>" (e.g. "abc123_2025-01-15")
+      - parentId = <template-id>
+      - isTemplate = false
+      - occurrenceDate = "2025-01-15"
+      - dateMode = "due_date" with dueDate set to that exact date
+      - All other fields copied from template (icon, priority, location,
+        body)
+      - Subtasks are COPIED with fresh UUIDs and reset completion state
+        (all unchecked)
+
+  ListTasksByDate("2025-01-15")
+
+    For a given date, returns all:
+      - Standalone tasks whose dueDate or date range covers that date
+      - Dynamic occurrences from templates whose recurrence pattern
+        matches that date
+
+4.5 Example: Weekly Recurrence
+
+A template created with:
+
+  dateMode: "range"
+  startDate: 2025-01-06 (Monday)
+  endDate: 2025-01-19 (Sunday)
+  recurrence:
+    type: "weekly"
+    interval: 1
+    daysOfWeek: [1, 3, 5]   # Mon, Wed, Fri
+
+This produces occurrences on:
+  - 2025-01-06 (Mon), 2025-01-08 (Wed), 2025-01-10 (Fri)
+  - 2025-01-13 (Mon), 2025-01-15 (Wed), 2025-01-17 (Fri)
+
+Each occurrence has id = "<template-id>_2025-01-06", etc.
+
+4.6 Occurrence Overrides (Per-Instance Customization)
+
+Although occurrences are computed dynamically, the user can override
+specific fields for a single occurrence without modifying the template.
+This is done via JSON override files stored in:
+
+  overrides/<parentID>_<date>.json
+
+The OccurrenceOverride struct supports:
+
+  Status   : string        // override status
+  Title    : string        // override title
+  Body     : string        // override description
+  Subtasks : []Subtask     // override subtasks
+
+API endpoint: PUT /tasks/occurrence/:parentId/:date
+
+When computing an occurrence, if an override file exists:
+  1. ComputeDynamicOccurrence() generates the base occurrence
+  2. ApplyOccurrenceOverride(occ, override) applies overridden fields
+  3. The merged result is returned as the virtual task
+
+This allows marking a single Tuesday's instance as "completed" while
+all future instances remain "pending", or changing the title of a
+specific weekly occurrence.
+
+
+5. EFFECTIVE STATUS (AUTOMATIC STATUS COMPUTATION)
+===================================================
+
+The function ComputeEffectiveStatus(t, now) runs on every task/occurrence
+before returning it to the client:
+
+  - If dateMode == "" (no date)     -> returns manual status as-is
+  - If status is already "completed"
+    or "expired"                     -> respects manual override
+  - For due_date mode               -> compares now against
+                                       dueDate/dueTime
+  - For range mode                  -> compares now against
+                                       startDate/endDate with time
+                                       boundaries
+
+The result is stored in effectiveStatus (not serialized to YAML, only
+returned in JSON).
+
+The X-Timezone-Offset HTTP header (in minutes) allows the client to
+pass its timezone, so the computation uses the user's local time.
+
+
+6. API ENDPOINTS
+================
+
+  Method  Path                                    Description
+  ------  ----                                    -----------
+  GET     /tasks                                  List tasks with filtering
+                                                  (status, priority, search)
+                                                  and sorting (title,
+                                                  created_at, updated_at,
+                                                  due_date, priority) +
+                                                  pagination
+
+  GET     /tasks/templates                        List only template tasks
+
+  GET     /tasks/by-date?date=YYYY-MM-DD          List all tasks/occurrences
+                                                  for a specific date
+
+  GET     /tasks/upcoming?days=N                  List upcoming tasks within
+                                                  N days (default 7)
+
+  POST    /tasks/batch                            Batch delete or complete
+                                                  multiple tasks
+
+  GET     /tasks/:id                              Get a single task (also
+                                                  resolves dynamic
+                                                  occurrences)
+
+  POST    /tasks                                  Create a task (auto-sets
+                                                  isTemplate=true if
+                                                  recurrence is provided
+                                                  with range mode)
+
+  PUT     /tasks/:id                              Update a task
+
+  DELETE  /tasks/:id                              Delete a task (moves to
+                                                  archive)
+
+  PUT     /tasks/occurrence/:parentId/:date       Update a single occurrence
+                                                  via overrides
+
+
+7. FRONTEND (ANDROID / JETPACK COMPOSE)
+========================================
+
+The Android app provides three main screens:
+
+7.1 Task List Screen (TaskListScreen)
+
+  Displays all standalone tasks (filters out old occurrence files).
+  Each task is shown as a Card with:
+    - Color-coded left border based on effective status
+    - Icon (Material icon or emoji) in a colored surface
+    - Title
+    - Priority badge (Low, Medium, High, Urgent with colors)
+    - Status badge (Pending, In Progress, Completed)
+    - Location text
+    - Subtask progress bar (completedCount/totalCount)
+    - Date info text (due date or date range)
+    - Delete icon button
+
+  Features:
+    - Search bar with text query filtering
+    - Filter chips for status, priority, and sort options
+    - Sort toggle (ascending/descending)
+    - Selection mode for batch operations (select all, complete
+      selected, delete selected)
+    - Pull-to-refresh via RefreshOnResume
+    - Empty state with prompt to create the first task
+
+7.2 Task Detail Screen (TaskDetailScreen)
+
+  Full view of a single task (including dynamically computed
+  occurrences). Shows:
+    - Icon in colored surface
+    - Status badge
+    - Location with icon
+    - Date info (due date or date range)
+    - Time info (due time, start/end, or start + duration)
+    - Tags displayed as chips
+    - Linked entities section (notes, people, tasks)
+    - Subtask list with checkboxes
+    - Body/description with wikilink support ([[links]] to other
+      entities)
+
+  Actions:
+    - Complete button (marks as completed)
+    - Edit button (navigates to edit screen)
+    - Subtask toggle (checks/unchecks via API call)
+
+7.3 Task Edit Screen (TaskEditScreen)
+
+  Create or edit a task. Organized into sections:
+
+    Task Info:
+      - Title text field
+      - Icon picker (opens icon selection dialog)
+      - Location text field
+      - Status chips: Pending, In Progress, Completed
+      - Priority chips: None, Low, Medium, High, Urgent
+
+    Dates & Recurrence:
+      - Date mode chips: None, Due Date, Date Range
+      - Date picker buttons (opens Material3 DatePickerDialog)
+      - For Range mode and templates: Recurrence chips (None, Daily,
+        Weekly, Monthly)
+      - Interval input (every N weeks/months)
+      - Weekly day-of-week selector (Mon-Sun buttons)
+
+    Time:
+      - Time mode chips: None, Due Time, Start/End, Start + Duration
+      - Time picker buttons (opens Material3 TimePickerDialog)
+      - Duration input (minutes)
+
+    Tags & Subtasks:
+      - Tag input component
+      - Subtask list with add, remove, toggle, move up/down
+
+    Linked Entities:
+      - Link picker (bottom sheet listing all notes, tasks, people)
+      - Display of currently linked entities
+
+    Description:
+      - Multi-line body text field
+
+  Occurrence Editing Flow:
+    When editing an occurrence (task with a parentId), a dialog asks:
+      - "Edit this occurrence only" -> saves to override JSON file
+      - "Edit template (all occurrences)" -> loads the template into
+        the edit form instead
+
+7.4 ViewModel Layer
+
+  TaskListViewModel:
+    - StateFlow-based UI state
+    - Filtering, sorting, search
+    - Selection mode for batch operations
+    - Silent reload on resume
+    - Filters out occurrence tasks (parentId != "") from the list
+
+  TaskDetailViewModel:
+    - Task loading
+    - Complete action
+    - Subtask toggle
+    - Wikilink resolution via SearchRepository
+
+  TaskEditViewModel:
+    - Full form state management
+    - Handles both create and update paths
+    - Occurrence vs template editing decision
+    - Recurrence configuration (type, interval, days of week)
+    - Constructs proper API request objects with ISO date strings
+
+
+8. DATA FLOW SUMMARY
+====================
+
+  A. User taps "Save"
+
+     1. TaskEditViewModel.save()
+     2. Determines operation type:
+        - Create new standalone task
+        - Create new template (if recurrence + range mode)
+        - Update existing standalone task or template
+        - Update single occurrence via override (if parentId set)
+     3. Builds appropriate request DTO (CreateTaskRequest,
+        UpdateTaskRequest, or UpdateOccurrenceRequest) with:
+        - ISO date strings (e.g. "2025-01-15T00:00:00Z")
+        - RecurrenceDto (type, interval, daysOfWeek)
+        - SubtaskDto list
+     4. Calls TaskRepository.create() / update() / updateOccurrence()
+     5. HTTP request hits TaskHandler in Go backend
+     6. TaskHandler validates, then calls Vault.WriteTask() or
+        Vault.WriteOccurrenceOverride()
+     7. Vault writes .md file (with YAML frontmatter + body) to
+        tasks/<id>.md, or .json override file to
+        overrides/<parentID>_<date>.json
+     8. Atomic write via temp file + rename
+
+  B. Reading tasks for a calendar view (GET /tasks/by-date)
+
+     1. vault.ListTasksByDate("2025-01-15")
+     2. Loads ALL .md files from tasks/ directory
+     3. Filters out old occurrence files (isTemplate=false &&
+        parentId!="")
+     4. Finds standalone tasks matching by:
+        - dueDate equal to the requested date
+        - date range covering the requested date
+     5. Finds templates whose recurrence matches:
+        - DateMatchesRecurrence() checks pattern
+        - ComputeDynamicOccurrence() creates virtual task
+        - ApplyOccurrenceOverride() merges any overrides
+     6. Returns combined list of standalone + dynamic occurrences
+
+  C. Response enrichment
+
+     1. For every task in the response, enrichTasks() runs
+     2. Computes effectiveStatus via timezone-adjusted current time
+     3. Sets the effectiveStatus field (non-persisted, JSON only)
+
+
+9. KEY DESIGN DECISIONS
+=======================
+
+  1. Occurrences are virtual, not stored
+
+     This avoids an explosion of files for recurring tasks. A daily
+     task for 5 years generates 1825 virtual occurrences from a single
+     template file on disk.
+
+  2. Date range is required for recurrence
+
+     The startDate and endDate of the range serve as the bounds within
+     which recurrence dates are generated. A "general" recurring task
+     with no end date is not yet supported; the system returns empty
+     for indefinite recurrence (endDate == nil).
+
+  3. Effective status is server-computed
+
+     The client receives a computed effectiveStatus field alongside the
+     persisted status, so the UI always reflects the correct state
+     based on the current time, while respecting manual overrides.
+
+  4. Per-occurrence overrides via separate JSON files
+
+     This enables customizing a single instance without storing all
+     occurrences as individual files. Overrides are merged on top of
+     the dynamically computed occurrence.
+
+  5. Archive-on-delete
+
+     Delete moves to an archive/ subdirectory preserving the same file
+     structure, supporting full restore via RestoreArchive(). The
+     archive happens BEFORE the original is deleted to prevent data
+     loss on crash.
+
+  6. Per-file locking via sync.Mutex
+
+     Each vault file has a dedicated mutex stored in a sync.Map,
+     preventing concurrent read/write corruption. Locks are cleaned up
+     after file deletion to prevent memory leaks.
+
+  7. Atomic file writes via temp + rename
+
+     All writes first go to a .tmp file, then are renamed to the final
+     path. This prevents partial writes from leaving corrupted files
+     on disk.
