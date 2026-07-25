@@ -35,13 +35,6 @@ data class DashboardUiState(
     // Greeting
     val greeting: String = "",
     val dateString: String = "",
-    // Scope: today, tomorrow, week, date
-    val selectedScope: String = "today",
-    // Selected date for viewing
-    val selectedDate: LocalDate = LocalDate.now(),
-    // Week view
-    val weekStartDate: LocalDate = LocalDate.now(),
-    val weekTasksByDay: Map<LocalDate, List<Task>> = emptyMap(),
     // Routine
     val routine: RoutineInfo? = null,
     val routineTimeOfDay: String = "",
@@ -63,8 +56,6 @@ data class DashboardUiState(
 
 sealed interface DashboardEvent {
     data object LoadData : DashboardEvent
-    data class SelectDate(val date: LocalDate) : DashboardEvent
-    data class SelectScope(val scope: String) : DashboardEvent
     // Routine
     data class ToggleRoutineSubtask(val subtaskId: String) : DashboardEvent
     data object CompleteRoutine : DashboardEvent
@@ -97,8 +88,6 @@ class DashboardViewModel(
     fun onEvent(event: DashboardEvent) {
         when (event) {
             is DashboardEvent.LoadData -> loadData()
-            is DashboardEvent.SelectScope -> selectScope(event.scope)
-            is DashboardEvent.SelectDate -> selectDate(event.date)
             is DashboardEvent.ToggleRoutineSubtask -> toggleRoutineSubtask(event.subtaskId)
             is DashboardEvent.CompleteRoutine -> completeRoutine()
             is DashboardEvent.CreateQuickTask -> createQuickTask(event.title)
@@ -124,97 +113,6 @@ class DashboardViewModel(
         }
     }
 
-    private fun selectScope(scope: String) {
-        val today = LocalDate.now()
-        val newDate = when (scope) {
-            "today" -> today
-            "tomorrow" -> today.plusDays(1)
-            "week" -> today
-            else -> _state.value.selectedDate
-        }
-        val weekStart = if (scope == "week") {
-            today.minusDays((today.dayOfWeek.value - 1).toLong())
-        } else {
-            _state.value.weekStartDate
-        }
-
-        _state.update {
-            it.copy(
-                selectedScope = scope,
-                selectedDate = newDate,
-                weekStartDate = weekStart
-            )
-        }
-
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            if (scope == "week") {
-                loadWeekTasks()
-                loadTasksForDate(newDate)
-            } else {
-                loadTasksForDate(newDate)
-            }
-            _state.update { it.copy(isLoading = false) }
-        }
-    }
-
-    private suspend fun loadWeekTasks() {
-        val weekStart = _state.value.weekStartDate
-        val weekEnd = weekStart.plusDays(6)
-
-        val allTasks = taskRepository.getAll().getOrDefault(emptyList())
-        val nonTemplate = allTasks.filter { !it.isTemplate }
-
-        val weekTasks = mutableMapOf<LocalDate, MutableList<Task>>()
-        var current = weekStart
-        while (current <= weekEnd) {
-            weekTasks[current] = mutableListOf()
-            current = current.plusDays(1)
-        }
-
-        for (task in nonTemplate) {
-            when (task.dateMode) {
-                "due_date" -> {
-                    val dueDate = parseLocalDate(task.dueDate)
-                    if (dueDate != null && dueDate >= weekStart && dueDate <= weekEnd) {
-                        weekTasks.getOrPut(dueDate) { mutableListOf() }.add(task)
-                    }
-                }
-                "range" -> {
-                    val startDate = parseLocalDate(task.startDate)
-                    val endDate = parseLocalDate(task.endDate)
-                    if (startDate != null && endDate != null) {
-                        var d = if (startDate > weekStart) startDate else weekStart
-                        val end = if (endDate < weekEnd) endDate else weekEnd
-                        while (d <= end) {
-                            weekTasks.getOrPut(d) { mutableListOf() }.add(task)
-                            d = d.plusDays(1)
-                        }
-                    }
-                }
-            }
-        }
-
-        _state.update { it.copy(weekTasksByDay = weekTasks) }
-    }
-
-    private fun parseLocalDate(dateStr: String): LocalDate? {
-        if (dateStr.isBlank()) return null
-        return try {
-            LocalDate.parse(dateStr)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun selectDate(date: LocalDate) {
-        _state.update { it.copy(selectedScope = "date", selectedDate = date, isLoading = true) }
-        viewModelScope.launch {
-            loadTasksForDate(date)
-            _state.update { it.copy(isLoading = false) }
-        }
-    }
-
     private suspend fun loadDataInternal(isSilent: Boolean) {
         val now = LocalDateTime.now()
         val hour = now.hour
@@ -232,7 +130,7 @@ class DashboardViewModel(
         }
 
         val hidden = _state.value.hiddenQuickTaskIds
-        val selectedDate = _state.value.selectedDate
+        val today = LocalDate.now()
 
         coroutineScope {
             val allTasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
@@ -267,13 +165,8 @@ class DashboardViewModel(
                     task.displayStatus == "completed"
             }
 
-            // Load tasks for the selected date
-            loadTasksForDate(selectedDate)
-
-            // Reload week tasks if in week scope
-            if (_state.value.selectedScope == "week") {
-                loadWeekTasks()
-            }
+            // Load tasks for today
+            loadTasksForDate(today)
 
             val quickTasks = quickTasksDeferred.await().filter { qt -> qt.id !in hidden }
 
@@ -306,7 +199,7 @@ class DashboardViewModel(
 
     fun silentReloadDateTasks() {
         viewModelScope.launch {
-            loadTasksForDate(_state.value.selectedDate)
+            loadTasksForDate(LocalDate.now())
         }
     }
 

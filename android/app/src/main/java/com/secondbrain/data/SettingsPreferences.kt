@@ -3,9 +3,7 @@ package com.secondbrain.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.secondbrain.ui.theme.ColorSource
@@ -23,9 +21,6 @@ class SettingsPreferences(private val context: Context) {
         val COLOR_SOURCE = stringPreferencesKey("color_source")
         val CUSTOM_SEED_HEX = stringPreferencesKey("custom_seed_hex")
         val PALETTE_STYLE = stringPreferencesKey("palette_style")
-        val USE_GRADIENT = booleanPreferencesKey("use_gradient")
-        val USE_BLACK_THEME = booleanPreferencesKey("use_black_theme")
-        val SHADING_INTENSITY = floatPreferencesKey("shading_intensity")
     }
 
     suspend fun loadSettings(): SavedSettings {
@@ -35,10 +30,7 @@ class SettingsPreferences(private val context: Context) {
             darkMode = prefs[Keys.DARK_MODE] ?: "SYSTEM",
             colorSource = prefs[Keys.COLOR_SOURCE] ?: "MATERIAL_YOU",
             customSeedHex = prefs[Keys.CUSTOM_SEED_HEX] ?: "",
-            paletteStyle = prefs[Keys.PALETTE_STYLE] ?: "TONAL_SPOT",
-            useGradient = prefs[Keys.USE_GRADIENT] ?: true,
-            useBlackTheme = prefs[Keys.USE_BLACK_THEME] ?: false,
-            shadingIntensity = prefs[Keys.SHADING_INTENSITY] ?: 0.0f
+            paletteStyle = prefs[Keys.PALETTE_STYLE] ?: "TONAL_SPOT"
         )
     }
 
@@ -49,9 +41,6 @@ class SettingsPreferences(private val context: Context) {
             prefs[Keys.COLOR_SOURCE] = settings.colorSource
             prefs[Keys.CUSTOM_SEED_HEX] = settings.customSeedHex
             prefs[Keys.PALETTE_STYLE] = settings.paletteStyle
-            prefs[Keys.USE_GRADIENT] = settings.useGradient
-            prefs[Keys.USE_BLACK_THEME] = settings.useBlackTheme
-            prefs[Keys.SHADING_INTENSITY] = settings.shadingIntensity
         }
     }
 }
@@ -61,10 +50,7 @@ data class SavedSettings(
     val darkMode: String = "SYSTEM",
     val colorSource: String = "MATERIAL_YOU",
     val customSeedHex: String = "",
-    val paletteStyle: String = "TONAL_SPOT",
-    val useGradient: Boolean = true,
-    val useBlackTheme: Boolean = false,
-    val shadingIntensity: Float = 0.0f
+    val paletteStyle: String = "TONAL_SPOT"
 ) {
     fun toDarkModeOption(): DarkModeOption = when (darkMode) {
         "LIGHT" -> DarkModeOption.LIGHT
@@ -94,10 +80,7 @@ data class SavedSettings(
             darkTheme = darkTheme,
             colorSource = toColorSource(),
             customSeedHex = customSeedHex,
-            paletteStyle = toPaletteStyle(),
-            useGradient = useGradient,
-            useBlackTheme = useBlackTheme,
-            shadingIntensity = shadingIntensity
+            paletteStyle = toPaletteStyle()
         )
     }
 }

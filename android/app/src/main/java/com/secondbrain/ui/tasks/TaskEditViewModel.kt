@@ -99,6 +99,7 @@ sealed interface TaskEditEvent {
     data class RemoveSubtask(val id: String) : TaskEditEvent
     data class ToggleSubtask(val id: String) : TaskEditEvent
     data class MoveSubtask(val id: String, val direction: Int) : TaskEditEvent
+    data class ReorderSubtasks(val fromIndex: Int, val toIndex: Int) : TaskEditEvent
     // UI
     data object ShowLinkPicker : TaskEditEvent
     data object DismissLinkPicker : TaskEditEvent
@@ -287,6 +288,14 @@ class TaskEditViewModel(
                 if (newIndex < 0 || newIndex >= list.size) return@update state
                 val item = list.removeAt(index)
                 list.add(newIndex, item)
+                state.copy(subtasks = list)
+            }
+            is TaskEditEvent.ReorderSubtasks -> _state.update { state ->
+                val list = state.subtasks.toMutableList()
+                if (event.fromIndex < 0 || event.fromIndex >= list.size ||
+                    event.toIndex < 0 || event.toIndex >= list.size) return@update state
+                val item = list.removeAt(event.fromIndex)
+                list.add(event.toIndex, item)
                 state.copy(subtasks = list)
             }
             // UI

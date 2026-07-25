@@ -49,6 +49,11 @@ class CalendarViewModel(
         loadMonth(newMonth)
     }
 
+    fun setMonth(month: YearMonth) {
+        _state.update { it.copy(currentMonth = month) }
+        loadMonth(month)
+    }
+
     private fun loadMonth(month: YearMonth) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }

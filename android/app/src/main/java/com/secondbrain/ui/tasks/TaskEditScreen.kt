@@ -14,9 +14,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,9 +28,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NoteAlt
@@ -88,6 +91,10 @@ import com.secondbrain.ui.util.IconPickerDialog
 import com.secondbrain.ui.util.TagInput
 import com.secondbrain.ui.util.resolveIcon
 import com.secondbrain.domain.model.Task
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorderAfterLongPress
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -407,8 +414,13 @@ fun TaskEditScreen(
                     }
                 }
 
-                // Section 2: Dates & Recurrence (recurrence hidden for occurrences)
+                // Section 2: Schedule (dates + time consolidated)
                 val showRecurrence = state.isTemplate || (taskId == null && state.dateMode == "range")
+                val dateModeOptions = if (state.isOccurrenceEdit)
+                    listOf("" to "None", "due_date" to "Due Date")
+                else
+                    listOf("" to "None", "due_date" to "Due Date", "range" to "Range")
+                val timeModeOptions = listOf("" to "None", "due_time" to "Due Time", "start_end" to "Start/End", "start_duration" to "Start+Duration")
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -420,7 +432,7 @@ fun TaskEditScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Dates & Recurrence",
+                            text = "Schedule",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -428,7 +440,6 @@ fun TaskEditScreen(
                         // -- Date Mode --
                         Text("Date", style = MaterialTheme.typography.titleSmall)
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            val dateModeOptions = listOf("" to "None", "due_date" to "Due Date", "range" to "Range")
                             dateModeOptions.forEachIndexed { i, (value, label) ->
                                 SegmentedButton(
                                     selected = state.dateMode == value,
@@ -548,52 +559,18 @@ fun TaskEditScreen(
                             } // end showRecurrence
                             } // end Column inside AnimatedVisibility
                         } // end AnimatedVisibility for range
-                    }
-                }
-
-                // Section 2b: Time
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 1.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Time",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
 
                         // -- Time Mode --
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            FilterChip(
-                                selected = state.timeMode == "",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("")) },
-                                label = { Text("None") }
-                            )
-                            FilterChip(
-                                selected = state.timeMode == "due_time",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("due_time")) },
-                                label = { Text("Due Time") }
-                            )
-                            FilterChip(
-                                selected = state.timeMode == "start_end",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("start_end")) },
-                                label = { Text("Start/End") }
-                            )
-                            FilterChip(
-                                selected = state.timeMode == "start_duration",
-                                onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode("start_duration")) },
-                                label = { Text("Start + Duration") }
-                            )
+                        Text("Time", style = MaterialTheme.typography.titleSmall)
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            timeModeOptions.forEachIndexed { i, (value, label) ->
+                                SegmentedButton(
+                                    selected = state.timeMode == value,
+                                    onClick = { viewModel.onEvent(TaskEditEvent.SetTimeMode(value)) },
+                                    shape = SegmentedButtonDefaults.itemShape(i, timeModeOptions.size),
+                                    icon = { SegmentedButtonDefaults.Icon(active = state.timeMode == value) },
+                                ) { Text(label, style = MaterialTheme.typography.bodySmall) }
+                            }
                         }
 
                         // Conditional time inputs
@@ -763,58 +740,63 @@ fun TaskEditScreen(
                                 Icon(Icons.Default.Add, contentDescription = "Add subtask")
                             }
                         }
-                        state.subtasks.forEachIndexed { index, subtask ->
-                            Row(
+                        if (state.subtasks.isNotEmpty()) {
+                            val reorderState = rememberReorderableLazyListState(
+                                onMove = { from, to ->
+                                    viewModel.onEvent(TaskEditEvent.ReorderSubtasks(from.index, to.index))
+                                }
+                            )
+                            LazyColumn(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .heightIn(max = 300.dp)
+                                    .reorderable(reorderState),
+                                state = reorderState.listState,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    IconButton(
-                                        onClick = { viewModel.onEvent(TaskEditEvent.MoveSubtask(subtask.id, -1)) },
-                                        modifier = Modifier.size(24.dp),
-                                        enabled = index > 0
-                                    ) {
-                                        Icon(
-                                            Icons.Default.ArrowDropUp,
-                                            contentDescription = "Move up",
-                                            modifier = Modifier.size(18.dp)
-                                        )
+                                itemsIndexed(
+                                    items = state.subtasks,
+                                    key = { _, subtask -> subtask.id }
+                                ) { index, subtask ->
+                                    ReorderableItem(reorderState, key = subtask.id) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                Icons.Default.DragHandle,
+                                                contentDescription = "Drag to reorder",
+                                                modifier = Modifier
+                                                    .detectReorderAfterLongPress(reorderState)
+                                                    .size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Checkbox(
+                                                checked = subtask.completed,
+                                                onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
+                                            )
+                                            Text(
+                                                text = subtask.title,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.weight(1f),
+                                                textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            IconButton(
+                                                onClick = { viewModel.onEvent(TaskEditEvent.RemoveSubtask(subtask.id)) },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Remove subtask",
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
                                     }
-                                    IconButton(
-                                        onClick = { viewModel.onEvent(TaskEditEvent.MoveSubtask(subtask.id, 1)) },
-                                        modifier = Modifier.size(24.dp),
-                                        enabled = index < state.subtasks.lastIndex
-                                    ) {
-                                        Icon(
-                                            Icons.Default.ArrowDropDown,
-                                            contentDescription = "Move down",
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                                Checkbox(
-                                    checked = subtask.completed,
-                                    onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
-                                )
-                                Text(
-                                    text = subtask.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.weight(1f),
-                                    textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                IconButton(
-                                    onClick = { viewModel.onEvent(TaskEditEvent.RemoveSubtask(subtask.id)) },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Remove subtask",
-                                        modifier = Modifier.size(16.dp)
-                                    )
                                 }
                             }
                         }

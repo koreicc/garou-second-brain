@@ -95,6 +95,9 @@ dependencies {
     // Calendar library (kotlinx-datetime compatible)
     implementation("com.kizitonwose.calendar:compose:2.6.2")
 
+    // Compose Reorderable (drag-and-drop)
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -1,7 +1,6 @@
 package com.secondbrain.ui.dashboard
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,26 +14,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NoteAlt
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -50,7 +41,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,8 +67,6 @@ import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.formatRelativeTime
 import com.secondbrain.ui.util.resolveIcon
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 // ---------------------------------------------------------------------------
 // Top-level screen composable
@@ -92,8 +80,7 @@ fun DashboardScreen(
     onNavigateToPeople: () -> Unit,
     onNavigateToNoteDetail: (String) -> Unit,
     onNavigateToTaskDetail: (String) -> Unit,
-    onNavigateToCalendar: () -> Unit,
-    onNavigateToSearch: () -> Unit
+    onNavigateToCalendar: () -> Unit
 ) {
     val viewModel: DashboardViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -110,7 +97,6 @@ fun DashboardScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.error) {
         state.error?.let { error ->
@@ -120,39 +106,6 @@ fun DashboardScreen(
 
     RefreshOnResume {
         viewModel.silentReload()
-    }
-
-    // Date picker dialog
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = java.time.ZoneId.systemDefault()
-                .let { zone ->
-                    state.selectedDate.atStartOfDay(zone)
-                        .toInstant()
-                        .toEpochMilli()
-                }
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val ld = java.time.Instant.ofEpochMilli(millis)
-                                .atZone(java.time.ZoneId.systemDefault())
-                                .toLocalDate()
-                            viewModel.onEvent(DashboardEvent.SelectDate(ld))
-                        }
-                        showDatePicker = false
-                    }
-                ) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 
     Scaffold(
@@ -181,14 +134,6 @@ fun DashboardScreen(
                 colors = transparentTopAppBarColors(),
                 actions = {
                     IconButton(
-                        onClick = { onNavigateToSearch() }
-                    ) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = "Search"
-                        )
-                    }
-                    IconButton(
                         onClick = { onNavigateToCalendar() }
                     ) {
                         Icon(
@@ -213,26 +158,6 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ---- Scope filter chips ----
-            item(key = "scope-chips") {
-                ScopeChipsRow(
-                    selectedScope = state.selectedScope,
-                    onSelectScope = { scope -> viewModel.onEvent(DashboardEvent.SelectScope(scope)) },
-                    onOpenDatePicker = { showDatePicker = true }
-                )
-            }
-
-            // ---- Date selector (hidden in week view) ----
-            if (state.selectedScope != "week") {
-                item(key = "date-selector") {
-                    DateSelectorCard(
-                        selectedDate = state.selectedDate,
-                        onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
-                        onOpenDatePicker = { showDatePicker = true }
-                    )
-                }
-            }
-
             // ---- Routine section ----
             state.routine?.let { routine ->
                 item(key = "routine") {
@@ -259,23 +184,13 @@ fun DashboardScreen(
                 }
             }
 
-            // ---- Tasks section: week view or single day ----
-            if (state.selectedScope == "week") {
-                item(key = "week-tasks") {
-                    WeekTasksSection(
-                        weekStartDate = state.weekStartDate,
-                        tasksByDay = state.weekTasksByDay,
-                        onTaskClick = onNavigateToTaskDetail
-                    )
-                }
-            } else {
-                item(key = "date-tasks") {
-                    DateTasksSection(
-                        date = state.selectedDate,
-                        tasks = state.selectedDateTasks,
-                        onTaskClick = onNavigateToTaskDetail
-                    )
-                }
+            // ---- Today's tasks ----
+            item(key = "date-tasks") {
+                DateTasksSection(
+                    date = LocalDate.now(),
+                    tasks = state.selectedDateTasks,
+                    onTaskClick = onNavigateToTaskDetail
+                )
             }
 
             // ---- Quick task input ----
@@ -332,167 +247,6 @@ fun DashboardScreen(
 }
 
 // ---------------------------------------------------------------------------
-// Scope filter chips row
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun ScopeChipsRow(
-    selectedScope: String,
-    onSelectScope: (String) -> Unit,
-    onOpenDatePicker: () -> Unit
-) {
-    val scopes = listOf(
-        "today" to "Today",
-        "tomorrow" to "Tomorrow",
-        "week" to "This Week",
-        "date" to "Pick Date"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        scopes.forEach { (value, label) ->
-            val isSelected = selectedScope == value
-            FilterChip(
-                selected = isSelected,
-                onClick = {
-                    if (value == "date") {
-                        onOpenDatePicker()
-                    } else {
-                        onSelectScope(value)
-                    }
-                },
-                label = { Text(label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Week tasks section
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun WeekTasksSection(
-    weekStartDate: LocalDate,
-    tasksByDay: Map<LocalDate, List<Task>>,
-    onTaskClick: (String) -> Unit
-) {
-    val weekEndDate = weekStartDate.plusDays(6)
-    val headerText = "This Week: ${weekStartDate.format(DateTimeFormatter.ofPattern("MMM d"))} - ${weekEndDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))}"
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = headerText,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            var current = weekStartDate
-            val today = LocalDate.now()
-            while (current <= weekEndDate) {
-                val dayTasks = tasksByDay[current] ?: emptyList()
-                val isToday = current == today
-                val dayLabel = current.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
-                val dayColor = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-
-                Text(
-                    text = if (isToday) "$dayLabel (Today)" else dayLabel,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.SemiBold,
-                    color = dayColor,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                if (dayTasks.isEmpty()) {
-                    Text(
-                        text = "No tasks",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-                    )
-                } else {
-                    dayTasks.forEach { task ->
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 8.dp, bottom = 4.dp)
-                                .clickable { onTaskClick(task.id) },
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            tonalElevation = 0.dp,
-                            shadowElevation = 0.dp
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val iconVector = resolveIcon(task.icon)
-                                if (iconVector != null) {
-                                    Icon(
-                                        imageVector = iconVector,
-                                        contentDescription = task.icon,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                } else if (task.icon.isNotEmpty()) {
-                                    Text(
-                                        text = task.icon,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                if (task.icon.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                }
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = task.title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    PriorityBadge(priority = task.priority)
-                                    StatusBadge(status = task.displayStatus)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                current = current.plusDays(1)
-                if (current <= weekEndDate) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Overdue tasks section
 // ---------------------------------------------------------------------------
 
@@ -535,78 +289,6 @@ private fun OverdueTasksSection(
                 if (task != tasks.last()) {
                     Spacer(modifier = Modifier.height(6.dp))
                 }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Date selector card
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun DateSelectorCard(
-    selectedDate: LocalDate,
-    onChangeDate: (LocalDate) -> Unit,
-    onOpenDatePicker: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = { onChangeDate(selectedDate.minusDays(1)) }) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous day")
-            }
-
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onOpenDatePicker),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Default.CalendarToday,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    val today = LocalDate.now()
-                    val label = when {
-                        selectedDate == today -> "Today"
-                        selectedDate == today.minusDays(1) -> "Yesterday"
-                        selectedDate == today.plusDays(1) -> "Tomorrow"
-                        else -> ""
-                    }
-                    if (label.isNotEmpty()) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            IconButton(onClick = { onChangeDate(selectedDate.plusDays(1)) }) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next day")
             }
         }
     }

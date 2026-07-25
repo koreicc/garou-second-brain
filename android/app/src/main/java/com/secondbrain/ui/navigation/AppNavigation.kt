@@ -153,9 +153,6 @@ fun AppNavigation(
                         },
                         onNavigateToCalendar = {
                             navController.navigate(Screen.Calendar)
-                        },
-                        onNavigateToSearch = {
-                            navController.navigate(Screen.Search)
                         }
                     )
                 }

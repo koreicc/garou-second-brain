@@ -15,11 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,7 +31,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,15 +41,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.secondbrain.domain.model.Task
 import com.secondbrain.ui.util.StatusBadge
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+
+private const val PAGE_COUNT = 240
+private const val INITIAL_PAGE = 120
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +59,20 @@ fun CalendarScreen(
     onTaskClick: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    val pagerState = rememberPagerState(
+        initialPage = INITIAL_PAGE,
+        pageCount = { PAGE_COUNT }
+    )
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { pageIndex ->
+            val targetMonth = state.currentMonth.minusMonths((INITIAL_PAGE - pageIndex).toLong())
+            if (targetMonth != state.currentMonth) {
+                viewModel.setMonth(targetMonth)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -87,58 +103,64 @@ fun CalendarScreen(
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Calendar grid
-                item(key = "calendar-grid") {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) { pageIndex ->
+                    val pageMonth = state.currentMonth.minusMonths((INITIAL_PAGE - pageIndex).toLong())
                     CalendarGrid(
-                        currentMonth = state.currentMonth,
+                        currentMonth = pageMonth,
                         selectedDate = state.selectedDate,
                         tasksByDate = state.tasksByDate,
-                        onDateSelected = { viewModel.selectDate(it) },
-                        onPreviousMonth = { viewModel.previousMonth() },
-                        onNextMonth = { viewModel.nextMonth() }
+                        onDateSelected = { viewModel.selectDate(it) }
                     )
                 }
 
-                // Selected date header
-                item(key = "selected-date-header") {
-                    Text(
-                        text = state.selectedDate.format(
-                            DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Tasks for selected date
-                if (state.selectedDateTasks.isEmpty()) {
-                    item(key = "no-tasks") {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item(key = "selected-date-header") {
                         Text(
-                            text = "No tasks for this day",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            text = state.selectedDate.format(
+                                DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                } else {
-                    items(state.selectedDateTasks, key = { it.id }) { task ->
-                        CalendarTaskCard(
-                            task = task,
-                            onClick = { onTaskClick(task.id) }
-                        )
-                    }
-                }
 
-                item(key = "bottom-spacer") {
-                    Spacer(modifier = Modifier.height(32.dp))
+                    if (state.selectedDateTasks.isEmpty()) {
+                        item(key = "no-tasks") {
+                            Text(
+                                text = "No tasks for this day",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                    } else {
+                        items(state.selectedDateTasks, key = { it.id }) { task ->
+                            CalendarTaskCard(
+                                task = task,
+                                onClick = { onTaskClick(task.id) }
+                            )
+                        }
+                    }
+
+                    item(key = "bottom-spacer") {
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
                 }
             }
         }
@@ -150,13 +172,10 @@ private fun CalendarGrid(
     currentMonth: YearMonth,
     selectedDate: LocalDate,
     tasksByDate: Map<LocalDate, List<Task>>,
-    onDateSelected: (LocalDate) -> Unit,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onDateSelected: (LocalDate) -> Unit
 ) {
     val daysOfWeek = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     val firstOfMonth = currentMonth.atDay(1)
-    val lastOfMonth = currentMonth.atEndOfMonth()
     val startDayOfWeek = firstOfMonth.dayOfWeek.value - 1 // Monday = 0
     val totalDays = currentMonth.lengthOfMonth()
     val totalCells = startDayOfWeek + totalDays
@@ -170,27 +189,6 @@ private fun CalendarGrid(
         shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Month navigation
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onPreviousMonth) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = "Previous month")
-                }
-                Text(
-                    text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                IconButton(onClick = onNextMonth) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = "Next month")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Day of week headers
             Row(modifier = Modifier.fillMaxWidth()) {
                 daysOfWeek.forEach { day ->

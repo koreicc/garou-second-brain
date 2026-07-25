@@ -23,9 +23,6 @@ data class SettingsUiState(
     val colorSource: ColorSource = ColorSource.MATERIAL_YOU,
     val customSeedHex: String = "",
     val paletteStyle: PaletteStyleOpt = PaletteStyleOpt.TONAL_SPOT,
-    val useGradient: Boolean = true,
-    val useBlackTheme: Boolean = false,
-    val shadingIntensity: Float = 0.0f,
     val appVersion: String = "1.0.0",
     // Persistence state
     val isSaving: Boolean = false,
@@ -38,9 +35,6 @@ sealed interface SettingsEvent {
     data class SetColorSource(val source: ColorSource) : SettingsEvent
     data class UpdateCustomSeedHex(val hex: String) : SettingsEvent
     data class SetPaletteStyle(val style: PaletteStyleOpt) : SettingsEvent
-    data object ToggleGradient : SettingsEvent
-    data object ToggleBlackTheme : SettingsEvent
-    data class SetShadingIntensity(val intensity: Float) : SettingsEvent
     data object SaveSettings : SettingsEvent
     data object ClearSaveMessage : SettingsEvent
 }
@@ -78,18 +72,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 _state.update { it.copy(paletteStyle = event.style) }
                 updateThemeState()
             }
-            is SettingsEvent.ToggleGradient -> {
-                _state.update { it.copy(useGradient = !it.useGradient) }
-                updateThemeState()
-            }
-            is SettingsEvent.ToggleBlackTheme -> {
-                _state.update { it.copy(useBlackTheme = !it.useBlackTheme) }
-                updateThemeState()
-            }
-            is SettingsEvent.SetShadingIntensity -> {
-                _state.update { it.copy(shadingIntensity = event.intensity) }
-                updateThemeState()
-            }
             is SettingsEvent.SaveSettings -> saveSettings()
             is SettingsEvent.ClearSaveMessage -> _state.update { it.copy(saveMessage = null) }
         }
@@ -104,10 +86,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     darkMode = saved.toDarkModeOption(),
                     colorSource = saved.toColorSource(),
                     customSeedHex = saved.customSeedHex,
-                    paletteStyle = saved.toPaletteStyle(),
-                    useGradient = saved.useGradient,
-                    useBlackTheme = saved.useBlackTheme,
-                    shadingIntensity = saved.shadingIntensity
+                    paletteStyle = saved.toPaletteStyle()
                 )
             }
             _themeState.value = saved.toThemeState()
@@ -125,10 +104,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             darkTheme = darkTheme,
             colorSource = s.colorSource,
             customSeedHex = s.customSeedHex,
-            paletteStyle = s.paletteStyle,
-            useGradient = s.useGradient,
-            useBlackTheme = s.useBlackTheme,
-            shadingIntensity = s.shadingIntensity
+            paletteStyle = s.paletteStyle
         )
     }
 
@@ -141,10 +117,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 darkMode = s.darkMode.name,
                 colorSource = s.colorSource.name,
                 customSeedHex = s.customSeedHex,
-                paletteStyle = s.paletteStyle.name,
-                useGradient = s.useGradient,
-                useBlackTheme = s.useBlackTheme,
-                shadingIntensity = s.shadingIntensity
+                paletteStyle = s.paletteStyle.name
             )
             preferences.saveSettings(saved)
             _state.update { it.copy(isSaving = false, saveMessage = "Settings saved") }
