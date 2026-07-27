@@ -2,12 +2,10 @@ package com.secondbrain.ui.habits
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +69,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import com.secondbrain.ui.theme.LocalReducedMotion
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -385,7 +384,7 @@ fun HabitEditScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 1.dp
                 ) {
                     Column(
@@ -693,7 +692,7 @@ fun HabitEditScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 1.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -760,7 +759,7 @@ fun HabitEditScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         tonalElevation = 1.dp
                     ) {
                         Column(
@@ -988,7 +987,7 @@ private fun HabitMoreDetailsSheet(
 }
 
 // ---------------------------------------------------------------------------
-// Animated section wrapper for staggered entrance
+// Minimal entrance fade for edit sections
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -996,20 +995,18 @@ private fun AnimatedEditSection(
     index: Int,
     content: @Composable () -> Unit
 ) {
+    val reducedMotion = LocalReducedMotion.current
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(300, delayMillis = index * 60)) +
-            slideInVertically(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessLow
-                ),
-                initialOffsetY = { it / 5 }
-            )
-    ) {
+    if (reducedMotion) {
         content()
+    } else {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(100))
+        ) {
+            content()
+        }
     }
 }

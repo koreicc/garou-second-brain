@@ -1021,14 +1021,7 @@ private fun AnimatedSection(
     } else {
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(tween(300, delayMillis = index * 80)) +
-                slideInVertically(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessLow
-                    ),
-                    initialOffsetY = { it / 4 }
-                )
+            enter = fadeIn(tween(100))
         ) {
             content()
         }
