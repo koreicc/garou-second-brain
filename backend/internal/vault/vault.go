@@ -14,28 +14,28 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/koreicc/garou-second-brain/backend/internal/model"
-	_ "modernc.org/sqlite"
 	"gopkg.in/yaml.v3"
+	_ "modernc.org/sqlite"
 )
 
 type Vault struct {
-	db       *sql.DB
-	root     string
-	stmt     *statements
+	db   *sql.DB
+	root string
+	stmt *statements
 }
 
 // statements holds prepared SQL statements for frequent operations.
 type statements struct {
-	getEntity    *sql.Stmt
-	getBody      *sql.Stmt
-	listByType   *sql.Stmt
-	insertEntity *sql.Stmt
-	updateEntity *sql.Stmt
-	deleteEntity *sql.Stmt
-	deleteBody   *sql.Stmt
-	insertBody   *sql.Stmt
-	listSubtasks *sql.Stmt
-	insertSubtask *sql.Stmt
+	getEntity      *sql.Stmt
+	getBody        *sql.Stmt
+	listByType     *sql.Stmt
+	insertEntity   *sql.Stmt
+	updateEntity   *sql.Stmt
+	deleteEntity   *sql.Stmt
+	deleteBody     *sql.Stmt
+	insertBody     *sql.Stmt
+	listSubtasks   *sql.Stmt
+	insertSubtask  *sql.Stmt
 	deleteSubtasks *sql.Stmt
 }
 
@@ -935,22 +935,22 @@ func (v *Vault) WriteTask(task *model.Task) error {
 
 	task.Body = normalizeBody(task.Body)
 	extras := map[string]interface{}{
-		"icon":            task.Icon,
-		"location":        task.Location,
-		"priority":        task.Priority,
-		"parent_id":       task.ParentID,
-		"is_template":     task.IsTemplate,
-		"occurrence_date": task.OccurrenceDate,
-		"date_mode":       task.DateMode,
-		"due_date":        task.DueDate,
-		"start_date":      task.StartDate,
-		"end_date":        task.EndDate,
-		"time_mode":       task.TimeMode,
-		"start_time":      task.StartTime,
-		"end_time":        task.EndTime,
+		"icon":             task.Icon,
+		"location":         task.Location,
+		"priority":         task.Priority,
+		"parent_id":        task.ParentID,
+		"is_template":      task.IsTemplate,
+		"occurrence_date":  task.OccurrenceDate,
+		"date_mode":        task.DateMode,
+		"due_date":         task.DueDate,
+		"start_date":       task.StartDate,
+		"end_date":         task.EndDate,
+		"time_mode":        task.TimeMode,
+		"start_time":       task.StartTime,
+		"end_time":         task.EndTime,
 		"duration_minutes": task.DurationMinutes,
-		"due_time":        task.DueTime,
-		"body":            task.Body,
+		"due_time":         task.DueTime,
+		"body":             task.Body,
 	}
 	args := buildEntityArgs(task.ID, model.TypeTask, task.Title, string(task.Status), task.BaseEntity, extras)
 
