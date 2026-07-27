@@ -27,6 +27,7 @@ import com.secondbrain.domain.model.SocialLink
 import com.secondbrain.ui.theme.pillShape
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.common.LinkedEntitiesView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -97,12 +98,13 @@ fun PersonDetailScreen(
             }
             state.person != null -> {
                 val person = state.person!!
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                AnimatedSection {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     val initials = person.name.split(" ").let { parts ->
                         if (parts.size > 1) {
@@ -205,6 +207,7 @@ fun PersonDetailScreen(
                             Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
+                }
                 }
             }
         }

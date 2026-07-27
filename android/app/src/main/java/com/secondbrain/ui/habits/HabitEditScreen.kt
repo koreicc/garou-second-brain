@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,7 +68,6 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import com.secondbrain.ui.theme.LocalReducedMotion
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,6 +82,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.LinkedEntityInfo
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.common.LinkPickerSheet
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.IconPickerDialog
@@ -262,7 +261,7 @@ fun HabitEditScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Section 1: Habit Core Details
-                AnimatedEditSection(index = 0) {
+                AnimatedSection(index = 0) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
@@ -380,11 +379,11 @@ fun HabitEditScreen(
             }
 
             // Section 2: Days of Week
-            AnimatedEditSection(index = 1) {
+            AnimatedSection(index = 1) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 1.dp
                 ) {
                     Column(
@@ -584,7 +583,7 @@ fun HabitEditScreen(
             }
 
             // Section 3: Subtasks
-            AnimatedEditSection(index = 2) {
+            AnimatedSection(index = 2) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -688,11 +687,11 @@ fun HabitEditScreen(
             }
 
             // Section 4: Body/description
-            AnimatedEditSection(index = 3) {
+            AnimatedSection(index = 3) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = 1.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -709,7 +708,7 @@ fun HabitEditScreen(
             }
 
             // Section 5: More details chip -> sheet
-            AnimatedEditSection(index = 4) {
+            AnimatedSection(index = 4) {
                 var moreDetailsSheetVisible by remember { mutableStateOf(false) }
                 Surface(
                     modifier = Modifier
@@ -755,11 +754,11 @@ fun HabitEditScreen(
 
             // Section 6: Linked Entities (if any)
             if (state.links.isNotEmpty()) {
-                AnimatedEditSection(index = 5) {
+                AnimatedSection(index = 5) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         tonalElevation = 1.dp
                     ) {
                         Column(
@@ -986,27 +985,4 @@ private fun HabitMoreDetailsSheet(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Minimal entrance fade for edit sections
-// ---------------------------------------------------------------------------
 
-@Composable
-private fun AnimatedEditSection(
-    index: Int,
-    content: @Composable () -> Unit
-) {
-    val reducedMotion = LocalReducedMotion.current
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible = true }
-
-    if (reducedMotion) {
-        content()
-    } else {
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(tween(100))
-        ) {
-            content()
-        }
-    }
-}

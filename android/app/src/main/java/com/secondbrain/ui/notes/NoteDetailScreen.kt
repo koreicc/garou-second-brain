@@ -25,6 +25,7 @@ import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
 import com.secondbrain.ui.util.formatRelativeTime
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.common.LinkedEntitiesView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -120,10 +121,11 @@ fun NoteDetailScreen(
             }
             state.note != null -> {
                 val note = state.note!!
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
+                AnimatedSection {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
                         .padding(horizontal = 20.dp, vertical = 16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -218,7 +220,9 @@ fun NoteDetailScreen(
                         )
                     }
                 }
+                }
             }
         }
     }
 }
+

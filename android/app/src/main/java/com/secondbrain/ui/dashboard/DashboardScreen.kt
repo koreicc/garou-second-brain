@@ -1,11 +1,5 @@
 package com.secondbrain.ui.dashboard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,7 +66,7 @@ import com.secondbrain.domain.model.Habit
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Subtask
 import com.secondbrain.domain.model.Task
-import com.secondbrain.ui.theme.LocalReducedMotion
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.PriorityBadge
 import com.secondbrain.ui.util.RefreshOnResume
@@ -1007,23 +1001,3 @@ private fun DateSelectorCard(
 // Animated section wrapper for staggered entrance
 // ---------------------------------------------------------------------------
 
-@Composable
-private fun AnimatedSection(
-    index: Int,
-    content: @Composable () -> Unit
-) {
-    val reducedMotion = LocalReducedMotion.current
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible = true }
-
-    if (reducedMotion) {
-        content()
-    } else {
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(tween(100))
-        ) {
-            content()
-        }
-    }
-}

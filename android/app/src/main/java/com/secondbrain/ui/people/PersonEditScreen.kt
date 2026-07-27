@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
 import com.secondbrain.domain.model.LinkedEntityInfo
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.common.LinkPickerSheet
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.TagInput
@@ -179,13 +180,14 @@ fun PersonEditScreen(
                 CircularProgressIndicator()
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            AnimatedSection {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Section 1: Contact Information
                 Surface(
@@ -458,6 +460,7 @@ fun PersonEditScreen(
                     }
                 }
             }
+        }
         }
     }
 }
