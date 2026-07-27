@@ -42,4 +42,11 @@ credentials.json
 skills/
 
 apk/
+
+# AI agent working directories
+.mimocode/
+.opencode/
+.swarm/
+
+# Windows
 nul

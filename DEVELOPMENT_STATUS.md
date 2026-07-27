@@ -10,7 +10,29 @@ a local-first PKM app with Markdown vault backend (Go/Echo) and Android frontend
 
 ## Completed Features
 
-### 1. Task Status Automation
+### 1. Habit Tracking
+
+**Files changed:**
+- `backend/internal/model/habit.go` -- Habit model with weekly day-of-week scheduling
+- `backend/internal/handler/habit.go` -- CRUD + complete + today endpoints
+- `backend/internal/handler/helpers.go` -- shared helper for content type
+- `android/.../domain/model/Habit.kt` -- Habit domain model
+- `android/.../data/dto/HabitDto.kt` -- Habit DTO with kotlinx.serialization
+- `android/.../data/api/KtorApiService.kt` -- Habit API calls
+- `android/.../data/repository/HabitRepository.kt` -- Habit repository
+- `android/.../ui/habits/HabitListScreen.kt` -- Habit list with completion toggle
+- `android/.../ui/habits/HabitEditScreen.kt` -- Create/edit with day-of-week selector
+- `android/.../ui/habits/HabitViewModel.kt` -- Habit state management
+
+**Behavior:**
+- Habits share `tasks/` vault directory with `type: habit` in frontmatter
+- Scheduled by days of week (Mon, Tue, Wed, etc.)
+- Backend computes `todayCompleted` response field
+- Dedicated UI with day-of-week chip selector
+- Access via FAB menu on Dashboard
+- Weekly recurrence anchored to start-of-week; monthly clamps last valid day
+
+### 2. Task Status Automation
 
 **Files changed:**
 - `backend/internal/model/task.go` -- `ComputeEffectiveStatus()` + `startOfDay`/`endOfDay` helpers
@@ -102,6 +124,7 @@ red "Overdue" section above the daily task list.
 | **Drag-Drop Reschedule** | Drag tasks in calendar view | `CalendarScreen.kt` |
 | **ICS Import** | Import tasks from calendar files | New `import` handler |
 | **Natural Language Input** | "Buy milk tomorrow at 5pm" parsing | `TaskEditViewModel.kt` |
+| **Habit Streaks** | Track consecutive habit completions | Backend + Habit screen |
 
 ---
 
@@ -136,7 +159,9 @@ red "Overdue" section above the daily task list.
 |---|---|
 | `backend/cmd/server/main.go` | Entry point, routes |
 | `backend/internal/handler/task.go` | Task CRUD + `enrichTasks()` |
+| `backend/internal/handler/habit.go` | Habit CRUD + complete + today endpoints |
 | `backend/internal/model/task.go` | Task struct + `ComputeEffectiveStatus()` + `Priority` |
+| `backend/internal/model/habit.go` | Habit model with weekly day-of-week scheduling |
 | `backend/internal/model/common.go` | EntityStatus, BaseEntity constants |
 | `backend/internal/vault/vault.go` | File operations, locking |
 | `backend/internal/handler/entity.go` | Entity resolution |
@@ -149,11 +174,14 @@ red "Overdue" section above the daily task list.
 | `ui/dashboard/DashboardViewModel.kt` | Dashboard state + scope/date/week loading |
 | `ui/calendar/CalendarScreen.kt` | Month grid calendar |
 | `ui/calendar/CalendarViewModel.kt` | Calendar state + task loading |
+| `ui/habits/HabitListScreen.kt` | Habit list with completion toggle |
+| `ui/habits/HabitEditScreen.kt` | Create/edit with day-of-week selector |
 | `ui/tasks/TaskListScreen.kt` | Task list with status colors |
 | `ui/tasks/TaskDetailScreen.kt` | Task detail view |
 | `ui/tasks/TaskEditScreen.kt` | Task creation/editing with priority |
 | `data/api/KtorApiService.kt` | API client with timezone header |
 | `domain/model/Task.kt` | Task model + `displayStatus` + `priority` |
+| `domain/model/Habit.kt` | Habit domain model |
 | `ui/navigation/AppNavigation.kt` | Navigation host + routes |
 | `ui/navigation/Screen.kt` | Route definitions |
 | `ui/util/StatusBadge.kt` | `StatusBadge` + `PriorityBadge` composables |
