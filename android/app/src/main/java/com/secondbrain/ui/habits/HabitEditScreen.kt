@@ -377,6 +377,7 @@ fun HabitEditScreen(
                     }
                 }
             }
+            }
 
             // Section 2: Days of Week
             AnimatedSection(index = 1) {
@@ -581,6 +582,7 @@ fun HabitEditScreen(
                     }
                 }
             }
+            }
 
             // Section 3: Subtasks
             AnimatedSection(index = 2) {
@@ -684,6 +686,7 @@ fun HabitEditScreen(
                             }
                     }
                 }
+            }
             }
 
             // Section 4: Body/description
@@ -817,11 +820,7 @@ fun HabitEditScreen(
             }
         }
     }
-            }
-        }
     }
-}
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
