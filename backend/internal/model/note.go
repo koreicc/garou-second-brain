@@ -25,6 +25,8 @@ func NewNote(id, title string) *Note {
 	}
 }
 
+func (n *Note) SetBody(body string) { n.Body = body }
+
 func (n *Note) Validate() error {
 	if err := ValidateBase(&n.BaseEntity); err != nil {
 		return err

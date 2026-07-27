@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -34,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
@@ -125,6 +125,13 @@ fun NoteListScreen(
         },
         containerColor = Color.Transparent
     ) { innerPadding ->
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
         if (state.isLoading && state.notes.isEmpty()) {
             Column(
                 modifier = Modifier
@@ -188,6 +195,7 @@ fun NoteListScreen(
         }
     }
 }
+}
 
 @Composable
 private fun NoteCard(
@@ -205,7 +213,7 @@ private fun NoteCard(
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Surface(
                 modifier = Modifier
                     .width(4.dp)

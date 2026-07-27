@@ -25,12 +25,39 @@ func NewSearchHandler(v *vault.Vault) *SearchHandler {
 	return &SearchHandler{vault: v}
 }
 
+// Search performs full-text search using the FTS5 index.
+// GET /api/v1/search?q=query
 func (h *SearchHandler) Search(c echo.Context) error {
 	q := c.QueryParam("q")
 	if strings.TrimSpace(q) == "" {
 		return c.JSON(http.StatusBadRequest, model.ErrorResponse("query parameter 'q' is required"))
 	}
 
+	q = strings.TrimSpace(q)
+
+	// Use FTS5 search for speed and snippet highlighting.
+	ftsResults, err := h.vault.SearchFTS(q)
+	if err != nil {
+		// Fallback to legacy search if FTS fails.
+		return h.legacySearch(c, q)
+	}
+
+	// Convert FTS results to handler format.
+	results := make([]SearchResult, 0, len(ftsResults))
+	for _, r := range ftsResults {
+		results = append(results, SearchResult{
+			ID:      r.EntityID,
+			Type:    r.Type,
+			Title:   r.Title,
+			Snippet: r.Snippet,
+		})
+	}
+
+	return c.JSON(http.StatusOK, model.DataResponse(results))
+}
+
+// legacySearch is the fallback search used when FTS5 is unavailable.
+func (h *SearchHandler) legacySearch(c echo.Context, q string) error {
 	q = strings.ToLower(strings.TrimSpace(q))
 	var results []SearchResult
 
@@ -102,7 +129,6 @@ func (h *SearchHandler) Search(c echo.Context) error {
 }
 
 // extractSnippet returns a preview of the text around the first occurrence of query.
-// If query is not found, it returns the first 150 characters of text.
 func extractSnippet(text, query string) string {
 	if text == "" {
 		return ""
@@ -111,14 +137,12 @@ func extractSnippet(text, query string) string {
 	lower := strings.ToLower(text)
 	idx := strings.Index(lower, query)
 	if idx == -1 {
-		// Query not found in body; return first 150 chars as preview
 		if len(text) > 150 {
 			return text[:150] + "..."
 		}
 		return text
 	}
 
-	// Start up to 40 chars before match, end up to 80 chars after match
 	start := idx - 40
 	if start < 0 {
 		start = 0

@@ -36,6 +36,7 @@ import com.secondbrain.ui.theme.ColorSource
 import com.secondbrain.ui.theme.PaletteStyleOpt
 import com.secondbrain.ui.theme.colorSourceLabel
 import com.secondbrain.ui.theme.paletteStyleLabel
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,11 +65,12 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+        AnimatedSection {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -209,6 +211,7 @@ fun SettingsScreen(
 
             // Bottom spacing so content isnt clipped by nav bar
             Spacer(modifier = Modifier.height(16.dp))
+        }
         }
     }
 }

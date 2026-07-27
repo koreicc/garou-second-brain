@@ -2,9 +2,11 @@ package com.secondbrain.ui.workspace
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.secondbrain.data.repository.HabitRepository
 import com.secondbrain.data.repository.NoteRepository
 import com.secondbrain.data.repository.PersonRepository
 import com.secondbrain.data.repository.TaskRepository
+import com.secondbrain.domain.model.Habit
 import com.secondbrain.domain.model.Note
 import com.secondbrain.domain.model.Person
 import com.secondbrain.domain.model.Task
@@ -21,6 +23,7 @@ data class WorkspaceUiState(
     val notes: List<Note> = emptyList(),
     val tasks: List<Task> = emptyList(),
     val people: List<Person> = emptyList(),
+    val habits: List<Habit> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -28,7 +31,8 @@ data class WorkspaceUiState(
     val showDeleteDialog: Boolean = false,
     val pendingDeleteNote: Note? = null,
     val pendingDeleteTask: Task? = null,
-    val pendingDeletePerson: Person? = null
+    val pendingDeletePerson: Person? = null,
+    val pendingDeleteHabit: Habit? = null
 )
 
 sealed interface WorkspaceEvent {
@@ -39,6 +43,7 @@ sealed interface WorkspaceEvent {
     data class ShowDeleteNote(val note: Note) : WorkspaceEvent
     data class ShowDeleteTask(val task: Task) : WorkspaceEvent
     data class ShowDeletePerson(val person: Person) : WorkspaceEvent
+    data class ShowDeleteHabit(val habit: Habit) : WorkspaceEvent
     data object ConfirmDelete : WorkspaceEvent
     data object DismissDelete : WorkspaceEvent
     data object DismissError : WorkspaceEvent
@@ -47,7 +52,8 @@ sealed interface WorkspaceEvent {
 class WorkspaceViewModel(
     private val noteRepository: NoteRepository,
     private val taskRepository: TaskRepository,
-    private val personRepository: PersonRepository
+    private val personRepository: PersonRepository,
+    private val habitRepository: HabitRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WorkspaceUiState())
@@ -71,13 +77,17 @@ class WorkspaceViewModel(
             is WorkspaceEvent.ShowDeletePerson -> _state.update {
                 it.copy(showDeleteDialog = true, pendingDeletePerson = event.person)
             }
+            is WorkspaceEvent.ShowDeleteHabit -> _state.update {
+                it.copy(showDeleteDialog = true, pendingDeleteHabit = event.habit)
+            }
             is WorkspaceEvent.ConfirmDelete -> confirmDelete()
             is WorkspaceEvent.DismissDelete -> _state.update {
                 it.copy(
                     showDeleteDialog = false,
                     pendingDeleteNote = null,
                     pendingDeleteTask = null,
-                    pendingDeletePerson = null
+                    pendingDeletePerson = null,
+                    pendingDeleteHabit = null
                 )
             }
             is WorkspaceEvent.DismissError -> _state.update { it.copy(error = null) }
@@ -90,17 +100,16 @@ class WorkspaceViewModel(
      */
     fun silentReload() {
         viewModelScope.launch {
-            val result = coroutineScope {
-                val notesDeferred = async { noteRepository.getAll().getOrDefault(emptyList()) }
-                val tasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
-                val peopleDeferred = async { personRepository.getAll().getOrDefault(emptyList()) }
-                Triple(notesDeferred.await(), tasksDeferred.await(), peopleDeferred.await())
-            }
+            val notesDeferred = async { noteRepository.getAll().getOrDefault(emptyList()) }
+            val tasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
+            val peopleDeferred = async { personRepository.getAll().getOrDefault(emptyList()) }
+            val habitsDeferred = async { habitRepository.getAll().getOrDefault(emptyList()) }
             _state.update {
                 it.copy(
-                    notes = result.first,
-                    tasks = result.second,
-                    people = result.third
+                    notes = notesDeferred.await(),
+                    tasks = tasksDeferred.await(),
+                    people = peopleDeferred.await(),
+                    habits = habitsDeferred.await()
                 )
             }
         }
@@ -114,11 +123,13 @@ class WorkspaceViewModel(
                     val notesDeferred = async { noteRepository.getAll().getOrDefault(emptyList()) }
                     val tasksDeferred = async { taskRepository.getAll().getOrDefault(emptyList()) }
                     val peopleDeferred = async { personRepository.getAll().getOrDefault(emptyList()) }
+                    val habitsDeferred = async { habitRepository.getAll().getOrDefault(emptyList()) }
                     _state.update {
                         it.copy(
                             notes = notesDeferred.await(),
                             tasks = tasksDeferred.await(),
                             people = peopleDeferred.await(),
+                            habits = habitsDeferred.await(),
                             isLoading = false
                         )
                     }
@@ -147,12 +158,18 @@ class WorkspaceViewModel(
                     .onSuccess { silentReload() }
                     .onFailure { error -> _state.update { it.copy(error = error.message) } }
             }
+            currentState.pendingDeleteHabit?.let { habit ->
+                habitRepository.delete(habit.id)
+                    .onSuccess { silentReload() }
+                    .onFailure { error -> _state.update { it.copy(error = error.message) } }
+            }
             _state.update {
                 it.copy(
                     showDeleteDialog = false,
                     pendingDeleteNote = null,
                     pendingDeleteTask = null,
-                    pendingDeletePerson = null
+                    pendingDeletePerson = null,
+                    pendingDeleteHabit = null
                 )
             }
         }

@@ -1,6 +1,10 @@
 package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -21,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,10 +34,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +54,7 @@ import androidx.compose.ui.unit.dp
  * @param onNewNote Called when "New Note" is selected
  * @param onNewTask Called when "New Task" is selected
  * @param onNewPerson Called when "New Person" is selected
+ * @param onNewHabit Called when "New Habit" is selected
  */
 @Composable
 fun FabMenuOverlay(
@@ -53,12 +62,13 @@ fun FabMenuOverlay(
     onDismiss: () -> Unit,
     onNewNote: () -> Unit,
     onNewTask: () -> Unit,
-    onNewPerson: () -> Unit
+    onNewPerson: () -> Unit,
+    onNewHabit: () -> Unit
 ) {
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = fadeIn(tween(300)),
+        exit = fadeOut(tween(200))
     ) {
         // Semi-transparent backdrop filling the entire screen
         Box(
@@ -71,65 +81,75 @@ fun FabMenuOverlay(
                     onClick = onDismiss
                 ),
             contentAlignment = Alignment.BottomCenter
-        ) {
-            // Menu cards aligned above the bottom bar
+            ) {
+            // Menu cards aligned above the bottom bar with staggered spring reveal
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)
-                    .padding(bottom = 80.dp), // Clear the floating pill + FAB
+                    .padding(bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                FabMenuOption(
-                    label = "New Note",
-                    icon = Icons.Default.Description,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    onClick = {
-                        onDismiss()
-                        onNewNote()
-                    }
+                val menuItems = listOf(
+                    Triple("New Note", Icons.Default.Description to MaterialTheme.colorScheme.tertiary) { onDismiss(); onNewNote() },
+                    Triple("New Task", Icons.Default.Task to MaterialTheme.colorScheme.primary) { onDismiss(); onNewTask() },
+                    Triple("New Person", Icons.Default.Person to MaterialTheme.colorScheme.secondary) { onDismiss(); onNewPerson() },
+                    Triple("New Habit", Icons.Default.Repeat to MaterialTheme.colorScheme.tertiary) { onDismiss(); onNewHabit() }
                 )
-                FabMenuOption(
-                    label = "New Task",
-                    icon = Icons.Default.Task,
-                    tint = MaterialTheme.colorScheme.primary,
-                    onClick = {
-                        onDismiss()
-                        onNewTask()
-                    }
-                )
-                FabMenuOption(
-                    label = "New Person",
-                    icon = Icons.Default.Person,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    onClick = {
-                        onDismiss()
-                        onNewPerson()
-                    }
-                )
+                menuItems.forEachIndexed { index, (label, iconTint, onClick) ->
+                    val (icon, tint) = iconTint
+                    StaggeredFabMenuItem(
+                        index = index,
+                        label = label,
+                        icon = icon,
+                        tint = tint,
+                        onClick = onClick
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * A single menu option card inside the FAB expansion menu.
- *
- * @param label Display text (e.g. "New Note")
- * @param icon Icon for the option
- * @param tint Accent color for the icon and its circular background
- * @param onClick Called when the card is tapped
+ * A single FAB menu option with staggered spring entrance animation.
+ * Each item slides up and fades in with a delay based on its index.
  */
 @Composable
-private fun FabMenuOption(
+private fun StaggeredFabMenuItem(
+    index: Int,
     label: String,
     icon: ImageVector,
     tint: Color,
     onClick: () -> Unit
 ) {
+    val delayMillis = index * 50
+
+    val alpha by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(
+            durationMillis = 200,
+            delayMillis = delayMillis
+        ),
+        label = "fab_alpha_$index"
+    )
+    val offsetY by animateFloatAsState(
+        targetValue = 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "fab_offset_$index"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                this.alpha = alpha
+                translationY = offsetY * density
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -144,7 +164,6 @@ private fun FabMenuOption(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            // Circular tinted icon background
             Surface(
                 shape = CircleShape,
                 color = tint.copy(alpha = 0.15f),
@@ -162,7 +181,6 @@ private fun FabMenuOption(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Label + subtitle
             Column {
                 Text(
                     text = label,
@@ -179,3 +197,12 @@ private fun FabMenuOption(
         }
     }
 }
+
+/**
+ * A single menu option card inside the FAB expansion menu.
+ *
+ * @param label Display text (e.g. "New Note")
+ * @param icon Icon for the option
+ * @param tint Accent color for the icon and its circular background
+ * @param onClick Called when the card is tapped
+ */

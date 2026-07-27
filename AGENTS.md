@@ -2,7 +2,8 @@
 
 This file governs AI coding agent behavior for the Second Brain System project.
 Read it at session start. For project overview, architecture, and API docs, see
-`README.md` and `docs/ARCHITECTURE.md`.
+`README.md` and `docs/ARCHITECTURE.md`. For contributing guidelines, see
+`CONTRIBUTING.md`.
 
 ---
 
@@ -13,9 +14,9 @@ Read it at session start. For project overview, architecture, and API docs, see
 2. **Branch** -- never work on main. Use `feat/[name]` or `fix/[name]`.
 3. **Implement** -- backend first (YAML schema + Go structs), then frontend sync
    (Kotlin data classes to match).
-4. **Validate** -- backend: `gofmt -w .` then `go build ./...`. Frontend:
-   `./gradlew ktlintCheck` then `./gradlew assembleDebug`. Do NOT commit if
-   validation fails.
+4. **Validate** -- backend: `gofmt -w .` then `go build ./...` then `go vet ./...`
+   then `go test -race ./...`. Frontend: `./gradlew ktlintCheck` then
+   `./gradlew assembleDebug`. Do NOT commit if validation fails.
 5. **Anti-patterns** -- load `docs/agent-anti-patterns.md` before writing Go code.
    For Compose code, load the Compose anti-patterns reference. Audit your output
    against the WRONG/RIGHT tables.

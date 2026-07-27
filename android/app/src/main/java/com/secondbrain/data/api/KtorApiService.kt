@@ -202,6 +202,44 @@ class KtorApiService(
         }.body()
     }
 
+    // ===== Habits =====
+
+    override suspend fun getAllHabits(): ApiResponse<List<HabitDto>> {
+        return client.get("$baseUrl/habits").body()
+    }
+
+    override suspend fun getHabit(id: String): ApiResponse<HabitDto> {
+        return client.get("$baseUrl/habits/$id").body()
+    }
+
+    override suspend fun createHabit(request: CreateHabitRequest): ApiResponse<HabitDto> {
+        return client.post("$baseUrl/habits") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    override suspend fun updateHabit(id: String, request: UpdateHabitRequest): ApiResponse<HabitDto> {
+        return client.put("$baseUrl/habits/$id") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    override suspend fun deleteHabit(id: String): ApiResponse<Unit> {
+        return client.delete("$baseUrl/habits/$id").body()
+    }
+
+    override suspend fun completeHabit(id: String): ApiResponse<HabitDto> {
+        return client.post("$baseUrl/habits/$id/complete").body()
+    }
+
+    override suspend fun getTodayHabits(): ApiResponse<List<HabitDto>> {
+        return client.get("$baseUrl/habits/today") {
+            withTimezone()
+        }.body()
+    }
+
     // ===== A7 convenience endpoints =====
 
     override suspend fun getTodayTasks(): ApiResponse<List<TaskDto>> {

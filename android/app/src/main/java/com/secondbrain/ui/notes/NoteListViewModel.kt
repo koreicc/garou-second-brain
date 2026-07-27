@@ -15,7 +15,8 @@ data class NoteListUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showDeleteDialog: Boolean = false,
-    val pendingDeleteNote: Note? = null
+    val pendingDeleteNote: Note? = null,
+    val isRefreshing: Boolean = false
 )
 
 sealed interface NoteListEvent {
@@ -83,6 +84,15 @@ class NoteListViewModel(
                 .onFailure { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
                 }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true) }
+            noteRepository.getAll()
+                .onSuccess { notes -> _state.update { it.copy(notes = notes, isRefreshing = false) } }
+                .onFailure { e -> _state.update { it.copy(isRefreshing = false, error = e.message) } }
         }
     }
 

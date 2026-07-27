@@ -62,9 +62,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.secondbrain.di.AppModule
+import com.secondbrain.domain.model.Habit
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Subtask
 import com.secondbrain.domain.model.Task
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.PriorityBadge
 import com.secondbrain.ui.util.RefreshOnResume
@@ -87,7 +89,8 @@ fun DashboardScreen(
     onNavigateToPeople: () -> Unit,
     onNavigateToNoteDetail: (String) -> Unit,
     onNavigateToTaskDetail: (String) -> Unit,
-    onNavigateToCalendar: () -> Unit
+    onNavigateToCalendar: () -> Unit,
+    onNavigateToHabits: () -> Unit
 ) {
     val viewModel: DashboardViewModel = viewModel(
         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -97,7 +100,8 @@ fun DashboardScreen(
                     noteRepository = AppModule.noteRepository,
                     taskRepository = AppModule.taskRepository,
                     quickTaskRepository = AppModule.quickTaskRepository,
-                    personRepository = AppModule.personRepository
+                    personRepository = AppModule.personRepository,
+                    habitRepository = AppModule.habitRepository
                 ) as T
             }
         }
@@ -190,7 +194,7 @@ fun DashboardScreen(
                     }
                 }
             )
-        }
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -201,55 +205,81 @@ fun DashboardScreen(
         ) {
             // ---- Date selector ----
             item(key = "date-selector") {
-                DateSelectorCard(
-                    selectedDate = state.selectedDate,
-                    onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
-                    onOpenDatePicker = { showDatePicker = true }
-                )
+                AnimatedSection(index = 0) {
+                    DateSelectorCard(
+                        selectedDate = state.selectedDate,
+                        onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
+                        onOpenDatePicker = { showDatePicker = true }
+                    )
+                }
             }
 
             // ---- Routine section ----
             state.routine?.let { routine ->
                 item(key = "routine") {
-                    RoutineSection(
-                        routine = routine,
-                        timeOfDay = state.routineTimeOfDay,
-                        onToggleSubtask = { subtaskId ->
-                            viewModel.onEvent(DashboardEvent.ToggleRoutineSubtask(subtaskId))
-                        },
-                        onCompleteRoutine = {
-                            viewModel.onEvent(DashboardEvent.CompleteRoutine)
-                        }
-                    )
+                    AnimatedSection(index = 1) {
+                        RoutineSection(
+                            routine = routine,
+                            timeOfDay = state.routineTimeOfDay,
+                            onToggleSubtask = { subtaskId ->
+                                viewModel.onEvent(DashboardEvent.ToggleRoutineSubtask(subtaskId))
+                            },
+                            onCompleteRoutine = {
+                                viewModel.onEvent(DashboardEvent.CompleteRoutine)
+                            }
+                        )
+                    }
+                }
+            }
+
+            // ---- Today's Habits ----
+            if (state.todayHabits.isNotEmpty()) {
+                item(key = "today-habits") {
+                    AnimatedSection(index = 2) {
+                        TodayHabitsSection(
+                            habits = state.todayHabits,
+                            onHabitClick = onNavigateToHabits,
+                            onCompleteHabit = { habitId ->
+                                viewModel.onEvent(DashboardEvent.CompleteHabit(habitId))
+                            }
+                        )
+                    }
                 }
             }
 
             // ---- Overdue tasks ----
             if (state.overdueTasks.isNotEmpty()) {
                 item(key = "overdue-tasks") {
-                    OverdueTasksSection(
-                        tasks = state.overdueTasks,
-                        onTaskClick = onNavigateToTaskDetail
-                    )
+                    AnimatedSection(index = 3) {
+                        OverdueTasksSection(
+                            tasks = state.overdueTasks,
+                            onTaskClick = onNavigateToTaskDetail
+                        )
+                    }
                 }
             }
 
             // ---- Today's tasks ----
             item(key = "date-tasks") {
-                DateTasksSection(
-                    date = LocalDate.now(),
-                    tasks = state.selectedDateTasks,
-                    onTaskClick = onNavigateToTaskDetail
-                )
+                AnimatedSection(index = 4) {
+                    val todayDate = remember { LocalDate.now() }
+                    DateTasksSection(
+                        date = todayDate,
+                        tasks = state.selectedDateTasks,
+                        onTaskClick = onNavigateToTaskDetail
+                    )
+                }
             }
 
             // ---- Quick task input ----
             item(key = "quick-task-input") {
-                QuickTaskInputCard(
-                    onAddQuickTask = { title ->
-                        viewModel.onEvent(DashboardEvent.CreateQuickTask(title = title))
-                    }
-                )
+                AnimatedSection(index = 5) {
+                    QuickTaskInputCard(
+                        onAddQuickTask = { title ->
+                            viewModel.onEvent(DashboardEvent.CreateQuickTask(title = title))
+                        }
+                    )
+                }
             }
 
             // ---- Quick task list ----
@@ -265,13 +295,15 @@ fun DashboardScreen(
 
             // ---- Quick note input ----
             item(key = "quick-note-input") {
-                QuickNoteInputCard(
-                    title = state.quickNoteTitle,
-                    content = state.quickNoteContent,
-                    onTitleChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteTitle(it)) },
-                    onContentChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteContent(it)) },
-                    onAddNote = { viewModel.onEvent(DashboardEvent.CreateQuickNote) }
-                )
+                AnimatedSection(index = 6) {
+                    QuickNoteInputCard(
+                        title = state.quickNoteTitle,
+                        content = state.quickNoteContent,
+                        onTitleChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteTitle(it)) },
+                        onContentChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteContent(it)) },
+                        onAddNote = { viewModel.onEvent(DashboardEvent.CreateQuickNote) }
+                    )
+                }
             }
 
             // ---- Loading indicator ----
@@ -458,6 +490,115 @@ private fun DateTaskItem(
                 PriorityBadge(priority = task.priority)
                 StatusBadge(status = task.displayStatus)
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Today's habits section
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun TodayHabitsSection(
+    habits: List<Habit>,
+    onHabitClick: () -> Unit,
+    onCompleteHabit: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Today's Habits (${habits.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                TextButton(onClick = onHabitClick) {
+                    Text("View All")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            habits.forEach { habit ->
+                TodayHabitRow(
+                    habit = habit,
+                    onComplete = { onCompleteHabit(habit.id) }
+                )
+                if (habit != habits.last()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayHabitRow(
+    habit: Habit,
+    onComplete: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val iconVector = resolveIcon(habit.icon)
+            if (iconVector != null) {
+                Icon(
+                    imageVector = iconVector,
+                    contentDescription = habit.icon,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else if (habit.icon.isNotEmpty()) {
+                Text(
+                    text = habit.icon,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (habit.icon.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(10.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = habit.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (habit.todayCompleted)
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    else
+                        MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textDecoration = if (habit.todayCompleted)
+                        androidx.compose.ui.text.style.TextDecoration.LineThrough
+                    else
+                        androidx.compose.ui.text.style.TextDecoration.None
+                )
+            }
+            Checkbox(
+                checked = habit.todayCompleted,
+                onCheckedChange = { onComplete() }
+            )
         }
     }
 }
@@ -855,3 +996,8 @@ private fun DateSelectorCard(
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Animated section wrapper for staggered entrance
+// ---------------------------------------------------------------------------
+

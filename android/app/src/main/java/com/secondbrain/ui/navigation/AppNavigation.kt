@@ -1,6 +1,7 @@
 package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.fadeIn
@@ -35,6 +36,8 @@ import com.secondbrain.ui.search.SearchScreen
 import com.secondbrain.ui.search.SearchViewModel
 import com.secondbrain.ui.settings.SettingsScreen
 import com.secondbrain.ui.settings.SettingsViewModel
+import com.secondbrain.ui.habits.HabitEditScreen
+import com.secondbrain.ui.habits.HabitListScreen
 import com.secondbrain.ui.tasks.RepeatingScreen
 import com.secondbrain.ui.tasks.TaskDetailScreen
 import com.secondbrain.ui.tasks.TaskEditScreen
@@ -92,26 +95,26 @@ fun AppNavigation(
                 enterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300))
+                        animationSpec = tween(350, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
                 },
                 exitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(300))
+                        animationSpec = tween(250, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
                 },
                 popEnterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300))
+                        animationSpec = tween(350, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
                 },
                 popExitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(300))
+                        animationSpec = tween(250, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
                 }
             ) {
                 // -- Bottom tab destinations --
@@ -153,6 +156,9 @@ fun AppNavigation(
                         },
                         onNavigateToCalendar = {
                             navController.navigate(Screen.Calendar)
+                        },
+                        onNavigateToHabits = {
+                            navController.navigate(Screen.HabitList)
                         }
                     )
                 }
@@ -176,6 +182,12 @@ fun AppNavigation(
                         },
                         onNavigateToPersonEdit = {
                             navController.navigate(Screen.PersonEdit())
+                        },
+                        onNavigateToHabitDetail = { habitId ->
+                            navController.navigate(Screen.HabitEdit(habitId))
+                        },
+                        onNavigateToHabitEdit = {
+                            navController.navigate(Screen.HabitEdit())
                         }
                     )
                 }
@@ -274,9 +286,12 @@ fun AppNavigation(
                 // -- Calendar screen --
 
                 composable<Screen.Calendar> {
-                    val calendarViewModel = CalendarViewModel(
-                        taskRepository = AppModule.taskRepository
-                    )
+                    val calendarViewModel = remember {
+                        CalendarViewModel(
+                            taskRepository = AppModule.taskRepository,
+                            habitRepository = AppModule.habitRepository
+                        )
+                    }
                     CalendarScreen(
                         viewModel = calendarViewModel,
                         onNavigateBack = { navController.popBackStack() },
@@ -317,6 +332,27 @@ fun AppNavigation(
                         }
                     )
                 }
+
+                // -- Habit screens --
+
+                composable<Screen.HabitList> {
+                    HabitListScreen(
+                        onHabitClick = { habitId ->
+                            navController.navigate(Screen.HabitEdit(habitId))
+                        },
+                        onAddHabit = {
+                            navController.navigate(Screen.HabitEdit())
+                        }
+                    )
+                }
+
+                composable<Screen.HabitEdit> { backStackEntry ->
+                    val screen: Screen.HabitEdit = backStackEntry.toRoute()
+                    HabitEditScreen(
+                        habitId = screen.habitId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
 
@@ -335,6 +371,10 @@ fun AppNavigation(
             onNewPerson = {
                 fabMenuVisible = false
                 navController.navigate(Screen.PersonEdit())
+            },
+            onNewHabit = {
+                fabMenuVisible = false
+                navController.navigate(Screen.HabitEdit())
             }
         )
     }

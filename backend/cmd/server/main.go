@@ -58,6 +58,7 @@ func main() {
 	api.GET("/tasks", taskHandler.List)
 	api.GET("/tasks/templates", taskHandler.ListTemplates)
 	api.GET("/tasks/by-date", taskHandler.ListByDate)
+	api.GET("/tasks/by-month", taskHandler.ListByMonth)
 	api.GET("/tasks/upcoming", taskHandler.Upcoming)
 	api.POST("/tasks/batch", taskHandler.Batch)
 	api.GET("/tasks/:id", taskHandler.Get)
@@ -90,9 +91,27 @@ func main() {
 	entityHandler := handler.NewEntityHandler(v)
 	api.GET("/entities/by-ids", entityHandler.GetByIDs)
 
+	habitHandler := handler.NewHabitHandler(v)
+	api.GET("/habits", habitHandler.List)
+	api.GET("/habits/today", habitHandler.Today)
+	api.GET("/habits/:id", habitHandler.Get)
+	api.POST("/habits", habitHandler.Create)
+	api.PUT("/habits/:id", habitHandler.Update)
+	api.DELETE("/habits/:id", habitHandler.Delete)
+	api.POST("/habits/:id/complete", habitHandler.Complete)
+
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
+
+	// Debug / admin endpoints
+	debug := e.Group("/debug")
+	debug.GET("/vault-stats", func(c echo.Context) error {
+		return c.JSON(200, v.Stats())
+	})
+
+	// Start background file sync for external edits.
+	go v.StartSync(ctx.Done())
 
 	addr := ":" + cfg.Port
 	log.Printf("Server starting on %s", addr)

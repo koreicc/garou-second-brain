@@ -49,6 +49,8 @@ type Task struct {
 	Body       string      `yaml:"-" json:"body"`
 }
 
+func (t *Task) SetBody(body string) { t.Body = body }
+
 func NewTask(id, title string) *Task {
 	now := time.Now().UTC()
 	return &Task{

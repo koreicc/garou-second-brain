@@ -453,3 +453,137 @@ func TestNotFoundError(t *testing.T) {
 		t.Fatal("expected IsNotFoundError to be true")
 	}
 }
+
+func TestHabitValidate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		habit   *Habit
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid habit",
+			habit: func() *Habit {
+				h := NewHabit(uuid.NewString(), "Exercise")
+				h.DaysOfWeek = []int{1, 2, 3}
+				return h
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "missing title",
+			habit: func() *Habit {
+				h := NewHabit(uuid.NewString(), "")
+				h.Title = ""
+				return h
+			}(),
+			wantErr: true,
+			errMsg:  "habit.title is required",
+		},
+		{
+			name: "empty id",
+			habit: func() *Habit {
+				h := NewHabit("", "Exercise")
+				h.ID = ""
+				return h
+			}(),
+			wantErr: true,
+			errMsg:  "id is required",
+		},
+		{
+			name: "empty type",
+			habit: func() *Habit {
+				h := NewHabit(uuid.NewString(), "Exercise")
+				h.Type = ""
+				return h
+			}(),
+			wantErr: true,
+			errMsg:  "type is required",
+		},
+		{
+			name: "empty days_of_week",
+			habit: func() *Habit {
+				h := NewHabit(uuid.NewString(), "Exercise")
+				h.DaysOfWeek = []int{}
+				return h
+			}(),
+			wantErr: true,
+			errMsg:  "habit.days_of_week is required (at least 1 day)",
+		},
+		{
+			name: "invalid day value 0",
+			habit: func() *Habit {
+				h := NewHabit(uuid.NewString(), "Exercise")
+				h.DaysOfWeek = []int{0}
+				return h
+			}(),
+			wantErr: true,
+			errMsg:  "habit.days_of_week values must be 1-7 (Mon-Sun)",
+		},
+		{
+			name: "invalid day value 8",
+			habit: func() *Habit {
+				h := NewHabit(uuid.NewString(), "Exercise")
+				h.DaysOfWeek = []int{8}
+				return h
+			}(),
+			wantErr: true,
+			errMsg:  "habit.days_of_week values must be 1-7 (Mon-Sun)",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := tc.habit.Validate()
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if err.Error() != tc.errMsg {
+					t.Fatalf("expected error %q, got %q", tc.errMsg, err.Error())
+				}
+				if !IsValidationError(err) {
+					t.Fatalf("expected ValidationError, got %T", err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestNewHabitDefaults(t *testing.T) {
+	id := uuid.NewString()
+	h := NewHabit(id, "Meditate")
+
+	if h.ID != id {
+		t.Fatalf("ID = %q, want %q", h.ID, id)
+	}
+	if h.Type != TypeHabit {
+		t.Fatalf("Type = %q, want %q", h.Type, TypeHabit)
+	}
+	if h.Status != StatusActive {
+		t.Fatalf("Status = %q, want %q", h.Status, StatusActive)
+	}
+	if h.Title != "Meditate" {
+		t.Fatalf("Title = %q, want %q", h.Title, "Meditate")
+	}
+	if h.DaysOfWeek == nil {
+		t.Fatal("DaysOfWeek should be initialized to empty slice, not nil")
+	}
+	if h.Subtasks == nil {
+		t.Fatal("Subtasks should be initialized to empty slice, not nil")
+	}
+	if h.Tags == nil {
+		t.Fatal("Tags should be initialized to empty slice, not nil")
+	}
+	if h.Links == nil {
+		t.Fatal("Links should be initialized to empty slice, not nil")
+	}
+}

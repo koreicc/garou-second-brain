@@ -51,6 +51,15 @@ interface ApiService {
     // Occurrence override
     suspend fun updateOccurrence(parentId: String, date: String, request: UpdateOccurrenceRequest): ApiResponse<TaskDto>
 
+    // Habits
+    suspend fun getAllHabits(): ApiResponse<List<HabitDto>>
+    suspend fun getHabit(id: String): ApiResponse<HabitDto>
+    suspend fun createHabit(request: CreateHabitRequest): ApiResponse<HabitDto>
+    suspend fun updateHabit(id: String, request: UpdateHabitRequest): ApiResponse<HabitDto>
+    suspend fun deleteHabit(id: String): ApiResponse<Unit>
+    suspend fun completeHabit(id: String): ApiResponse<HabitDto>
+    suspend fun getTodayHabits(): ApiResponse<List<HabitDto>>
+
     // A7 convenience endpoints
     suspend fun getTodayTasks(): ApiResponse<List<TaskDto>>
     suspend fun getOverdueTasks(): ApiResponse<List<TaskDto>>

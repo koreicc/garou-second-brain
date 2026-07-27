@@ -3,6 +3,7 @@ package com.secondbrain.di
 import com.secondbrain.BuildConfig
 import com.secondbrain.data.api.ApiService
 import com.secondbrain.data.api.KtorApiService
+import com.secondbrain.data.repository.HabitRepository
 import com.secondbrain.data.repository.LinkingRepository
 import com.secondbrain.data.repository.NoteRepository
 import com.secondbrain.data.repository.PersonRepository
@@ -64,5 +65,9 @@ object AppModule {
 
     val linkingRepository: LinkingRepository by lazy {
         LinkingRepository(apiService)
+    }
+
+    val habitRepository: HabitRepository by lazy {
+        HabitRepository(apiService)
     }
 }

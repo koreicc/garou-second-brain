@@ -31,6 +31,7 @@ import com.secondbrain.ui.util.RefreshOnResume
 import com.secondbrain.ui.util.WikilinkText
 import com.secondbrain.ui.util.StatusBadge
 import com.secondbrain.ui.util.resolveIcon
+import com.secondbrain.ui.common.AnimatedSection
 import com.secondbrain.ui.common.LinkedEntitiesView
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -121,11 +122,12 @@ fun TaskDetailScreen(
             }
             state.task != null -> {
                 val task = state.task!!
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                AnimatedSection {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(horizontal = 20.dp, vertical = 16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
                     Row(
@@ -317,6 +319,7 @@ fun TaskDetailScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }
