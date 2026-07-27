@@ -1,6 +1,7 @@
 package com.secondbrain.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.fadeIn
@@ -94,26 +95,26 @@ fun AppNavigation(
                 enterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300))
+                        animationSpec = tween(350, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
                 },
                 exitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(300))
+                        animationSpec = tween(250, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
                 },
                 popEnterTransition = {
                     slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300))
+                        animationSpec = tween(350, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing))
                 },
                 popExitTransition = {
                     slideOutOfContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(300))
+                        animationSpec = tween(250, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing))
                 }
             ) {
                 // -- Bottom tab destinations --

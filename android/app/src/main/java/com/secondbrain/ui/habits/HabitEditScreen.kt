@@ -1,8 +1,13 @@
 package com.secondbrain.ui.habits
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -258,12 +263,13 @@ fun HabitEditScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Section 1: Habit Core Details
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 1.dp
-                ) {
+                AnimatedEditSection(index = 0) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 1.dp
+                    ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -370,11 +376,12 @@ fun HabitEditScreen(
                                     Spacer(modifier = Modifier.height(16.dp))
                                 }
                             }
-                        }
                     }
                 }
+            }
 
-                // Section 2: Days of Week
+            // Section 2: Days of Week
+            AnimatedEditSection(index = 1) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -573,11 +580,12 @@ fun HabitEditScreen(
                                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                                 )
                             }
-                        }
                     }
                 }
+            }
 
-                // Section 3: Subtasks
+            // Section 3: Subtasks
+            AnimatedEditSection(index = 2) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -676,11 +684,12 @@ fun HabitEditScreen(
                                     }
                                 }
                             }
-                        }
                     }
                 }
+            }
 
-                // Section 4: Body/description
+            // Section 4: Body/description
+            AnimatedEditSection(index = 3) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
@@ -696,10 +705,11 @@ fun HabitEditScreen(
                             minLines = 2,
                             shape = MaterialTheme.shapes.medium
                         )
-                    }
                 }
+            }
 
-                // Section 5: More details chip -> sheet
+            // Section 5: More details chip -> sheet
+            AnimatedEditSection(index = 4) {
                 var moreDetailsSheetVisible by remember { mutableStateOf(false) }
                 Surface(
                     modifier = Modifier
@@ -741,9 +751,11 @@ fun HabitEditScreen(
                         onDismiss = { moreDetailsSheetVisible = false }
                     )
                 }
+            }
 
-                // Section 6: Linked Entities (if any)
-                if (state.links.isNotEmpty()) {
+            // Section 6: Linked Entities (if any)
+            if (state.links.isNotEmpty()) {
+                AnimatedEditSection(index = 5) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large,
@@ -966,5 +978,32 @@ private fun HabitMoreDetailsSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Animated section wrapper for staggered entrance
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun AnimatedEditSection(
+    index: Int,
+    content: @Composable () -> Unit
+) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(300, delayMillis = index * 60)) +
+            slideInVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                initialOffsetY = { it / 5 }
+            )
+    ) {
+        content()
     }
 }

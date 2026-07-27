@@ -1,5 +1,11 @@
 package com.secondbrain.ui.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,6 +72,7 @@ import com.secondbrain.domain.model.Habit
 import com.secondbrain.domain.model.QuickTask
 import com.secondbrain.domain.model.Subtask
 import com.secondbrain.domain.model.Task
+import com.secondbrain.ui.theme.LocalReducedMotion
 import com.secondbrain.ui.theme.transparentTopAppBarColors
 import com.secondbrain.ui.util.PriorityBadge
 import com.secondbrain.ui.util.RefreshOnResume
@@ -193,7 +200,7 @@ fun DashboardScreen(
                     }
                 }
             )
-        }
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -204,67 +211,82 @@ fun DashboardScreen(
         ) {
             // ---- Date selector ----
             item(key = "date-selector") {
-                DateSelectorCard(
-                    selectedDate = state.selectedDate,
-                    onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
-                    onOpenDatePicker = { showDatePicker = true }
-                )
+                AnimatedSection(index = 0) {
+                    DateSelectorCard(
+                        selectedDate = state.selectedDate,
+                        onChangeDate = { date -> viewModel.onEvent(DashboardEvent.SelectDate(date)) },
+                        onOpenDatePicker = { showDatePicker = true }
+                    )
+                }
             }
 
             // ---- Routine section ----
             state.routine?.let { routine ->
                 item(key = "routine") {
-                    RoutineSection(
-                        routine = routine,
-                        timeOfDay = state.routineTimeOfDay,
-                        onToggleSubtask = { subtaskId ->
-                            viewModel.onEvent(DashboardEvent.ToggleRoutineSubtask(subtaskId))
-                        },
-                        onCompleteRoutine = {
-                            viewModel.onEvent(DashboardEvent.CompleteRoutine)
-                        }
-                    )
+                    AnimatedSection(index = 1) {
+                        RoutineSection(
+                            routine = routine,
+                            timeOfDay = state.routineTimeOfDay,
+                            onToggleSubtask = { subtaskId ->
+                                viewModel.onEvent(DashboardEvent.ToggleRoutineSubtask(subtaskId))
+                            },
+                            onCompleteRoutine = {
+                                viewModel.onEvent(DashboardEvent.CompleteRoutine)
+                            }
+                        )
+                    }
                 }
             }
 
             // ---- Today's Habits ----
             if (state.todayHabits.isNotEmpty()) {
                 item(key = "today-habits") {
-                    TodayHabitsSection(
-                        habits = state.todayHabits,
-                        onHabitClick = onNavigateToHabits,
-                        onCompleteHabit = { habitId ->
-                            viewModel.onEvent(DashboardEvent.CompleteHabit(habitId))
-                        }
-                    )
+                    AnimatedSection(index = 2) {
+                        TodayHabitsSection(
+                            habits = state.todayHabits,
+                            onHabitClick = onNavigateToHabits,
+                            onCompleteHabit = { habitId ->
+                                viewModel.onEvent(DashboardEvent.CompleteHabit(habitId))
+                            }
+                        )
+                    }
                 }
             }
 
             // ---- Overdue tasks ----
             if (state.overdueTasks.isNotEmpty()) {
                 item(key = "overdue-tasks") {
-                    OverdueTasksSection(
-                        tasks = state.overdueTasks,
-                        onTaskClick = onNavigateToTaskDetail
-                    )
+                    AnimatedSection(index = 3) {
+                        OverdueTasksSection(
+                            tasks = state.overdueTasks,
+                            onTaskClick = onNavigateToTaskDetail
+                        )
+                    }
                 }
             }
 
             // ---- Today's tasks ----
             item(key = "date-tasks") {
-                DateTasksSection(
-                    date = LocalDate.now(),
-                    tasks = state.selectedDateTasks,
-                    onTaskClick = onNavigateToTaskDetail
-                )
+                AnimatedSection(index = 4) {
+                    val todayDate = remember { LocalDate.now() }
+                    DateTasksSection(
+                        date = todayDate,
+                        tasks = state.selectedDateTasks,
+                        onTaskClick = onNavigateToTaskDetail
+                    )
+                }
             }
 
             // ---- Quick task input ----
             item(key = "quick-task-input") {
-                QuickTaskInputCard(
-                    onAddQuickTask = { title ->
-                        viewModel.onEvent(DashboardEvent.CreateQuickTask(title = title))
-                    }
+                AnimatedSection(index = 5) {
+                    QuickTaskInputCard(
+                        onAddQuickTask = { title ->
+                            viewModel.onEvent(DashboardEvent.CreateQuickTask(title = title))
+                        }
+                    )
+                }
+            }
                 )
             }
 
@@ -281,13 +303,15 @@ fun DashboardScreen(
 
             // ---- Quick note input ----
             item(key = "quick-note-input") {
-                QuickNoteInputCard(
-                    title = state.quickNoteTitle,
-                    content = state.quickNoteContent,
-                    onTitleChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteTitle(it)) },
-                    onContentChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteContent(it)) },
-                    onAddNote = { viewModel.onEvent(DashboardEvent.CreateQuickNote) }
-                )
+                AnimatedSection(index = 6) {
+                    QuickNoteInputCard(
+                        title = state.quickNoteTitle,
+                        content = state.quickNoteContent,
+                        onTitleChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteTitle(it)) },
+                        onContentChange = { viewModel.onEvent(DashboardEvent.UpdateQuickNoteContent(it)) },
+                        onAddNote = { viewModel.onEvent(DashboardEvent.CreateQuickNote) }
+                    )
+                }
             }
 
             // ---- Loading indicator ----
@@ -977,6 +1001,38 @@ private fun DateSelectorCard(
             IconButton(onClick = { onChangeDate(selectedDate.plusDays(1)) }) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Next day")
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Animated section wrapper for staggered entrance
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun AnimatedSection(
+    index: Int,
+    content: @Composable () -> Unit
+) {
+    val reducedMotion = LocalReducedMotion.current
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
+    if (reducedMotion) {
+        content()
+    } else {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(300, delayMillis = index * 80)) +
+                slideInVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    initialOffsetY = { it / 4 }
+                )
+        ) {
+            content()
         }
     }
 }

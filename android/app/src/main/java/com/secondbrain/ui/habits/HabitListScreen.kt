@@ -1,6 +1,9 @@
 package com.secondbrain.ui.habits
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,11 +44,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -181,7 +187,11 @@ fun HabitListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(state.habits, key = { it.id }) { habit ->
+                    items(
+                        items = state.habits,
+                        key = { it.id },
+                        contentType = { "habit_card" }
+                    ) { habit ->
                         HabitCard(
                             habit = habit,
                             onClick = { onHabitClick(habit.id) },
@@ -215,10 +225,33 @@ private fun HabitCard(
         label = "habit_card_color"
     )
 
+    // Scale pulse on completion
+    var scale by remember { mutableFloatStateOf(1f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = scale,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "habit_scale"
+    )
+
+    LaunchedEffect(habit.todayCompleted) {
+        if (habit.todayCompleted) {
+            scale = 0.92f
+            kotlinx.coroutines.delay(100)
+            scale = 1f
+        }
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+            }
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
