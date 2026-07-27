@@ -5,7 +5,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -371,7 +370,7 @@ private fun WorkspaceNoteCard(
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Surface(
                 modifier = Modifier
                     .width(4.dp)
@@ -511,7 +510,7 @@ private fun WorkspaceTaskCard(
             else -> MaterialTheme.colorScheme.outline to MaterialTheme.colorScheme.onSurface
         }
 
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Surface(
                 modifier = Modifier
                     .width(4.dp)
@@ -656,7 +655,7 @@ private fun WorkspacePersonCard(
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Surface(
                 modifier = Modifier
                     .width(4.dp)
@@ -794,7 +793,7 @@ private fun WorkspaceHabitCard(
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Surface(
                 modifier = Modifier
                     .width(4.dp)

@@ -57,7 +57,9 @@ fun AnimatedSection(
         label = "section_offset_$index"
     )
 
-    if (reducedMotion) {
+    val animationFinished = visible && animatedAlpha >= 0.99f
+
+    if (reducedMotion || animationFinished) {
         content()
     } else {
         Box(

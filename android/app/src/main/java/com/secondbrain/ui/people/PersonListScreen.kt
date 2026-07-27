@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -204,7 +203,7 @@ private fun PersonCard(person: Person, onClick: () -> Unit, onDelete: () -> Unit
         tonalElevation = 1.dp,
         shadowElevation = 0.dp
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Surface(
                 modifier = Modifier
                     .width(4.dp)

@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-27T00:00:00Z",
+  "title": "Design System: Second Brain",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Fallback Signal Blue",
+        "canonical": "#1565C0",
+        "tonalRamp": ["#001D36", "#003258", "#00497D", "#1565C0", "#3F7ED9", "#9ECAFF", "#D1E4FF", "#F7FAFF"]
+      },
+      "primary-container": {
+        "role": "primary",
+        "displayName": "Primary Atmosphere",
+        "canonical": "#D1E4FF",
+        "tonalRamp": ["#001D36", "#003258", "#00497D", "#1565C0", "#3F7ED9", "#9ECAFF", "#D1E4FF", "#F7FAFF"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Slate Utility",
+        "canonical": "#545F71",
+        "tonalRamp": ["#111C2B", "#263141", "#3C4858", "#545F71", "#7D8799", "#BCC7DB", "#D8E3F8", "#F7F9FF"]
+      },
+      "tertiary": {
+        "role": "tertiary",
+        "displayName": "Plum Annotation",
+        "canonical": "#6D5676",
+        "tonalRamp": ["#271430", "#3D2946", "#553F5D", "#6D5676", "#92769D", "#D9BDE3", "#F6D9FF", "#FFF7FF"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Cloud Surface",
+        "canonical": "#FDFBFF",
+        "tonalRamp": ["#1A1C1E", "#2F3033", "#43474E", "#73777F", "#C3C6CF", "#DEE0E4", "#F0F2F5", "#FDFBFF"]
+      },
+      "error": {
+        "role": "neutral",
+        "displayName": "Semantic Error Red",
+        "canonical": "#BA1A1A",
+        "tonalRamp": ["#410002", "#690005", "#93000A", "#BA1A1A", "#DC362E", "#FFB4AB", "#FFDAD6", "#FFF8F7"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Material Display", "purpose": "Rare high-impact page moments and large entity titles." },
+      "headline": { "displayName": "Material Headline", "purpose": "Dashboard greeting and screen-level context." },
+      "title": { "displayName": "Material Title", "purpose": "Actionable cards, section names, and menu options." },
+      "body": { "displayName": "Material Body", "purpose": "Dates, metadata, note excerpts, descriptions, and task support information." },
+      "label": { "displayName": "Material Label", "purpose": "Status, priority, navigation, and compact controls." }
+    },
+    "shadows": [
+      { "name": "floating-navigation", "value": "8dp shadowElevation with 6dp tonalElevation", "purpose": "Separates the floating navigation pill from scrolling content." },
+      { "name": "floating-action", "value": "6dp defaultElevation; 12dp pressedElevation", "purpose": "Clarifies the detached primary creation action." },
+      { "name": "menu-card", "value": "8dp defaultElevation", "purpose": "Shows an expanded creation option above the current screen." }
+    ],
+    "motion": [
+      { "name": "navigation-pill-spring", "value": "spring(dampingRatio = MediumBouncy, stiffness = Low)", "purpose": "Selected navigation item width and color transitions." },
+      { "name": "reduced-motion", "value": "snap() when Android animator duration scale is 0", "purpose": "Honors user motion preferences." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "phone navigation pill + FAB" },
+      { "name": "expanded", "value": "Material navigation rail or NavigationSuiteScaffold required" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Floating Action Button",
+      "kind": "button",
+      "refersTo": "floating-action-button",
+      "description": "The single primary creation action paired with the compact navigation pill.",
+      "html": "<button class=\"ds-fab\" aria-label=\"Create new\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z\"/></svg></button>",
+      "css": ".ds-fab{width:56px;height:56px;border:0;border-radius:50%;display:grid;place-items:center;background:#1565C0;color:#fff;box-shadow:0 6px 12px rgba(26,28,30,.24);transition:transform .2s ease,box-shadow .2s ease}.ds-fab svg{width:26px;height:26px;fill:currentColor}.ds-fab:hover{transform:translateY(-2px);box-shadow:0 12px 20px rgba(26,28,30,.26)}.ds-fab:focus-visible{outline:3px solid #D1E4FF;outline-offset:3px}.ds-fab:active{transform:scale(.96)}"
+    },
+    {
+      "name": "Floating Navigation Pill",
+      "kind": "nav",
+      "refersTo": "navigation-pill",
+      "description": "Compact three-destination navigation that expands the active destination from icon to icon plus label.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary\"><button class=\"ds-nav-item is-active\" aria-current=\"page\"><span class=\"ds-nav-icon\">▦</span><span>Dashboard</span></button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\">▤</span></button><button class=\"ds-nav-item\"><span class=\"ds-nav-icon\">⚙</span></button></nav>",
+      "css": ".ds-nav{display:inline-flex;align-items:center;gap:4px;height:56px;padding:0 4px;border-radius:28px;background:#EBEDF0;box-shadow:0 8px 16px rgba(26,28,30,.18)}.ds-nav-item{height:48px;min-width:48px;border:0;border-radius:24px;padding:0 12px;background:transparent;color:#43474E;font:600 12px Roboto,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:background .25s ease,color .25s ease,transform .25s ease}.ds-nav-item.is-active{background:#D1E4FF;color:#001D36}.ds-nav-icon{font-size:20px;line-height:1}.ds-nav-item:hover{transform:translateY(-1px)}.ds-nav-item:focus-visible{outline:3px solid #1565C0;outline-offset:2px}.ds-nav-item:active{transform:scale(.97)}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "A low-emphasis semantic state indicator for task truth.",
+      "html": "<span class=\"ds-status ds-status-active\">In Progress</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font:500 11px Roboto,sans-serif}.ds-status-active{background:rgba(21,101,192,.15);color:#1565C0}.ds-status:focus-visible{outline:2px solid currentColor;outline-offset:2px}"
+    },
+    {
+      "name": "Creation Option Card",
+      "kind": "card",
+      "refersTo": "navigation-pill",
+      "description": "An elevated, icon-led row used in the expanded creation menu.",
+      "html": "<button class=\"ds-create-card\"><span class=\"ds-create-icon\">+</span><span><strong>New Task</strong><small>Create a new task</small></span></button>",
+      "css": ".ds-create-card{width:100%;display:flex;align-items:center;gap:16px;border:0;border-radius:16px;padding:16px 20px;background:#EBEDF0;color:#1A1C1E;text-align:left;box-shadow:0 8px 16px rgba(26,28,30,.18);cursor:pointer;transition:transform .2s ease,background .2s ease}.ds-create-card:hover{transform:translateY(-2px);background:#F0F2F5}.ds-create-card:focus-visible{outline:3px solid #1565C0;outline-offset:3px}.ds-create-card:active{transform:scale(.99)}.ds-create-icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(21,101,192,.15);color:#1565C0;font:700 24px Roboto,sans-serif}.ds-create-card strong,.ds-create-card small{display:block}.ds-create-card strong{font:600 16px Roboto,sans-serif}.ds-create-card small{margin-top:3px;color:#43474E;font:400 12px Roboto,sans-serif}"
+    },
+    {
+      "name": "Tonal Input",
+      "kind": "input",
+      "refersTo": "status-badge",
+      "description": "Material-shaped text input with a visible label and semantic focus ring.",
+      "html": "<label class=\"ds-field\"><span>Task title</span><input value=\"Plan the week\" aria-label=\"Task title\"></label>",
+      "css": ".ds-field{display:grid;gap:6px;color:#43474E;font:500 12px Roboto,sans-serif}.ds-field input{height:52px;border:1px solid #73777F;border-radius:6px;padding:0 14px;background:#FDFBFF;color:#1A1C1E;font:400 16px Roboto,sans-serif;transition:border-color .2s ease,box-shadow .2s ease}.ds-field input:hover{border-color:#1565C0}.ds-field input:focus{outline:0;border:2px solid #1565C0;box-shadow:0 0 0 3px rgba(209,228,255,.8)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Material Yoldaş",
+    "overview": "Second Brain's incumbent visual system is a native Android companion that borrows its character from the user's own device. Material You is the visual authority: Android 12+ wallpaper colors create the preferred palette, while a composed blue fallback protects consistency when system colors are unavailable. The result is intentionally personal rather than externally branded: the user's phone gives the application its atmosphere.\n\nThe system combines calm operational surfaces with selective play. Transparent app bars let a soft, wallpaper-aware gradient breathe behind screen content. Rounded tonal containers, a floating navigation pill, detached circular FAB, and medium-bouncy spring transitions create a companion that is personalizable and expressive without abandoning Android fluency. Its visual behavior honors system dark mode, optional OLED black, contrast needs, and reduced-motion settings.",
+    "keyCharacteristics": ["Device-owned color through Material You, curated seeds, and optional custom palette input.", "Standard Material 3 hierarchy with extra personality concentrated in navigation, theme atmosphere, and feedback motion.", "Tonal layering first; small, intentional elevation only for floating controls and actionable containers.", "Soft geometric language: rounded rectangles, circular action buttons, and pill-shaped status/navigation elements.", "Personalization is a product feature, not a decorative afterthought."],
+    "rules": [
+      { "name": "The Device Leads Rule", "body": "When Android's dynamic color is available, Material You roles are authoritative. Do not hard-code a brand palette into individual components.", "section": "colors" },
+      { "name": "The Status Is Semantic Rule", "body": "Pending, active, completed, and missed states use their semantic status roles consistently. Status color communicates task truth; it must not be reassigned for decoration.", "section": "colors" },
+      { "name": "The Role-Not-Size Rule", "body": "Select a Material typography role by semantic purpose, never by ad hoc font-size values in a screen.", "section": "typography" },
+      { "name": "The Tonal-First Rule", "body": "Establish hierarchy with the Material surface-container ladder. Add shadow only when an element must read as physically floating or temporarily elevated.", "section": "elevation" },
+      { "name": "The Soft-Structure Rule", "body": "Use the established M3 radius tier that matches the component's function; do not introduce one-off corner radii.", "section": "shapes" }
+    ],
+    "dos": ["Do let Material You/dynamic color set the active palette on Android 12+; use the fallback seed only when necessary.", "Do use the Material surface container ladder to separate regions before adding elevation.", "Do map every piece of text to a Material typography role and keep it responsive to user font settings.", "Do keep touch targets at or above 48dp and apply edge-to-edge insets to bars, content, and IME-sensitive fields.", "Do use transparent app bars only where the gradient/surface underneath preserves legibility.", "Do disable or simplify motion when the system animation scale is zero."],
+    "donts": ["Don't hard-code raw fallback colors into screen components when MaterialTheme.colorScheme provides the semantic role.", "Don't treat every card as a floating object; preserve the tonal-first depth hierarchy.", "Don't add iOS-shaped controls, bottom-only navigation on expanded screens, or Back behavior that bypasses Android predictive Back.", "Don't use status colors to decorate unrelated content or obscure the distinction between completed and missed work.", "Don't introduce arbitrary corner radii, typography sizes, shadows, or custom control replicas when a Material component exists."]
+  }
+}

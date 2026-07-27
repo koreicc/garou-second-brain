@@ -91,10 +91,7 @@ import com.secondbrain.ui.util.IconPickerDialog
 import com.secondbrain.ui.util.TagInput
 import com.secondbrain.ui.util.resolveIcon
 import com.secondbrain.domain.model.Task
-import org.burnoutcrew.reorderable.ReorderableItem
-import org.burnoutcrew.reorderable.detectReorderAfterLongPress
-import org.burnoutcrew.reorderable.rememberReorderableLazyListState
-import org.burnoutcrew.reorderable.reorderable
+
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -741,60 +738,41 @@ fun TaskEditScreen(
                             }
                         }
                         if (state.subtasks.isNotEmpty()) {
-                            val reorderState = rememberReorderableLazyListState(
-                                onMove = { from, to ->
-                                    viewModel.onEvent(TaskEditEvent.ReorderSubtasks(from.index, to.index))
-                                }
-                            )
-                            LazyColumn(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .heightIn(max = 300.dp)
-                                    .reorderable(reorderState),
-                                state = reorderState.listState,
+                                    .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
-                                itemsIndexed(
-                                    items = state.subtasks,
-                                    key = { _, subtask -> subtask.id }
-                                ) { index, subtask ->
-                                    ReorderableItem(reorderState, key = subtask.id) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 2.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                state.subtasks.forEach { subtask ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = subtask.completed,
+                                            onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
+                                        )
+                                        Text(
+                                            text = subtask.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.weight(1f),
+                                            textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.onEvent(TaskEditEvent.RemoveSubtask(subtask.id)) },
+                                            modifier = Modifier.size(32.dp)
                                         ) {
                                             Icon(
-                                                Icons.Default.DragHandle,
-                                                contentDescription = "Drag to reorder",
-                                                modifier = Modifier
-                                                    .detectReorderAfterLongPress(reorderState)
-                                                    .size(20.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                Icons.Default.Close,
+                                                contentDescription = "Remove subtask",
+                                                modifier = Modifier.size(16.dp)
                                             )
-                                            Checkbox(
-                                                checked = subtask.completed,
-                                                onCheckedChange = { viewModel.onEvent(TaskEditEvent.ToggleSubtask(subtask.id)) }
-                                            )
-                                            Text(
-                                                text = subtask.title,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                modifier = Modifier.weight(1f),
-                                                textDecoration = if (subtask.completed) TextDecoration.LineThrough else TextDecoration.None,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            IconButton(
-                                                onClick = { viewModel.onEvent(TaskEditEvent.RemoveSubtask(subtask.id)) },
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Close,
-                                                    contentDescription = "Remove subtask",
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
                                         }
                                     }
                                 }
