@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/koreicc/garou-second-brain/backend/internal/vault"
 	"github.com/labstack/echo/v4"
@@ -53,4 +54,19 @@ func paginate[T any](items []T, c echo.Context) []T {
 	}
 
 	return items[offset:end]
+}
+
+// timezoneNow returns the current UTC time adjusted by the X-Timezone-Offset
+// request header (in minutes). If the header is missing or invalid, plain UTC
+// is returned.
+func timezoneNow(c echo.Context) time.Time {
+	now := time.Now().UTC()
+	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
+	if tzOffsetStr != "" {
+		offset, err := strconv.Atoi(tzOffsetStr)
+		if err == nil {
+			now = now.Add(time.Duration(offset) * time.Minute)
+		}
+	}
+	return now
 }

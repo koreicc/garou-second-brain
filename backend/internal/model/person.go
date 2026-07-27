@@ -11,6 +11,8 @@ type Person struct {
 	Body        string       `yaml:"-" json:"body"`
 }
 
+func (p *Person) SetBody(body string) { p.Body = body }
+
 func NewPerson(id, name string) *Person {
 	now := time.Now().UTC()
 	return &Person{

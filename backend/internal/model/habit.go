@@ -21,6 +21,8 @@ type Habit struct {
 	TodayCompleted bool `yaml:"-" json:"today_completed,omitempty"`
 }
 
+func (h *Habit) SetBody(body string) { h.Body = body }
+
 func NewHabit(id, title string) *Habit {
 	now := time.Now().UTC()
 	return &Habit{

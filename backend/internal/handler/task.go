@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -23,32 +24,12 @@ func NewTaskHandler(v *vault.Vault) *TaskHandler {
 
 // enrichTasks sets the EffectiveStatus field on one or more tasks.
 func enrichTasks(c echo.Context, tasks ...*model.Task) {
-	now := time.Now().UTC()
-	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
-	if tzOffsetStr != "" {
-		offset, err := strconv.Atoi(tzOffsetStr)
-		if err == nil {
-			now = now.Add(time.Duration(offset) * time.Minute)
-		}
-	}
+	now := timezoneNow(c)
 	for _, t := range tasks {
 		if t != nil {
 			t.EffectiveStatus = model.ComputeEffectiveStatus(t, now)
 		}
 	}
-}
-
-// getNowForRequest returns the current time adjusted by the timezone offset header.
-func getNowForRequest(c echo.Context) time.Time {
-	now := time.Now().UTC()
-	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
-	if tzOffsetStr != "" {
-		offset, err := strconv.Atoi(tzOffsetStr)
-		if err == nil {
-			now = now.Add(time.Duration(offset) * time.Minute)
-		}
-	}
-	return now
 }
 
 // List returns all tasks with optional filtering and sorting.
@@ -118,36 +99,32 @@ func (h *TaskHandler) List(c echo.Context) error {
 }
 
 func sortTasks(tasks []*model.Task, key func(*model.Task) string, ascending bool) {
-	for i := 0; i < len(tasks); i++ {
-		for j := i + 1; j < len(tasks); j++ {
-			less := key(tasks[i]) < key(tasks[j])
-			if ascending != less {
-				tasks[i], tasks[j] = tasks[j], tasks[i]
-			}
+	sort.Slice(tasks, func(i, j int) bool {
+		less := key(tasks[i]) < key(tasks[j])
+		if ascending {
+			return less
 		}
-	}
+		return !less
+	})
 }
 
 func sortTasksByDueDate(tasks []*model.Task, ascending bool) {
-	for i := 0; i < len(tasks); i++ {
-		for j := i + 1; j < len(tasks); j++ {
-			ti := tasks[i].DueDate
-			tj := tasks[j].DueDate
-			var less bool
-			if ti == nil && tj == nil {
-				less = false
-			} else if ti == nil {
-				less = !ascending
-			} else if tj == nil {
-				less = ascending
-			} else {
-				less = ti.Before(*tj)
-			}
-			if ascending != less {
-				tasks[i], tasks[j] = tasks[j], tasks[i]
-			}
+	sort.Slice(tasks, func(i, j int) bool {
+		ti, tj := tasks[i].DueDate, tasks[j].DueDate
+		if ti == nil && tj == nil {
+			return false
 		}
-	}
+		if ti == nil {
+			return !ascending
+		}
+		if tj == nil {
+			return ascending
+		}
+		if ascending {
+			return ti.Before(*tj)
+		}
+		return !ti.Before(*tj)
+	})
 }
 
 // BatchRequest is used for batch operations on tasks.
@@ -214,7 +191,7 @@ func (h *TaskHandler) Upcoming(c echo.Context) error {
 		}
 	}
 
-	now := getNowForRequest(c)
+	now := timezoneNow(c)
 	cutoff := now.AddDate(0, 0, days)
 
 	tasks, err := h.vault.ListTasks()
@@ -279,6 +256,24 @@ func (h *TaskHandler) ListByDate(c echo.Context) error {
 	tasks, err := h.vault.ListTasksByDate(date)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("list tasks by date: %v", err)))
+	}
+	if tasks == nil {
+		tasks = []*model.Task{}
+	}
+	enrichTasks(c, tasks...)
+	return c.JSON(http.StatusOK, model.DataResponse(tasks))
+}
+
+// ListByMonth returns all tasks for a given month (YYYY-MM format).
+// This is a dedicated endpoint for calendar views that need all tasks in a month.
+func (h *TaskHandler) ListByMonth(c echo.Context) error {
+	month := c.QueryParam("month")
+	if month == "" {
+		return c.JSON(http.StatusBadRequest, model.ErrorResponse("month query parameter is required (YYYY-MM)"))
+	}
+	tasks, err := h.vault.ListTasksByMonth(month)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("list tasks by month: %v", err)))
 	}
 	if tasks == nil {
 		tasks = []*model.Task{}

@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -133,6 +134,13 @@ fun HabitListScreen(
             )
         }
     ) { padding ->
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
         when {
             state.isLoading && state.habits.isEmpty() -> {
                 Box(
@@ -206,6 +214,7 @@ fun HabitListScreen(
             }
         }
     }
+}
 }
 
 @OptIn(ExperimentalFoundationApi::class)

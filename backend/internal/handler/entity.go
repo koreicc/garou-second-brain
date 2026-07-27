@@ -2,9 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/koreicc/garou-second-brain/backend/internal/model"
 	"github.com/koreicc/garou-second-brain/backend/internal/vault"
@@ -38,15 +36,7 @@ func (h *EntityHandler) GetByIDs(c echo.Context) error {
 	ids := strings.Split(idsParam, ",")
 	results := make([]EntityInfo, 0, len(ids))
 
-	// Compute offset-adjusted now for task effective status
-	now := time.Now().UTC()
-	tzOffsetStr := c.Request().Header.Get("X-Timezone-Offset")
-	if tzOffsetStr != "" {
-		offset, err := strconv.Atoi(tzOffsetStr)
-		if err == nil {
-			now = now.Add(time.Duration(offset) * time.Minute)
-		}
-	}
+	now := timezoneNow(c)
 
 	for _, id := range ids {
 		id = strings.TrimSpace(id)

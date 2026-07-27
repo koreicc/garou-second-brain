@@ -286,9 +286,12 @@ fun AppNavigation(
                 // -- Calendar screen --
 
                 composable<Screen.Calendar> {
-                    val calendarViewModel = CalendarViewModel(
-                        taskRepository = AppModule.taskRepository
-                    )
+                    val calendarViewModel = remember {
+                        CalendarViewModel(
+                            taskRepository = AppModule.taskRepository,
+                            habitRepository = AppModule.habitRepository
+                        )
+                    }
                     CalendarScreen(
                         viewModel = calendarViewModel,
                         onNavigateBack = { navController.popBackStack() },

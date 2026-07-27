@@ -259,7 +259,7 @@ func (h *HabitHandler) Complete(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, model.ErrorResponse(fmt.Sprintf("read habit: %v", err)))
 	}
 
-	now := getNowForRequest(c)
+	now := timezoneNow(c)
 	today := now.Format("2006-01-02")
 
 	if err := h.vault.WriteHabitCompletion(habit.ID, today, true); err != nil {
@@ -280,7 +280,7 @@ func (h *HabitHandler) Today(c echo.Context) error {
 		habits = []*model.Habit{}
 	}
 
-	now := getNowForRequest(c)
+	now := timezoneNow(c)
 	today := now.Format("2006-01-02")
 	todayWeekday := now.Weekday()
 

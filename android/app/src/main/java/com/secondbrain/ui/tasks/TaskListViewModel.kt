@@ -28,7 +28,8 @@ data class TaskListUiState(
     val isSelectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),
     // Batch operation state
-    val isBatchLoading: Boolean = false
+    val isBatchLoading: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 sealed interface TaskListEvent {
@@ -186,6 +187,27 @@ class TaskListViewModel(
                 .onFailure { e ->
                     _state.update { it.copy(error = e.message) }
                     silentReload()
+                }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true) }
+            val s = _state.value
+            taskRepository.getAll(
+                status = s.statusFilter.ifBlank { null },
+                priority = s.priorityFilter.ifBlank { null },
+                search = s.searchQuery.ifBlank { null },
+                sortBy = s.sortBy,
+                sortOrder = s.sortOrder
+            )
+                .onSuccess { tasks ->
+                    val filtered = filterStandalone(tasks)
+                    _state.update { it.copy(tasks = filtered, groupedTasks = groupByTimeBucket(filtered), isRefreshing = false) }
+                }
+                .onFailure { e ->
+                    _state.update { it.copy(isRefreshing = false, error = e.message) }
                 }
         }
     }

@@ -58,6 +58,7 @@ func main() {
 	api.GET("/tasks", taskHandler.List)
 	api.GET("/tasks/templates", taskHandler.ListTemplates)
 	api.GET("/tasks/by-date", taskHandler.ListByDate)
+	api.GET("/tasks/by-month", taskHandler.ListByMonth)
 	api.GET("/tasks/upcoming", taskHandler.Upcoming)
 	api.POST("/tasks/batch", taskHandler.Batch)
 	api.GET("/tasks/:id", taskHandler.Get)
@@ -102,6 +103,15 @@ func main() {
 	api.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
+
+	// Debug / admin endpoints
+	debug := e.Group("/debug")
+	debug.GET("/vault-stats", func(c echo.Context) error {
+		return c.JSON(200, v.Stats())
+	})
+
+	// Start background file sync for external edits.
+	go v.StartSync(ctx.Done())
 
 	addr := ":" + cfg.Port
 	log.Printf("Server starting on %s", addr)

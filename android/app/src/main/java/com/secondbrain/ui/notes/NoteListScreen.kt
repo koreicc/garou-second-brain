@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
@@ -124,6 +125,13 @@ fun NoteListScreen(
         },
         containerColor = Color.Transparent
     ) { innerPadding ->
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
         if (state.isLoading && state.notes.isEmpty()) {
             Column(
                 modifier = Modifier
@@ -186,6 +194,7 @@ fun NoteListScreen(
             }
         }
     }
+}
 }
 
 @Composable

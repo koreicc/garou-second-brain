@@ -15,7 +15,8 @@ data class PersonListUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showDeleteDialog: Boolean = false,
-    val pendingDeletePerson: Person? = null
+    val pendingDeletePerson: Person? = null,
+    val isRefreshing: Boolean = false
 )
 
 sealed interface PersonListEvent {
@@ -76,6 +77,15 @@ class PersonListViewModel(
             personRepository.getAll()
                 .onSuccess { people -> _state.update { it.copy(people = people, isLoading = false) } }
                 .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message) } }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true) }
+            personRepository.getAll()
+                .onSuccess { people -> _state.update { it.copy(people = people, isRefreshing = false) } }
+                .onFailure { e -> _state.update { it.copy(isRefreshing = false, error = e.message) } }
         }
     }
 
