@@ -1,6 +1,5 @@
 package com.secondbrain.ui.workspace
 
-import androidx.compose.animation.animateItem
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -366,8 +365,7 @@ private fun WorkspaceNoteCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .animateItem(),
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 1.dp,
@@ -500,8 +498,7 @@ private fun WorkspaceTaskCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .animateItem(),
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 1.dp,
@@ -653,8 +650,7 @@ private fun WorkspacePersonCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .animateItem(),
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 1.dp,
@@ -792,8 +788,7 @@ private fun WorkspaceHabitCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .animateItem(),
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = containerColor,
         tonalElevation = 1.dp,

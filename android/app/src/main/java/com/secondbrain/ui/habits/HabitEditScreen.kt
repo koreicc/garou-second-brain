@@ -705,6 +705,7 @@ fun HabitEditScreen(
                             minLines = 2,
                             shape = MaterialTheme.shapes.medium
                         )
+                    }
                 }
             }
 
@@ -818,6 +819,11 @@ fun HabitEditScreen(
             }
         }
     }
+            }
+        }
+    }
+}
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

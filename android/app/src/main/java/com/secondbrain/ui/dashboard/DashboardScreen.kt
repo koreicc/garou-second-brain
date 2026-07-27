@@ -287,8 +287,6 @@ fun DashboardScreen(
                     )
                 }
             }
-                )
-            }
 
             // ---- Quick task list ----
             items(state.quickTasks, key = { it.id }) { qTask ->
