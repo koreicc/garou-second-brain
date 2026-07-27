@@ -113,7 +113,7 @@ pkill second-brain-server 2>/dev/null; nohup second-brain-server > /dev/null 2>&
 ## Entities
 
 | Entity | Description |
-|---|---|---|
+|---|---|
 | Note | Free-form markdown notes for ideas, references, resources |
 | Task | Full-featured tasks with icon, location, subtasks, dates, and optional recurrence (daily/weekly/monthly/yearly) |
 | Habit | Recurring habits with day-of-week scheduling, completion tracking per day |
